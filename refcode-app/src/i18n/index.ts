@@ -1,0 +1,80 @@
+import { Preferences } from '@capacitor/preferences'
+import { createI18n } from 'vue-i18n'
+
+import { ApiError } from '../api/client'
+import en from './locales/en.json'
+import ja from './locales/ja.json'
+import zhTW from './locales/zh-TW.json'
+
+const KEY_LANG = 'refcode_lang'
+
+export const SUPPORTED = [
+  { code: 'zh-TW', name: '繁體中文' },
+  { code: 'ja', name: '日本語' },
+  { code: 'en', name: 'English' },
+] as const
+
+export type LocaleCode = (typeof SUPPORTED)[number]['code']
+
+// 裝置語言可能是 zh-Hant-HK、ja-JP、en-GB 這種，只認前面的部分。
+// 中文一律給繁體 —— 目前沒有簡體語系檔，硬給日文或英文更糟。
+function fromDevice(): LocaleCode {
+  const tags = navigator.languages?.length ? navigator.languages : [navigator.language]
+  for (const tag of tags) {
+    const lower = tag.toLowerCase()
+    if (lower.startsWith('zh')) return 'zh-TW'
+    if (lower.startsWith('ja')) return 'ja'
+    if (lower.startsWith('en')) return 'en'
+  }
+  return 'zh-TW'
+}
+
+function isSupported(code: string | null): code is LocaleCode {
+  return SUPPORTED.some((l) => l.code === code)
+}
+
+export const i18n = createI18n({
+  // Composition API（useI18n）需要 legacy: false。
+  legacy: false,
+  locale: 'zh-TW',
+  fallbackLocale: 'zh-TW',
+  messages: { 'zh-TW': zhTW, ja, en },
+})
+
+// Preferences 是 async 的，跟 token 一樣要在 mount 之前讀回來，
+// 否則畫面會先用預設語言 render 一次再跳語言。
+export async function initLocale() {
+  const saved = await Preferences.get({ key: KEY_LANG })
+  i18n.global.locale.value = isSupported(saved.value) ? saved.value : fromDevice()
+}
+
+// 使用者手動選過語言就記住，之後不再跟著裝置語言跑。
+export async function setLocale(code: LocaleCode) {
+  i18n.global.locale.value = code
+  await Preferences.set({ key: KEY_LANG, value: code })
+}
+
+// 到期倒數。目錄頁的服務商卡片與服務商頁的每個碼共用這一份，
+// 分開寫的話同一個時間點會出現「今天到期」與「1 天後到期」兩種說法。
+export function daysUntilExpiry(iso: string): number {
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
+}
+
+export function expiryLabel(iso: string): string {
+  const { t } = i18n.global
+  const days = daysUntilExpiry(iso)
+  return days <= 0 ? t('common.expiresToday') : t('common.expiresInDays', { count: days }, days)
+}
+
+// 一律走 code：後端的每個 code 都對應到單一句話（見 refcode-api 的 response.go），
+// 這裡查得到就用譯文。查不到才退回後端那句中文 —— 那是後端加了新 code 但
+// 語系檔還沒跟上，顯示中文至少比顯示 code 好。
+// fallbackKey 是連不上後端（拿不到 ApiError）時要顯示的話。
+export function apiErrorMessage(e: unknown, fallbackKey: string): string {
+  const { t, te } = i18n.global
+
+  if (!(e instanceof ApiError)) return t(fallbackKey)
+
+  const key = `errors.${e.code}`
+  return te(key) ? t(key) : e.message
+}

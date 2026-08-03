@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: system-ui, 'PingFang TC', 'Noto Sans TC', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Consolas, monospace;
+}
+
+html {
+  background: var(--color-white);
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    background: var(--color-neutral-950);
+  }
+}

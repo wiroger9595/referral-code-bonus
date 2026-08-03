@@ -1,0 +1,15 @@
+/* naive-ui 自帶元件樣式，這裡只留全域的重置。 */
+:root {
+  font-family: system-ui, 'PingFang TC', 'Noto Sans TC', sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 500;
+}

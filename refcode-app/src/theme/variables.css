@@ -1,0 +1,151 @@
+/* 主題變數。Ionic 元件內部全部吃這些 CSS variable，所以顏色只改這裡，
+   不要在各個 .vue 裡寫死色碼。
+
+   調性：對齊 ShopBack 的設計語言 —— 珊瑚橘紅單一主色 + 純白卡片 + 冷灰階文字。
+   結構不靠框線，靠「白卡片浮在淺灰底上 + 柔陰影」；圓角走 8/12/16 三階，
+   按鈕與標籤一律膠囊。主色只出現在可點的東西上，資訊層級交給冷灰階，
+   否則一頁十幾個橘色色塊會蓋掉「這裡的碼有人審過」這件事的可信度。 */
+
+:root {
+  --ion-font-family: system-ui, -apple-system, 'PingFang TC', 'Noto Sans TC', sans-serif;
+  --app-font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+
+  /* 主色 —— 珊瑚橘紅。shade/tint 是 Ionic 用來做 hover 與 activated 的，必須成套給。 */
+  --ion-color-primary: #ff3407;
+  --ion-color-primary-rgb: 255, 52, 7;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #e02c05;
+  --ion-color-primary-tint: #ff4a20;
+
+  /* 可用 / 上架中。 */
+  --ion-color-success: #19a074;
+  --ion-color-success-rgb: 25, 160, 116;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #118658;
+  --ion-color-success-tint: #36c096;
+
+  /* 審核中。這個黃是亮黃，contrast 一定要給深色 —— 配白字整個讀不到。 */
+  --ion-color-warning: #ffca44;
+  --ion-color-warning-rgb: 255, 202, 68;
+  --ion-color-warning-contrast: #232938;
+  --ion-color-warning-contrast-rgb: 35, 41, 56;
+  --ion-color-warning-shade: #e0b23c;
+  --ion-color-warning-tint: #ffe29f;
+
+  --ion-color-danger: #e0311e;
+  --ion-color-danger-rgb: 224, 49, 30;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #c8120c;
+  --ion-color-danger-tint: #f44a46;
+
+  --ion-color-medium: #6a717f;
+  --ion-color-medium-rgb: 106, 113, 127;
+  --ion-color-medium-contrast: #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #414856;
+  --ion-color-medium-tint: #8b909b;
+
+  --ion-color-dark: #232938;
+  --ion-color-dark-rgb: 35, 41, 56;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #1c2130;
+  --ion-color-dark-tint: #414856;
+
+  --ion-color-light: #f6f6f7;
+  --ion-color-light-rgb: 246, 246, 247;
+  --ion-color-light-contrast: #232938;
+  --ion-color-light-contrast-rgb: 35, 41, 56;
+  --ion-color-light-shade: #efeff1;
+  --ion-color-light-tint: #ffffff;
+
+  /* 表面。頁面底色比卡片深一階，卡片才浮得起來 —— 這是整個設計的基礎。 */
+  --ion-background-color: #f6f6f7;
+  --ion-background-color-rgb: 246, 246, 247;
+  --ion-text-color: #232938;
+  --ion-text-color-rgb: 35, 41, 56;
+  --ion-item-background: #ffffff;
+  --ion-card-background: #ffffff;
+  --ion-toolbar-background: #ffffff;
+  --ion-tab-bar-background: rgba(255, 255, 255, 0.94);
+
+  --app-surface: #ffffff;
+  --app-line: #efeff1;
+  --app-line-strong: #dee0e3;
+  --app-muted: #6a717f;
+
+  /* 主色的淡底。#ff3407 直接放在這個淡底上只有 2.7:1 讀不到，
+     所以底跟字分兩個變數 —— 字用深一階的磚紅，才有 5.3:1。 */
+  --app-tint: #ffd6cd;
+  --app-tint-ink: #a0320e;
+
+  --app-radius-sm: 8px;
+  --app-radius: 12px;
+  --app-radius-lg: 16px;
+  --app-radius-full: 999px;
+
+  /* 冷灰底的陰影，不是純黑 —— 純黑在這個灰底上會發濁。 */
+  --app-shadow: 0 2px 8px rgba(64, 72, 90, 0.1);
+  --app-shadow-lifted: 0 4px 16px rgba(64, 72, 90, 0.16);
+}
+
+/* 深色。@ionic/vue 的 dark.system.css 先進來處理元件內部，這裡只覆蓋品牌色與表面色。
+   import 順序在 main.ts，改順序會讓這段失效。
+
+   ShopBack 沒有公開深色的 token，這裡是照它的冷灰階自己推的：珊瑚色在深底上
+   要往橘的方向提亮才有對比，直接用 #ff3407 會糊成一團暗紅。 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ion-color-primary: #ff6a45;
+    --ion-color-primary-rgb: 255, 106, 69;
+    --ion-color-primary-contrast: #1a1e29;
+    --ion-color-primary-contrast-rgb: 26, 30, 41;
+    --ion-color-primary-shade: #e05e3d;
+    --ion-color-primary-tint: #ff7d5d;
+
+    --ion-color-success: #36c096;
+    --ion-color-success-rgb: 54, 192, 150;
+    --ion-color-success-contrast: #1a1e29;
+    --ion-color-success-contrast-rgb: 26, 30, 41;
+    --ion-color-success-shade: #19a074;
+    --ion-color-success-tint: #73dcb8;
+
+    --ion-color-warning: #ffca44;
+    --ion-color-warning-rgb: 255, 202, 68;
+    --ion-color-warning-contrast: #1a1e29;
+    --ion-color-warning-contrast-rgb: 26, 30, 41;
+    --ion-color-warning-shade: #e0b23c;
+    --ion-color-warning-tint: #ffe29f;
+
+    --ion-color-danger: #f44a46;
+    --ion-color-danger-rgb: 244, 74, 70;
+    --ion-color-danger-contrast: #1a1e29;
+    --ion-color-danger-contrast-rgb: 26, 30, 41;
+    --ion-color-danger-shade: #e0311e;
+    --ion-color-danger-tint: #ff7e7b;
+
+    --ion-background-color: #1a1e29;
+    --ion-background-color-rgb: 26, 30, 41;
+    --ion-text-color: #f6f6f7;
+    --ion-text-color-rgb: 246, 246, 247;
+    --ion-item-background: #232938;
+    --ion-card-background: #232938;
+    --ion-toolbar-background: #1a1e29;
+    --ion-tab-bar-background: rgba(35, 41, 56, 0.94);
+
+    --app-surface: #232938;
+    --app-line: #333a4b;
+    --app-line-strong: #414856;
+    --app-muted: #aaadb6;
+
+    --app-tint: rgba(255, 106, 69, 0.16);
+    --app-tint-ink: #ff9a80;
+
+    /* 深色底下陰影幾乎看不見，卡片改用比表面亮一階的底來分層。 */
+    --app-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --app-shadow-lifted: 0 8px 20px rgba(0, 0, 0, 0.5);
+  }
+}

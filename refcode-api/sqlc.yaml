@@ -1,0 +1,49 @@
+version: "2"
+sql:
+  - engine: postgresql
+    queries: db/queries
+    schema: db/migrations
+    gen:
+      go:
+        package: dbgen
+        out: internal/store/dbgen
+        sql_package: pgx/v5
+        # 有些 endpoint 直接回 row（我的碼、審核佇列），沒有 tag 會吐出 Go 的欄位名。
+        emit_json_tags: true
+        json_tags_case_style: snake
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        # 表都在 referral_code_bonus schema 底下，sqlc 預設會把 struct 命名成 ReferralCodeBonusXxx，去掉前綴。
+        rename:
+          referral_code_bonus_admin: "Admin"
+          referral_code_bonus_code_event: "CodeEvent"
+          referral_code_bonus_code_report: "CodeReport"
+          referral_code_bonus_code_review: "CodeReview"
+          referral_code_bonus_category_slug_history: "CategorySlugHistory"
+          referral_code_bonus_merchant: "Merchant"
+          referral_code_bonus_merchant_category: "MerchantCategory"
+          referral_code_bonus_merchant_slug_history: "MerchantSlugHistory"
+          referral_code_bonus_oauth_identity: "OAuthIdentity"
+          referral_code_bonus_referral_code: "ReferralCode"
+          referral_code_bonus_refresh_token: "RefreshToken"
+          referral_code_bonus_subscription: "Subscription"
+          referral_code_bonus_subscription_event: "SubscriptionEvent"
+          referral_code_bonus_user: "User"
+        overrides:
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            nullable: true
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+              pointer: true
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "date"
+            go_type: "time.Time"
+          - db_type: "timestamptz"
+            nullable: true
+            go_type:
+              type: "time.Time"
+              pointer: true
