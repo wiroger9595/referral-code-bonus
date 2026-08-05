@@ -20,7 +20,7 @@ npm run dev          # http://localhost:3000
 | 路由 | 說明 |
 |---|---|
 | `/` | 首頁：分類 + 所有服務商 |
-| `/category/[slug]` | 分類頁 |
+| `/category/[id]` | 分類頁。網址是分類的 id，分類沒有 slug |
 | `/referral/[slug]` | 服務商頁 —— 這一頁是整個站的重點 |
 | `/about` | 平台怎麼運作 |
 | `/login`、`/register` | 登入 / 註冊，`noindex`（見下方） |

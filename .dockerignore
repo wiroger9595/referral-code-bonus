@@ -1,0 +1,20 @@
+# build context 是 repo 根目錄，但只有 refcode-api/ 會被用到。
+# 三個前端與 native 專案加起來很大，全部擋掉才不會每次 build 都上傳一包。
+node_modules/
+refcode-web/
+refcode-admin/
+refcode-app/
+public/
+
+.git/
+.github/
+.logs/
+.DS_Store
+
+# 憑證絕對不能進 image
+.env
+.env.*
+!.env.example
+
+refcode-api/bin/
+refcode-api/db/migrations/

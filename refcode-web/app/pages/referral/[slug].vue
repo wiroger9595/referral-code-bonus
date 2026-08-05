@@ -6,6 +6,7 @@ const { public: cfg } = useRuntimeConfig()
 const { track, report } = useTracking()
 const { t } = useI18n()
 const localePath = useLocalePath()
+const { expiryLabel, isUrgent } = useExpiry()
 
 // 要註冊才能拿到推薦碼：帶著 redirect 讓登入完直接回到這頁。
 const loginLink = computed(() => ({ path: localePath('/login'), query: { redirect: route.fullPath } }))
@@ -26,14 +27,8 @@ if (error.value) {
 const merchant = computed(() => data.value?.merchant)
 const codes = computed(() => data.value?.codes ?? [])
 
-// slug 改過的話後端仍然查得到（回查歷史表），但網址要換成現在的。
-// 用 301 而不是 302，搜尋排名才會跟著轉過去 —— 這頁是全站流量最集中的一頁。
-if (merchant.value && merchant.value.slug !== slug.value) {
-  await navigateTo(localePath(`/referral/${merchant.value.slug}`), {
-    redirectCode: 301,
-    replace: true,
-  })
-}
+// 手機上的固定操作列拿的是清單第一個碼 —— 後端已經照品質排過，第一個就是最推薦的那組。
+const topCode = computed(() => codes.value[0] ?? null)
 
 // 複製過的碼才問「能不能用」—— 沒複製的人根本沒試過，問了也是雜訊。
 const copiedId = ref<string | null>(null)
@@ -66,10 +61,6 @@ function goSignup(code: CodeItem) {
   if (!merchant.value) return
   track(code.id, 'click')
   window.open(merchant.value.signup_url, '_blank', 'noopener')
-}
-
-function daysLeft(iso: string) {
-  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
 }
 
 useSeoMeta({
@@ -110,99 +101,154 @@ useHead({
 </script>
 
 <template>
-  <div v-if="merchant">
+  <!-- 手機上底部有固定的操作列，內容要多留一段才不會被蓋住。 -->
+  <div v-if="merchant" class="pb-24 sm:pb-0">
     <NuxtLink
-      :to="localePath(`/category/${merchant.category_slug}`)"
-      class="text-sm text-neutral-500 hover:underline"
+      :to="localePath(`/category/${merchant.category_id}`)"
+      class="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"
     >
       ← {{ merchant.category_name }}
     </NuxtLink>
 
-    <h1 class="mt-3 text-2xl font-semibold">
-      {{ $t('referral.heading', { name: merchant.name }) }}
-    </h1>
-    <p class="mt-2 text-neutral-600 dark:text-neutral-400">{{ merchant.reward_desc }}</p>
+    <!-- 商品頁的品牌頭：獎勵內容是使用者往下滑之前唯一想知道的事，用最大的字。 -->
+    <div class="app-card mt-3 p-5 sm:p-6">
+      <span
+        class="grid size-14 place-items-center overflow-hidden rounded-tile bg-brand-soft text-2xl font-bold text-brand-ink"
+      >
+        <img
+          v-if="merchant.logo_url"
+          :src="merchant.logo_url"
+          :alt="merchant.name"
+          class="size-full object-cover"
+        />
+        <template v-else>{{ merchant.name.trim().charAt(0) }}</template>
+      </span>
 
-    <p v-if="copyFailed" class="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+      <p class="mt-4 text-sm font-semibold text-muted">{{ merchant.name }}</p>
+      <h1 class="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{{ merchant.reward_desc }}</h1>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        <span class="pill">{{ merchant.category_name }}</span>
+        <span class="pill" :class="(data?.total ?? 0) > 0 ? 'pill-ok' : ''">
+          {{ $t('referral.activeCodes', { count: data?.total ?? 0 }, data?.total ?? 0) }}
+        </span>
+      </div>
+
+      <p class="mt-4 flex items-center gap-1.5 border-t border-line pt-3 text-xs font-semibold text-muted">
+        <AppIcon name="shield" class="text-ok" />
+        {{ $t('referral.reviewed') }}
+      </p>
+    </div>
+
+    <p v-if="copyFailed" class="mt-4 rounded-card bg-brand-soft p-3 text-sm text-brand-ink">
       {{ $t('referral.copyBlocked') }}
     </p>
 
     <section class="mt-8">
-      <h2 class="mb-3 text-sm font-medium text-neutral-500">
+      <h2 class="mb-4 text-lg font-bold tracking-tight">
         {{ $t('referral.activeCodes', { count: data?.total ?? 0 }, data?.total ?? 0) }}
       </h2>
 
-      <ul v-if="codes.length" class="space-y-3">
-        <li
-          v-for="code in codes"
-          :key="code.id"
-          class="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
-        >
+      <ul v-if="codes.length" class="grid gap-3">
+        <li v-for="code in codes" :key="code.id" class="app-card p-4 sm:p-5">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="min-w-0">
-              <code v-if="code.masked" class="inline-flex items-center gap-1.5 font-mono text-lg font-medium text-neutral-400 italic dark:text-neutral-600">
+              <p
+                v-if="code.masked"
+                class="flex items-center gap-1.5 font-mono text-lg font-bold text-muted italic"
+              >
+                <AppIcon name="lock" />
                 {{ $t('referral.maskedPlaceholder') }}
-              </code>
-              <code v-else class="font-mono text-lg font-medium">{{ code.code }}</code>
-              <p class="mt-1 text-xs text-neutral-500">
-                {{ $t('referral.sharedBy', { name: code.owner_name }) }}
-                ・{{ $t('referral.expiresIn', { count: daysLeft(code.expires_at) }, daysLeft(code.expires_at)) }}
-                <template v-if="code.worked_count + code.failed_count > 0">
-                  ・{{ $t('referral.workedReports', { count: code.worked_count }, code.worked_count) }}
+              </p>
+              <p v-else class="font-mono text-xl font-bold tracking-wider break-all">
+                {{ code.code }}
+              </p>
+
+              <p class="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+                <span>{{ $t('referral.sharedBy', { name: code.owner_name }) }}</span>
+                <span>・</span>
+                <span :class="isUrgent(code.expires_at) ? 'font-semibold text-alert' : ''">
+                  {{ expiryLabel(code.expires_at) }}
+                </span>
+                <template v-if="code.worked_count > 0">
+                  <span>・</span>
+                  <span class="font-semibold text-ok-ink">
+                    {{ $t('referral.workedReports', { count: code.worked_count }, code.worked_count) }}
+                  </span>
                 </template>
               </p>
-              <p v-if="code.note" class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-                {{ code.note }}
-              </p>
+
+              <p v-if="code.note" class="mt-2 text-sm text-muted">{{ code.note }}</p>
             </div>
 
             <!-- 要註冊才能拿到推薦碼：遮碼狀態下只給一顆「登入查看」，不給複製或
                  前往註冊——沒有碼就跑去註冊服務商，使用者到了那邊也不知道要填什麼。 -->
-            <div v-if="code.masked" class="flex shrink-0">
-              <NuxtLink
-                :to="loginLink"
-                class="rounded-md bg-neutral-900 px-3 py-1.5 text-sm whitespace-nowrap text-white transition hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-              >
+            <div v-if="code.masked" class="shrink-0">
+              <NuxtLink :to="loginLink" class="btn btn-primary">
+                <AppIcon name="lock" />
                 {{ $t('referral.loginToReveal') }}
               </NuxtLink>
             </div>
             <div v-else class="flex shrink-0 gap-2">
-              <button
-                class="rounded-md border border-neutral-300 px-3 py-1.5 text-sm transition hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-900"
-                @click="copyCode(code)"
-              >
+              <button class="btn btn-outline" @click="copyCode(code)">
+                <AppIcon :name="copiedId === code.id ? 'check' : 'copy'" />
                 {{ copiedId === code.id ? $t('referral.copied') : $t('referral.copy') }}
               </button>
-              <button
-                class="rounded-md bg-neutral-900 px-3 py-1.5 text-sm text-white transition hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-                @click="goSignup(code)"
-              >
+              <button class="btn btn-primary" @click="goSignup(code)">
                 {{ $t('referral.goSignup') }}
+                <AppIcon name="external" />
               </button>
             </div>
           </div>
 
           <div
             v-if="copiedId === code.id"
-            class="mt-3 flex items-center gap-3 border-t border-neutral-200 pt-3 text-sm dark:border-neutral-800"
+            class="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-3 text-sm"
           >
             <template v-if="!reportedIds.has(code.id)">
-              <span class="text-neutral-500">{{ $t('referral.askFeedback') }}</span>
-              <button class="text-emerald-600 hover:underline" @click="sendReport(code, 'worked')">
+              <span class="text-muted">{{ $t('referral.askFeedback') }}</span>
+              <button class="font-semibold text-ok-ink hover:underline" @click="sendReport(code, 'worked')">
                 {{ $t('referral.worked') }}
               </button>
-              <button class="text-red-600 hover:underline" @click="sendReport(code, 'failed')">
+              <button
+                class="font-semibold text-alert-ink hover:underline"
+                @click="sendReport(code, 'failed')"
+              >
                 {{ $t('referral.failed') }}
               </button>
             </template>
-            <span v-else class="text-neutral-500">{{ $t('referral.thanks') }}</span>
+            <span v-else class="text-muted">{{ $t('referral.thanks') }}</span>
           </div>
         </li>
       </ul>
 
-      <p v-else class="py-12 text-center text-neutral-500">
-        {{ $t('referral.empty') }}
-      </p>
+      <p v-else class="py-12 text-center text-muted">{{ $t('referral.empty') }}</p>
     </section>
+
+    <!-- 手機上捲過兩三張卡就看不到按鈕了，這條列是那時候唯一的出口。
+         桌機的卡片一直在視野裡，再固定一條只是擋畫面。 -->
+    <div
+      v-if="topCode"
+      class="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface px-4 py-3 shadow-[0_-2px_12px_rgba(64,72,90,0.1)] sm:hidden"
+    >
+      <NuxtLink v-if="topCode.masked" :to="loginLink" class="btn btn-primary w-full">
+        <AppIcon name="lock" />
+        {{ $t('referral.loginToReveal') }}
+      </NuxtLink>
+
+      <template v-else>
+        <p class="mb-2 text-xs text-muted">{{ $t('referral.ctaBest') }}</p>
+        <div class="flex gap-2">
+          <button class="btn btn-outline" @click="copyCode(topCode)">
+            <AppIcon :name="copiedId === topCode.id ? 'check' : 'copy'" />
+            {{ copiedId === topCode.id ? $t('referral.copied') : $t('referral.copy') }}
+          </button>
+          <button class="btn btn-primary flex-1" @click="goSignup(topCode)">
+            {{ $t('referral.goSignup') }}
+            <AppIcon name="external" />
+          </button>
+        </div>
+      </template>
+    </div>
   </div>
 </template>

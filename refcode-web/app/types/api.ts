@@ -40,9 +40,11 @@ export interface MerchantSummary {
   logo_url: string | null
   signup_url: string
   reward_desc: string
-  category_slug: string
+  category_id: string
   category_name: string
   active_code_count: number
+  // 這家最快到期的那個碼。沒有可用的碼時是 null。
+  soonest_expires_at: string | null
   // 這家在哪些國家能用。空陣列代表不分地區。
   countries: string[]
 }

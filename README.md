@@ -163,6 +163,14 @@ port 寫在 `vite.config.ts`，改了一樣要同步後端的 `CORS_ORIGINS`。
 npm run build && npx cap sync     # 每次改完前端都要 sync 一次
 npx cap open ios                  # 開 Xcode
 npx cap open android              # 開 Android Studio
+
+要做成 hot reload
+# Terminal A：dev server（--host 一定要加，見下面第 2 點）
+cd refcode-app && npm run dev -- --host
+
+# Terminal B
+cd refcode-app && npx cap run ios -l --port 5174
+
 ```
 
 加了原生平台之後，**實機和模擬器連不到 `localhost:7802`**——那個 localhost 是裝置自己。

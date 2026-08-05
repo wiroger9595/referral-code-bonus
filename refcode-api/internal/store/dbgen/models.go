@@ -20,12 +20,6 @@ type Admin struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-type CategorySlugHistory struct {
-	Slug       string    `json:"slug"`
-	CategoryID uuid.UUID `json:"category_id"`
-	ReplacedAt time.Time `json:"replaced_at"`
-}
-
 type CodeEvent struct {
 	ID         uuid.UUID  `json:"id"`
 	CodeID     uuid.UUID  `json:"code_id"`
@@ -73,16 +67,10 @@ type Merchant struct {
 
 type MerchantCategory struct {
 	ID        uuid.UUID `json:"id"`
-	Slug      string    `json:"slug"`
 	Name      string    `json:"name"`
 	SortOrder int32     `json:"sort_order"`
 	CreatedAt time.Time `json:"created_at"`
-}
-
-type MerchantSlugHistory struct {
-	Slug       string    `json:"slug"`
-	MerchantID uuid.UUID `json:"merchant_id"`
-	ReplacedAt time.Time `json:"replaced_at"`
+	ImageUrl  *string   `json:"image_url"`
 }
 
 type OAuthIdentity struct {

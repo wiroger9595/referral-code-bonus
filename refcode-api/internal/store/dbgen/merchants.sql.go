@@ -12,47 +12,27 @@ import (
 	"github.com/google/uuid"
 )
 
-const claimCategorySlug = `-- name: ClaimCategorySlug :exec
-DELETE FROM referral_code_bonus.category_slug_history WHERE slug = $1
-`
-
-// 一個 slug 變成現用的，就不該再是誰的舊網址。
-func (q *Queries) ClaimCategorySlug(ctx context.Context, slug string) error {
-	_, err := q.db.Exec(ctx, claimCategorySlug, slug)
-	return err
-}
-
-const claimMerchantSlug = `-- name: ClaimMerchantSlug :exec
-DELETE FROM referral_code_bonus.merchant_slug_history WHERE slug = $1
-`
-
-// 一個 slug 變成現用的，就不該再是誰的舊網址。
-func (q *Queries) ClaimMerchantSlug(ctx context.Context, slug string) error {
-	_, err := q.db.Exec(ctx, claimMerchantSlug, slug)
-	return err
-}
-
 const createCategory = `-- name: CreateCategory :one
-INSERT INTO referral_code_bonus.merchant_categories (slug, name, sort_order)
+INSERT INTO referral_code_bonus.merchant_categories (name, sort_order, image_url)
 VALUES ($1, $2, $3)
-RETURNING id, slug, name, sort_order, created_at
+RETURNING id, name, sort_order, created_at, image_url
 `
 
 type CreateCategoryParams struct {
-	Slug      string `json:"slug"`
-	Name      string `json:"name"`
-	SortOrder int32  `json:"sort_order"`
+	Name      string  `json:"name"`
+	SortOrder int32   `json:"sort_order"`
+	ImageUrl  *string `json:"image_url"`
 }
 
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (MerchantCategory, error) {
-	row := q.db.QueryRow(ctx, createCategory, arg.Slug, arg.Name, arg.SortOrder)
+	row := q.db.QueryRow(ctx, createCategory, arg.Name, arg.SortOrder, arg.ImageUrl)
 	var i MerchantCategory
 	err := row.Scan(
 		&i.ID,
-		&i.Slug,
 		&i.Name,
 		&i.SortOrder,
 		&i.CreatedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }
@@ -115,7 +95,7 @@ func (q *Queries) DeleteCategory(ctx context.Context, id uuid.UUID) error {
 }
 
 const getCategoryByID = `-- name: GetCategoryByID :one
-SELECT id, slug, name, sort_order, created_at FROM referral_code_bonus.merchant_categories WHERE id = $1
+SELECT id, name, sort_order, created_at, image_url FROM referral_code_bonus.merchant_categories WHERE id = $1
 `
 
 func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (MerchantCategory, error) {
@@ -123,35 +103,10 @@ func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (MerchantCa
 	var i MerchantCategory
 	err := row.Scan(
 		&i.ID,
-		&i.Slug,
 		&i.Name,
 		&i.SortOrder,
 		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getCategoryBySlug = `-- name: GetCategoryBySlug :one
-SELECT id, slug, name, sort_order, created_at FROM referral_code_bonus.merchant_categories c
-WHERE c.slug = $1
-   OR c.id IN (
-        SELECT h.category_id FROM referral_code_bonus.category_slug_history h WHERE h.slug = $1
-      )
-ORDER BY (c.slug = $1) DESC
-LIMIT 1
-`
-
-// 舊 slug 也要找得到。live 的一律勝出（ORDER BY），所以就算某個字串同時是
-// A 的舊網址又被 B 拿去當現用網址，也不會回錯人。
-func (q *Queries) GetCategoryBySlug(ctx context.Context, slug string) (MerchantCategory, error) {
-	row := q.db.QueryRow(ctx, getCategoryBySlug, slug)
-	var i MerchantCategory
-	err := row.Scan(
-		&i.ID,
-		&i.Slug,
-		&i.Name,
-		&i.SortOrder,
-		&i.CreatedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }
@@ -181,16 +136,10 @@ func (q *Queries) GetMerchantByID(ctx context.Context, id uuid.UUID) (Merchant, 
 }
 
 const getMerchantBySlug = `-- name: GetMerchantBySlug :one
-SELECT m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, c.slug AS category_slug, c.name AS category_name
+SELECT m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, c.name AS category_name
 FROM referral_code_bonus.merchants m
 JOIN referral_code_bonus.merchant_categories c ON c.id = m.category_id
-WHERE m.is_active
-  AND (m.slug = $1
-       OR m.id IN (
-            SELECT h.merchant_id FROM referral_code_bonus.merchant_slug_history h WHERE h.slug = $1
-          ))
-ORDER BY (m.slug = $1) DESC
-LIMIT 1
+WHERE m.slug = $1 AND m.is_active
 `
 
 type GetMerchantBySlugRow struct {
@@ -206,13 +155,9 @@ type GetMerchantBySlugRow struct {
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	Countries       []string  `json:"countries"`
-	CategorySlug    string    `json:"category_slug"`
 	CategoryName    string    `json:"category_name"`
 }
 
-// 舊 slug 也要找得到，呼叫端比對回來的 m.slug 決定要不要 301（見 handleGetMerchant）。
-// live 的一律勝出（ORDER BY），所以就算某個字串同時是 A 的舊網址又被 B 拿去當現用網址，
-// 也不會回錯家。
 func (q *Queries) GetMerchantBySlug(ctx context.Context, slug string) (GetMerchantBySlugRow, error) {
 	row := q.db.QueryRow(ctx, getMerchantBySlug, slug)
 	var i GetMerchantBySlugRow
@@ -229,14 +174,13 @@ func (q *Queries) GetMerchantBySlug(ctx context.Context, slug string) (GetMercha
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Countries,
-		&i.CategorySlug,
 		&i.CategoryName,
 	)
 	return i, err
 }
 
 const listCategories = `-- name: ListCategories :many
-SELECT id, slug, name, sort_order, created_at FROM referral_code_bonus.merchant_categories ORDER BY sort_order, name
+SELECT id, name, sort_order, created_at, image_url FROM referral_code_bonus.merchant_categories ORDER BY sort_order, name
 `
 
 func (q *Queries) ListCategories(ctx context.Context) ([]MerchantCategory, error) {
@@ -250,10 +194,10 @@ func (q *Queries) ListCategories(ctx context.Context) ([]MerchantCategory, error
 		var i MerchantCategory
 		if err := rows.Scan(
 			&i.ID,
-			&i.Slug,
 			&i.Name,
 			&i.SortOrder,
 			&i.CreatedAt,
+			&i.ImageUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -298,7 +242,6 @@ func (q *Queries) ListMerchantSlugs(ctx context.Context) ([]ListMerchantSlugsRow
 const listMerchants = `-- name: ListMerchants :many
 SELECT
     m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries,
-    c.slug AS category_slug,
     c.name AS category_name,
     coalesce(stat.active_code_count, 0) AS active_code_count,
     stat.soonest_expires_at
@@ -310,7 +253,7 @@ LEFT JOIN LATERAL (
     WHERE rc.merchant_id = m.id AND rc.status = 'active' AND rc.expires_at > now()
 ) stat ON true
 WHERE m.is_active
-  AND ($3::text IS NULL OR c.slug = $3::text)
+  AND ($3::uuid IS NULL OR m.category_id = $3::uuid)
   AND ($4::text IS NULL OR m.name ILIKE '%' || $4::text || '%')
 ORDER BY
     CASE
@@ -324,11 +267,11 @@ LIMIT $1 OFFSET $2
 `
 
 type ListMerchantsParams struct {
-	Limit         int32   `json:"limit"`
-	Offset        int32   `json:"offset"`
-	CategorySlug  *string `json:"category_slug"`
-	Search        *string `json:"search"`
-	ViewerCountry *string `json:"viewer_country"`
+	Limit         int32      `json:"limit"`
+	Offset        int32      `json:"offset"`
+	CategoryID    *uuid.UUID `json:"category_id"`
+	Search        *string    `json:"search"`
+	ViewerCountry *string    `json:"viewer_country"`
 }
 
 type ListMerchantsRow struct {
@@ -344,7 +287,6 @@ type ListMerchantsRow struct {
 	CreatedAt        time.Time   `json:"created_at"`
 	UpdatedAt        time.Time   `json:"updated_at"`
 	Countries        []string    `json:"countries"`
-	CategorySlug     string      `json:"category_slug"`
 	CategoryName     string      `json:"category_name"`
 	ActiveCodeCount  int64       `json:"active_code_count"`
 	SoonestExpiresAt interface{} `json:"soonest_expires_at"`
@@ -359,6 +301,7 @@ type ListMerchantsRow struct {
 // sqlc 推不出 aggregate 的 nullability，soonest_expires_at 產出來是 interface{}，
 // 由 handler 收成 *time.Time。加 ::timestamptz 會讓它變成非 nullable 的 time.Time，
 // 掃到 NULL（這家沒有可用的碼）直接噴錯，所以不要加。
+// 分類篩選只認 id。
 // 地區優先只是排序，不過濾：外地的服務商照樣看得到，只是排在後面。
 // viewer_country 是 NULL（沒登入、或沒填所在地）時整個 CASE 都是 1，
 // 等於退回原本的排序 —— 匿名訪客拿到的 SSR 內容不會因人而異，SEO 才不會受影響。
@@ -366,7 +309,7 @@ func (q *Queries) ListMerchants(ctx context.Context, arg ListMerchantsParams) ([
 	rows, err := q.db.Query(ctx, listMerchants,
 		arg.Limit,
 		arg.Offset,
-		arg.CategorySlug,
+		arg.CategoryID,
 		arg.Search,
 		arg.ViewerCountry,
 	)
@@ -390,7 +333,6 @@ func (q *Queries) ListMerchants(ctx context.Context, arg ListMerchantsParams) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Countries,
-			&i.CategorySlug,
 			&i.CategoryName,
 			&i.ActiveCodeCount,
 			&i.SoonestExpiresAt,
@@ -408,7 +350,6 @@ func (q *Queries) ListMerchants(ctx context.Context, arg ListMerchantsParams) ([
 const listMerchantsForAdmin = `-- name: ListMerchantsForAdmin :many
 SELECT
     m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries,
-    c.slug AS category_slug,
     c.name AS category_name,
     (SELECT count(*) FROM referral_code_bonus.referral_codes rc
       WHERE rc.merchant_id = m.id AND rc.status = 'active' AND rc.expires_at > now()) AS active_code_count
@@ -430,7 +371,6 @@ type ListMerchantsForAdminRow struct {
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	Countries       []string  `json:"countries"`
-	CategorySlug    string    `json:"category_slug"`
 	CategoryName    string    `json:"category_name"`
 	ActiveCodeCount int64     `json:"active_code_count"`
 }
@@ -459,7 +399,6 @@ func (q *Queries) ListMerchantsForAdmin(ctx context.Context) ([]ListMerchantsFor
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Countries,
-			&i.CategorySlug,
 			&i.CategoryName,
 			&i.ActiveCodeCount,
 		); err != nil {
@@ -473,66 +412,34 @@ func (q *Queries) ListMerchantsForAdmin(ctx context.Context) ([]ListMerchantsFor
 	return items, nil
 }
 
-const recordCategorySlugChange = `-- name: RecordCategorySlugChange :exec
-INSERT INTO referral_code_bonus.category_slug_history (slug, category_id)
-VALUES ($1, $2)
-ON CONFLICT (slug) DO UPDATE SET category_id = EXCLUDED.category_id, replaced_at = now()
-`
-
-type RecordCategorySlugChangeParams struct {
-	Slug       string    `json:"slug"`
-	CategoryID uuid.UUID `json:"category_id"`
-}
-
-func (q *Queries) RecordCategorySlugChange(ctx context.Context, arg RecordCategorySlugChangeParams) error {
-	_, err := q.db.Exec(ctx, recordCategorySlugChange, arg.Slug, arg.CategoryID)
-	return err
-}
-
-const recordMerchantSlugChange = `-- name: RecordMerchantSlugChange :exec
-INSERT INTO referral_code_bonus.merchant_slug_history (slug, merchant_id)
-VALUES ($1, $2)
-ON CONFLICT (slug) DO UPDATE SET merchant_id = EXCLUDED.merchant_id, replaced_at = now()
-`
-
-type RecordMerchantSlugChangeParams struct {
-	Slug       string    `json:"slug"`
-	MerchantID uuid.UUID `json:"merchant_id"`
-}
-
-func (q *Queries) RecordMerchantSlugChange(ctx context.Context, arg RecordMerchantSlugChangeParams) error {
-	_, err := q.db.Exec(ctx, recordMerchantSlugChange, arg.Slug, arg.MerchantID)
-	return err
-}
-
 const updateCategory = `-- name: UpdateCategory :one
 UPDATE referral_code_bonus.merchant_categories
-SET slug = $2, name = $3, sort_order = $4
+SET name = $2, sort_order = $3, image_url = $4
 WHERE id = $1
-RETURNING id, slug, name, sort_order, created_at
+RETURNING id, name, sort_order, created_at, image_url
 `
 
 type UpdateCategoryParams struct {
 	ID        uuid.UUID `json:"id"`
-	Slug      string    `json:"slug"`
 	Name      string    `json:"name"`
 	SortOrder int32     `json:"sort_order"`
+	ImageUrl  *string   `json:"image_url"`
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (MerchantCategory, error) {
 	row := q.db.QueryRow(ctx, updateCategory,
 		arg.ID,
-		arg.Slug,
 		arg.Name,
 		arg.SortOrder,
+		arg.ImageUrl,
 	)
 	var i MerchantCategory
 	err := row.Scan(
 		&i.ID,
-		&i.Slug,
 		&i.Name,
 		&i.SortOrder,
 		&i.CreatedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }

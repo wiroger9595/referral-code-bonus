@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -116,16 +117,12 @@ func (s *Server) handleListMerchantsForAdmin(w http.ResponseWriter, r *http.Requ
 
 func (s *Server) handleCreateCategory(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Slug      string `json:"slug"`
-		Name      string `json:"name"`
-		SortOrder int32  `json:"sort_order"`
+		Name      string  `json:"name"`
+		SortOrder int32   `json:"sort_order"`
+		ImageURL  *string `json:"image_url"`
 	}
 	if err := decodeJSON(w, r, &req); err != nil {
 		badRequest(w, codeInvalidRequest, "請求格式錯誤")
-		return
-	}
-	if !slugPattern.MatchString(req.Slug) {
-		badRequest(w, codeSlugInvalid, "slug 只能是小寫英數字與連字號")
 		return
 	}
 	if strings.TrimSpace(req.Name) == "" {
@@ -133,26 +130,12 @@ func (s *Server) handleCreateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	var cat dbgen.MerchantCategory
-	err := s.store.InTx(ctx, func(q *dbgen.Queries) error {
-		// 新建的分類可能剛好用了某個被改掉的舊 slug —— 那筆轉址要讓位給現用的。
-		if err := q.ClaimCategorySlug(ctx, req.Slug); err != nil {
-			return err
-		}
-		var err error
-		cat, err = q.CreateCategory(ctx, dbgen.CreateCategoryParams{
-			Slug:      req.Slug,
-			Name:      strings.TrimSpace(req.Name),
-			SortOrder: req.SortOrder,
-		})
-		return err
+	cat, err := s.store.CreateCategory(r.Context(), dbgen.CreateCategoryParams{
+		Name:      strings.TrimSpace(req.Name),
+		SortOrder: req.SortOrder,
+		ImageUrl:  req.ImageURL,
 	})
 	if err != nil {
-		if store.IsUniqueViolation(err) {
-			conflict(w, codeSlugTaken, "這個 slug 已經有人用了")
-			return
-		}
 		internalError(w, r, err)
 		return
 	}
@@ -167,16 +150,12 @@ func (s *Server) handleUpdateCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Slug      string `json:"slug"`
-		Name      string `json:"name"`
-		SortOrder int32  `json:"sort_order"`
+		Name      string  `json:"name"`
+		SortOrder int32   `json:"sort_order"`
+		ImageURL  *string `json:"image_url"`
 	}
 	if err := decodeJSON(w, r, &req); err != nil {
 		badRequest(w, codeInvalidRequest, "請求格式錯誤")
-		return
-	}
-	if !slugPattern.MatchString(req.Slug) {
-		badRequest(w, codeSlugInvalid, "slug 只能是小寫英數字與連字號")
 		return
 	}
 	if strings.TrimSpace(req.Name) == "" {
@@ -184,43 +163,15 @@ func (s *Server) handleUpdateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	current, err := s.store.GetCategoryByID(ctx, id)
+	cat, err := s.store.UpdateCategory(r.Context(), dbgen.UpdateCategoryParams{
+		ID:        id,
+		Name:      strings.TrimSpace(req.Name),
+		SortOrder: req.SortOrder,
+		ImageUrl:  req.ImageURL,
+	})
 	if err != nil {
 		if store.IsNotFound(err) {
 			notFound(w, codeCategoryNotFound, "找不到這個分類")
-			return
-		}
-		internalError(w, r, err)
-		return
-	}
-
-	// 跟服務商同一套：改掉的 slug 進歷史表，舊網址才轉得回來。
-	var cat dbgen.MerchantCategory
-	err = s.store.InTx(ctx, func(q *dbgen.Queries) error {
-		if err := q.ClaimCategorySlug(ctx, req.Slug); err != nil {
-			return err
-		}
-		cat, err = q.UpdateCategory(ctx, dbgen.UpdateCategoryParams{
-			ID:        id,
-			Slug:      req.Slug,
-			Name:      strings.TrimSpace(req.Name),
-			SortOrder: req.SortOrder,
-		})
-		if err != nil {
-			return err
-		}
-		if current.Slug == req.Slug {
-			return nil
-		}
-		return q.RecordCategorySlugChange(ctx, dbgen.RecordCategorySlugChangeParams{
-			Slug:       current.Slug,
-			CategoryID: id,
-		})
-	})
-	if err != nil {
-		if store.IsUniqueViolation(err) {
-			conflict(w, codeSlugTaken, "這個 slug 已經有人用了")
 			return
 		}
 		internalError(w, r, err)
@@ -310,29 +261,25 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	var m dbgen.Merchant
-	err = s.store.InTx(ctx, func(q *dbgen.Queries) error {
-		// 新建的服務商可能剛好用了某個被改掉的舊 slug —— 那筆轉址要讓位給現用的。
-		if err := q.ClaimMerchantSlug(ctx, in.Slug); err != nil {
-			return err
-		}
-		var err error
-		m, err = q.CreateMerchant(ctx, dbgen.CreateMerchantParams{
-			Slug:            in.Slug,
-			Name:            strings.TrimSpace(in.Name),
-			CategoryID:      categoryID,
-			LogoUrl:         in.LogoURL,
-			SignupUrl:       in.SignupURL,
-			RewardDesc:      in.RewardDesc,
-			CodeFormatRegex: in.CodeFormatRegex,
-			Countries:       countries,
-		})
-		return err
+	m, err := s.store.CreateMerchant(r.Context(), dbgen.CreateMerchantParams{
+		Slug:            in.Slug,
+		Name:            strings.TrimSpace(in.Name),
+		CategoryID:      categoryID,
+		LogoUrl:         in.LogoURL,
+		SignupUrl:       in.SignupURL,
+		RewardDesc:      in.RewardDesc,
+		CodeFormatRegex: in.CodeFormatRegex,
+		Countries:       countries,
 	})
 	if err != nil {
 		if store.IsUniqueViolation(err) {
 			conflict(w, codeSlugTaken, "這個 slug 已經有人用了")
+			return
+		}
+		// category_id 通過了 uuid.Parse 但指到一個不存在的分類——多半是表單資料過期
+		// （分類被刪掉了），是使用者輸入錯誤，不是伺服器故障，不該回 500。
+		if store.IsForeignKeyViolation(err) {
+			badRequest(w, codeCategoryNotFound, "找不到這個分類，請重新整理後再試")
 			return
 		}
 		internalError(w, r, err)
@@ -364,56 +311,149 @@ func (s *Server) handleUpdateMerchant(w http.ResponseWriter, r *http.Request) {
 		isActive = *in.IsActive
 	}
 
-	ctx := r.Context()
-	current, err := s.store.GetMerchantByID(ctx, id)
+	m, err := s.store.UpdateMerchant(r.Context(), dbgen.UpdateMerchantParams{
+		ID:              id,
+		Slug:            in.Slug,
+		Name:            strings.TrimSpace(in.Name),
+		CategoryID:      categoryID,
+		LogoUrl:         in.LogoURL,
+		SignupUrl:       in.SignupURL,
+		RewardDesc:      in.RewardDesc,
+		CodeFormatRegex: in.CodeFormatRegex,
+		IsActive:        isActive,
+		Countries:       countries,
+	})
 	if err != nil {
 		if store.IsNotFound(err) {
 			notFound(w, codeMerchantNotFound, "找不到這個服務商")
 			return
 		}
-		internalError(w, r, err)
-		return
-	}
-
-	// slug 可以改，但舊網址還在外面流傳，所以改名的同時要把舊的記進歷史表，
-	// 公開端點才找得回來並 301（見 00007_slug_history.sql）。
-	// 三步要嘛全成功要嘛全不做：只寫了一半會留下指向錯誤服務商的轉址。
-	var m dbgen.Merchant
-	err = s.store.InTx(ctx, func(q *dbgen.Queries) error {
-		// 這個 slug 從現在起是現用的，不該再同時是誰的舊網址。
-		if err := q.ClaimMerchantSlug(ctx, in.Slug); err != nil {
-			return err
-		}
-		m, err = q.UpdateMerchant(ctx, dbgen.UpdateMerchantParams{
-			ID:              id,
-			Slug:            in.Slug,
-			Name:            strings.TrimSpace(in.Name),
-			CategoryID:      categoryID,
-			LogoUrl:         in.LogoURL,
-			SignupUrl:       in.SignupURL,
-			RewardDesc:      in.RewardDesc,
-			CodeFormatRegex: in.CodeFormatRegex,
-			IsActive:        isActive,
-			Countries:       countries,
-		})
-		if err != nil {
-			return err
-		}
-		if current.Slug == in.Slug {
-			return nil
-		}
-		return q.RecordMerchantSlugChange(ctx, dbgen.RecordMerchantSlugChangeParams{
-			Slug:       current.Slug,
-			MerchantID: id,
-		})
-	})
-	if err != nil {
 		if store.IsUniqueViolation(err) {
 			conflict(w, codeSlugTaken, "這個 slug 已經有人用了")
+			return
+		}
+		if store.IsForeignKeyViolation(err) {
+			badRequest(w, codeCategoryNotFound, "找不到這個分類，請重新整理後再試")
 			return
 		}
 		internalError(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, m)
+}
+
+type adminUserItem struct {
+	ID           uuid.UUID  `json:"id"`
+	Email        string     `json:"email"`
+	DisplayName  string     `json:"display_name"`
+	Status       string     `json:"status"`
+	CreatedAt    time.Time  `json:"created_at"`
+	IsPro        bool       `json:"is_pro"`
+	ProExpiresAt *time.Time `json:"pro_expires_at"`
+	ProStore     *string    `json:"pro_store"`
+	ProProductID *string    `json:"pro_product_id"`
+}
+
+// handleAdminListUsers 是客服查帳號、查訂閱狀態的入口——退款爭議或要手動
+// 補發/撤銷 Pro 時，得先在這裡找到人。
+func (s *Server) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
+	limit, offset := paginate(r, 50, 200)
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+
+	rows, err := s.store.ListUsersAdmin(r.Context(), dbgen.ListUsersAdminParams{
+		Limit:  limit,
+		Offset: offset,
+		Q:      q,
+	})
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	total, err := s.store.CountUsersAdmin(r.Context(), q)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+
+	items := make([]adminUserItem, len(rows))
+	for i, row := range rows {
+		items[i] = adminUserItem{
+			ID: row.ID, Email: row.Email, DisplayName: row.DisplayName,
+			Status: row.Status, CreatedAt: row.CreatedAt,
+			IsPro:        row.IsPro != nil && *row.IsPro,
+			ProExpiresAt: row.ProExpiresAt, ProStore: row.ProStore, ProProductID: row.ProProductID,
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"users": items, "total": total})
+}
+
+// handleAdminGrantPro 是客服手動補發 Pro 的入口（例如客訴補償、行銷贈送）。
+// 走 store='promotional'，跟 RevenueCat webhook 進來的訂閱共用同一張表、
+// 同一套 isPro() 判斷——之後真的商店訂閱進來一樣會 upsert 蓋過去，不會衝突。
+func (s *Server) handleAdminGrantPro(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		badRequest(w, codeInvalidID, "id 格式錯誤")
+		return
+	}
+
+	var req struct {
+		ExpiresAt *time.Time `json:"expires_at"`
+	}
+	if err := decodeJSON(w, r, &req); err != nil {
+		badRequest(w, codeInvalidRequest, "請求格式錯誤")
+		return
+	}
+
+	ctx := r.Context()
+	if _, err := s.store.GetUserByID(ctx, userID); err != nil {
+		if store.IsNotFound(err) {
+			notFound(w, codeUserNotFound, "找不到這個使用者")
+			return
+		}
+		internalError(w, r, err)
+		return
+	}
+
+	sub, err := s.store.UpsertSubscription(ctx, dbgen.UpsertSubscriptionParams{
+		UserID:      userID,
+		Entitlement: s.cfg.ProEntitlement,
+		ProductID:   "admin_grant",
+		Store:       "promotional",
+		IsActive:    true,
+		WillRenew:   false,
+		ExpiresAt:   req.ExpiresAt,
+		RcAppUserID: userID.String(),
+	})
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, sub)
+}
+
+// handleAdminRevokePro 撤銷手動或商店授權的 Pro（退款爭議、誤發）。
+// 跟刪分類一樣是冪等操作：本來就沒有生效中的訂閱也回 204，不當錯誤處理。
+func (s *Server) handleAdminRevokePro(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		badRequest(w, codeInvalidID, "id 格式錯誤")
+		return
+	}
+
+	ctx := r.Context()
+	if _, err := s.store.GetUserByID(ctx, userID); err != nil {
+		if store.IsNotFound(err) {
+			notFound(w, codeUserNotFound, "找不到這個使用者")
+			return
+		}
+		internalError(w, r, err)
+		return
+	}
+
+	if _, err := s.store.RevokeSubscription(ctx, userID); err != nil {
+		internalError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusNoContent, nil)
 }

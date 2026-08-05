@@ -10,13 +10,14 @@
   --ion-font-family: system-ui, -apple-system, 'PingFang TC', 'Noto Sans TC', sans-serif;
   --app-font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
 
-  /* 主色 —— 珊瑚橘紅。shade/tint 是 Ionic 用來做 hover 與 activated 的，必須成套給。 */
-  --ion-color-primary: #ff3407;
-  --ion-color-primary-rgb: 255, 52, 7;
-  --ion-color-primary-contrast: #ffffff;
-  --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #e02c05;
-  --ion-color-primary-tint: #ff4a20;
+  /* 主色 —— 珊瑚橘。shade/tint 是 Ionic 用來做 hover 與 activated 的，必須成套給。
+     contrast 是深墨色不是白的：這個橘配白字只有 2.7:1，按鈕上的字會讀不到。 */
+  --ion-color-primary: #f5794f;
+  --ion-color-primary-rgb: 245, 121, 79;
+  --ion-color-primary-contrast: #1a1e29;
+  --ion-color-primary-contrast-rgb: 26, 30, 41;
+  --ion-color-primary-shade: #d86a46;
+  --ion-color-primary-tint: #f68661;
 
   /* 可用 / 上架中。 */
   --ion-color-success: #19a074;
@@ -77,10 +78,22 @@
   --app-line-strong: #dee0e3;
   --app-muted: #6a717f;
 
-  /* 主色的淡底。#ff3407 直接放在這個淡底上只有 2.7:1 讀不到，
-     所以底跟字分兩個變數 —— 字用深一階的磚紅，才有 5.3:1。 */
-  --app-tint: #ffd6cd;
-  --app-tint-ink: #a0320e;
+  /* 主色的淡底。#f5794f 直接放在這個淡底上讀不到，
+     所以底跟字分兩個變數 —— 字用深一階的磚紅，才有 5.4:1。 */
+  --app-tint: #fde2d7;
+  --app-tint-ink: #a03d14;
+
+  /* 分類磁磚的四組淡底。分類**沒有顏色欄位**，這四組是照排序輪流套上去的，
+     只為了讓一整片磁磚不要變成同一坨橘 —— 不帶語意，別拿去表示狀態。
+     每組的字色都是在自己的底上算過 4.5:1 以上的深色。 */
+  --app-accent-1: #fde2d7;
+  --app-accent-1-ink: #a03d14;
+  --app-accent-2: #d8e6ff;
+  --app-accent-2-ink: #14488f;
+  --app-accent-3: #cdece0;
+  --app-accent-3-ink: #0f6a4a;
+  --app-accent-4: #e6ddfb;
+  --app-accent-4-ink: #6b3fa0;
 
   --app-radius-sm: 8px;
   --app-radius: 12px;
@@ -95,16 +108,16 @@
 /* 深色。@ionic/vue 的 dark.system.css 先進來處理元件內部，這裡只覆蓋品牌色與表面色。
    import 順序在 main.ts，改順序會讓這段失效。
 
-   ShopBack 沒有公開深色的 token，這裡是照它的冷灰階自己推的：珊瑚色在深底上
-   要往橘的方向提亮才有對比，直接用 #ff3407 會糊成一團暗紅。 */
+   ShopBack 沒有公開深色的 token，這裡是照它的冷灰階自己推的。主色本身已經夠亮
+   （在深底上有 6.1:1），深色沿用同一個值，只把 tint 往上提、淡底改半透明。 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --ion-color-primary: #ff6a45;
-    --ion-color-primary-rgb: 255, 106, 69;
+    --ion-color-primary: #f5794f;
+    --ion-color-primary-rgb: 245, 121, 79;
     --ion-color-primary-contrast: #1a1e29;
     --ion-color-primary-contrast-rgb: 26, 30, 41;
-    --ion-color-primary-shade: #e05e3d;
-    --ion-color-primary-tint: #ff7d5d;
+    --ion-color-primary-shade: #d86a46;
+    --ion-color-primary-tint: #f68661;
 
     --ion-color-success: #36c096;
     --ion-color-success-rgb: 54, 192, 150;
@@ -141,8 +154,18 @@
     --app-line-strong: #414856;
     --app-muted: #aaadb6;
 
-    --app-tint: rgba(255, 106, 69, 0.16);
-    --app-tint-ink: #ff9a80;
+    --app-tint: rgba(245, 121, 79, 0.16);
+    --app-tint-ink: #ffa286;
+
+    /* 深色底下淡底改用半透明，磚塊才不會比卡片還亮；字色一律提到 tint 那一階。 */
+    --app-accent-1: rgba(245, 121, 79, 0.16);
+    --app-accent-1-ink: #ffa286;
+    --app-accent-2: rgba(94, 156, 255, 0.16);
+    --app-accent-2-ink: #8fbaff;
+    --app-accent-3: rgba(54, 192, 150, 0.16);
+    --app-accent-3-ink: #73dcb8;
+    --app-accent-4: rgba(163, 130, 245, 0.18);
+    --app-accent-4-ink: #c3aefb;
 
     /* 深色底下陰影幾乎看不見，卡片改用比表面亮一階的底來分層。 */
     --app-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);

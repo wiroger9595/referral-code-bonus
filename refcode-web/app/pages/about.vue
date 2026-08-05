@@ -13,17 +13,17 @@ useSeoMeta({
 
     <section class="space-y-2">
       <h2 class="font-medium">{{ $t('about.noRewardsTitle') }}</h2>
-      <p class="text-neutral-600 dark:text-neutral-400">{{ $t('about.noRewardsBody') }}</p>
+      <p class="text-muted">{{ $t('about.noRewardsBody') }}</p>
     </section>
 
     <section class="space-y-2">
       <h2 class="font-medium">{{ $t('about.expiredTitle') }}</h2>
-      <p class="text-neutral-600 dark:text-neutral-400">{{ $t('about.expiredBody') }}</p>
+      <p class="text-muted">{{ $t('about.expiredBody') }}</p>
     </section>
 
     <section class="space-y-2">
       <h2 class="font-medium">{{ $t('about.rankingTitle') }}</h2>
-      <p class="text-neutral-600 dark:text-neutral-400">{{ $t('about.rankingBody') }}</p>
+      <p class="text-muted">{{ $t('about.rankingBody') }}</p>
     </section>
   </article>
 </template>

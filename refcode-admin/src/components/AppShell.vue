@@ -27,6 +27,10 @@ const menuOptions = computed(() => {
         label: () => h(RouterLink, { to: { name: 'categories' } }, () => '分類'),
         key: 'categories',
       },
+      {
+        label: () => h(RouterLink, { to: { name: 'users' } }, () => '使用者'),
+        key: 'users',
+      },
     )
   }
   return items

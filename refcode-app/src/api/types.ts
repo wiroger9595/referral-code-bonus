@@ -44,7 +44,6 @@ export interface MerchantSummary {
   logo_url: string | null
   signup_url: string
   reward_desc: string
-  category_slug: string
   category_name: string
   active_code_count: number
   // 這家最快到期的那個碼。沒有可用的碼時是 null。

@@ -27,7 +27,9 @@ const loadError = ref('')
 const showForm = ref(false)
 const editing = ref<Category | null>(null)
 const submitting = ref(false)
-const form = ref({ slug: '', name: '', sort_order: 0 })
+const uploading = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+const form = ref({ name: '', sort_order: 0, image_url: null as string | null })
 
 async function load() {
   loading.value = true
@@ -45,14 +47,35 @@ onMounted(load)
 
 function openCreate() {
   editing.value = null
-  form.value = { slug: '', name: '', sort_order: 0 }
+  form.value = { name: '', sort_order: 0, image_url: null }
   showForm.value = true
 }
 
 function openEdit(c: Category) {
   editing.value = c
-  form.value = { slug: c.slug, name: c.name, sort_order: c.sort_order }
+  form.value = { name: c.name, sort_order: c.sort_order, image_url: c.image_url }
   showForm.value = true
+}
+
+function pickImage() {
+  fileInput.value?.click()
+}
+
+async function onImageSelected(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  uploading.value = true
+  try {
+    form.value.image_url = await api.uploadImage(file, 'categories')
+  } catch (e) {
+    message.error(e instanceof ApiError ? e.message : '上傳失敗')
+  } finally {
+    uploading.value = false
+    // 清空 value，不然選同一個檔案第二次不會觸發 change。
+    input.value = ''
+  }
 }
 
 async function submit() {
@@ -60,9 +83,9 @@ async function submit() {
   try {
     if (editing.value) {
       await api.updateCategory(editing.value.id, {
-        slug: form.value.slug,
         name: form.value.name,
         sort_order: form.value.sort_order,
+        image_url: form.value.image_url,
       })
     } else {
       await api.createCategory(form.value)
@@ -90,9 +113,20 @@ async function remove(c: Category) {
 }
 
 const columns: DataTableColumns<Category> = [
+  {
+    title: '圖片',
+    key: 'image_url',
+    width: 60,
+    render: (row) =>
+      row.image_url
+        ? h('img', {
+            src: row.image_url,
+            style: 'width: 32px; height: 32px; object-fit: cover; border-radius: 4px',
+          })
+        : h('span', { style: 'opacity: 0.3' }, '—'),
+  },
   { title: '排序', key: 'sort_order', width: 80 },
   { title: '名稱', key: 'name' },
-  { title: 'slug', key: 'slug' },
   {
     title: '',
     key: 'actions',
@@ -137,17 +171,33 @@ const columns: DataTableColumns<Category> = [
       style="width: 460px"
     >
       <NForm>
-        <NFormItem label="slug">
-          <NInput v-model:value="form.slug" placeholder="bank" />
-          <template #feedback>
-            出現在 /category/{slug} 的網址上。改掉之後舊網址會自動 301 轉到新的。
-          </template>
-        </NFormItem>
         <NFormItem label="名稱">
           <NInput v-model:value="form.name" placeholder="銀行信用卡" />
         </NFormItem>
         <NFormItem label="排序">
           <NInputNumber v-model:value="form.sort_order" />
+        </NFormItem>
+        <NFormItem label="圖片">
+          <NSpace align="center">
+            <img
+              v-if="form.image_url"
+              :src="form.image_url"
+              style="width: 56px; height: 56px; object-fit: cover; border-radius: 6px"
+            />
+            <NButton size="small" :loading="uploading" @click="pickImage">
+              {{ form.image_url ? '更換圖片' : '上傳圖片' }}
+            </NButton>
+            <NButton v-if="form.image_url" size="small" quaternary @click="form.image_url = null">
+              移除
+            </NButton>
+            <input
+              ref="fileInput"
+              type="file"
+              accept="image/*"
+              style="display: none"
+              @change="onImageSelected"
+            />
+          </NSpace>
         </NFormItem>
       </NForm>
 

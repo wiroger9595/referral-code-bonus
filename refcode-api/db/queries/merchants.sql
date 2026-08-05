@@ -2,38 +2,18 @@
 SELECT * FROM referral_code_bonus.merchant_categories ORDER BY sort_order, name;
 
 -- name: CreateCategory :one
-INSERT INTO referral_code_bonus.merchant_categories (slug, name, sort_order)
+INSERT INTO referral_code_bonus.merchant_categories (name, sort_order, image_url)
 VALUES ($1, $2, $3)
 RETURNING *;
 
 -- name: UpdateCategory :one
 UPDATE referral_code_bonus.merchant_categories
-SET slug = $2, name = $3, sort_order = $4
+SET name = $2, sort_order = $3, image_url = $4
 WHERE id = $1
 RETURNING *;
 
--- 舊 slug 也要找得到。live 的一律勝出（ORDER BY），所以就算某個字串同時是
--- A 的舊網址又被 B 拿去當現用網址，也不會回錯人。
--- name: GetCategoryBySlug :one
-SELECT * FROM referral_code_bonus.merchant_categories c
-WHERE c.slug = $1
-   OR c.id IN (
-        SELECT h.category_id FROM referral_code_bonus.category_slug_history h WHERE h.slug = $1
-      )
-ORDER BY (c.slug = $1) DESC
-LIMIT 1;
-
 -- name: GetCategoryByID :one
 SELECT * FROM referral_code_bonus.merchant_categories WHERE id = $1;
-
--- name: RecordCategorySlugChange :exec
-INSERT INTO referral_code_bonus.category_slug_history (slug, category_id)
-VALUES ($1, $2)
-ON CONFLICT (slug) DO UPDATE SET category_id = EXCLUDED.category_id, replaced_at = now();
-
--- 一個 slug 變成現用的，就不該再是誰的舊網址。
--- name: ClaimCategorySlug :exec
-DELETE FROM referral_code_bonus.category_slug_history WHERE slug = $1;
 
 -- merchants.category_id 是 FK 且沒有 ON DELETE，還有服務商掛著的分類刪不掉，
 -- 交給呼叫端把 23503 轉成看得懂的錯誤（見 store.IsForeignKeyViolation）。
@@ -52,7 +32,6 @@ DELETE FROM referral_code_bonus.merchant_categories WHERE id = $1;
 -- name: ListMerchants :many
 SELECT
     m.*,
-    c.slug AS category_slug,
     c.name AS category_name,
     coalesce(stat.active_code_count, 0) AS active_code_count,
     stat.soonest_expires_at
@@ -64,7 +43,8 @@ LEFT JOIN LATERAL (
     WHERE rc.merchant_id = m.id AND rc.status = 'active' AND rc.expires_at > now()
 ) stat ON true
 WHERE m.is_active
-  AND (sqlc.narg(category_slug)::text IS NULL OR c.slug = sqlc.narg(category_slug)::text)
+-- 分類篩選只認 id。
+  AND (sqlc.narg(category_id)::uuid IS NULL OR m.category_id = sqlc.narg(category_id)::uuid)
   AND (sqlc.narg(search)::text IS NULL OR m.name ILIKE '%' || sqlc.narg(search)::text || '%')
 -- 地區優先只是排序，不過濾：外地的服務商照樣看得到，只是排在後面。
 -- viewer_country 是 NULL（沒登入、或沒填所在地）時整個 CASE 都是 1，
@@ -79,20 +59,11 @@ ORDER BY
     active_code_count DESC, m.name
 LIMIT $1 OFFSET $2;
 
--- 舊 slug 也要找得到，呼叫端比對回來的 m.slug 決定要不要 301（見 handleGetMerchant）。
--- live 的一律勝出（ORDER BY），所以就算某個字串同時是 A 的舊網址又被 B 拿去當現用網址，
--- 也不會回錯家。
 -- name: GetMerchantBySlug :one
-SELECT m.*, c.slug AS category_slug, c.name AS category_name
+SELECT m.*, c.name AS category_name
 FROM referral_code_bonus.merchants m
 JOIN referral_code_bonus.merchant_categories c ON c.id = m.category_id
-WHERE m.is_active
-  AND (m.slug = $1
-       OR m.id IN (
-            SELECT h.merchant_id FROM referral_code_bonus.merchant_slug_history h WHERE h.slug = $1
-          ))
-ORDER BY (m.slug = $1) DESC
-LIMIT 1;
+WHERE m.slug = $1 AND m.is_active;
 
 -- name: GetMerchantByID :one
 SELECT * FROM referral_code_bonus.merchants WHERE id = $1;
@@ -109,21 +80,12 @@ SET slug = $2, name = $3, category_id = $4, logo_url = $5, signup_url = $6,
 WHERE id = $1
 RETURNING *;
 
--- name: RecordMerchantSlugChange :exec
-INSERT INTO referral_code_bonus.merchant_slug_history (slug, merchant_id)
-VALUES ($1, $2)
-ON CONFLICT (slug) DO UPDATE SET merchant_id = EXCLUDED.merchant_id, replaced_at = now();
-
--- 一個 slug 變成現用的，就不該再是誰的舊網址。
--- name: ClaimMerchantSlug :exec
-DELETE FROM referral_code_bonus.merchant_slug_history WHERE slug = $1;
 
 -- 後台維護用：不過濾 is_active，而且要帶齊編輯表單需要的欄位
 -- （公開的 ListMerchants 只回展示用的子集）。
 -- name: ListMerchantsForAdmin :many
 SELECT
     m.*,
-    c.slug AS category_slug,
     c.name AS category_name,
     (SELECT count(*) FROM referral_code_bonus.referral_codes rc
       WHERE rc.merchant_id = m.id AND rc.status = 'active' AND rc.expires_at > now()) AS active_code_count

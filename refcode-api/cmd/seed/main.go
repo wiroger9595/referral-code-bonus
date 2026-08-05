@@ -76,35 +76,38 @@ func createAdmin(ctx context.Context, st *store.Store, email, password string) e
 }
 
 func seedDemo(ctx context.Context, st *store.Store) error {
-	categories := []struct{ slug, name string }{
+	// key 只是這支腳本內部把服務商掛到分類上用的，不是資料庫欄位 ——
+	// 分類現在只有 id。
+	categories := []struct{ key, name string }{
 		{"bank", "銀行信用卡"},
 		{"invest", "券商投資"},
 		{"delivery", "外送"},
 		{"streaming", "影音串流"},
 	}
 
-	ids := map[string]string{}
-	for i, c := range categories {
-		cat, err := st.CreateCategory(ctx, dbgen.CreateCategoryParams{
-			Slug: c.slug, Name: c.name, SortOrder: int32(i),
-		})
-		if err != nil {
-			if !store.IsUniqueViolation(err) {
-				return err
-			}
-			continue
-		}
-		ids[c.slug] = cat.ID.String()
-		fmt.Printf("分類：%s\n", cat.Name)
-	}
-
+	// 分類沒有唯一鍵了，重跑 seed 時靠名稱比對既有的，否則會建出一堆重複分類。
 	rows, err := st.ListCategories(ctx)
 	if err != nil {
 		return err
 	}
-	byslug := map[string]dbgen.MerchantCategory{}
+	byName := map[string]dbgen.MerchantCategory{}
 	for _, c := range rows {
-		byslug[c.Slug] = c
+		byName[c.Name] = c
+	}
+
+	byKey := map[string]dbgen.MerchantCategory{}
+	for i, c := range categories {
+		cat, ok := byName[c.name]
+		if !ok {
+			cat, err = st.CreateCategory(ctx, dbgen.CreateCategoryParams{
+				Name: c.name, SortOrder: int32(i),
+			})
+			if err != nil {
+				return err
+			}
+			fmt.Printf("分類：%s\n", cat.Name)
+		}
+		byKey[c.key] = cat
 	}
 
 	merchants := []struct {
@@ -117,7 +120,7 @@ func seedDemo(ctx context.Context, st *store.Store) error {
 	}
 
 	for _, m := range merchants {
-		cat, ok := byslug[m.category]
+		cat, ok := byKey[m.category]
 		if !ok {
 			continue
 		}
@@ -132,6 +135,10 @@ func seedDemo(ctx context.Context, st *store.Store) error {
 			SignupUrl:       m.signupURL,
 			RewardDesc:      m.reward,
 			CodeFormatRegex: regex,
+			// countries 是 NOT NULL（見 00006_geo.sql），零值 nil slice 會被 pgx 編碼成
+			// SQL NULL 而不是空陣列，直接違反約束。handleCreateMerchant 走 geo.NormalizeList
+			// 保證回傳非 nil，這裡繞過了它，要自己給一個非 nil 的空 slice。
+			Countries: []string{},
 		})
 		if err != nil {
 			if !store.IsUniqueViolation(err) {

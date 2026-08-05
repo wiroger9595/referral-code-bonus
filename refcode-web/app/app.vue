@@ -32,27 +32,32 @@ async function signOut() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+  <div class="min-h-screen bg-page text-ink">
     <NuxtRouteAnnouncer />
 
-    <header class="border-b border-neutral-200 dark:border-neutral-800">
-      <div class="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
-        <NuxtLink :to="localePath('/')" class="text-lg font-semibold">{{ $t('site.name') }}</NuxtLink>
+    <!-- 站頭固定在上面：這個站是拿來一直往下滑列表的，捲到一半想換分類或登入
+         的時候，不該要求使用者先滑回頂端。 -->
+    <header class="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur-md">
+      <div class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+        <NuxtLink
+          :to="localePath('/')"
+          class="flex items-center gap-2 text-lg font-bold tracking-tight"
+        >
+          <LogoMark class="size-8 shrink-0 text-brand" />
+          {{ $t('site.name') }}
+        </NuxtLink>
 
-        <nav class="flex items-center gap-4 text-sm">
+        <nav class="flex items-center gap-3 text-sm">
           <NuxtLink
             :to="localePath('/about')"
-            class="text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+            class="hidden font-semibold text-muted hover:text-ink sm:block"
           >
             {{ $t('nav.about') }}
           </NuxtLink>
 
           <template v-if="isLoggedIn">
-            <span class="max-w-32 truncate text-neutral-500">{{ user?.display_name }}</span>
-            <button
-              class="text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
-              @click="signOut"
-            >
+            <span class="max-w-32 truncate font-semibold text-muted">{{ user?.display_name }}</span>
+            <button class="font-semibold text-muted hover:text-ink" @click="signOut">
               {{ $t('nav.logout') }}
             </button>
           </template>
@@ -61,16 +66,11 @@ async function signOut() {
             <NuxtLink
               v-if="route.path !== localePath('/register')"
               :to="registerTo"
-              class="text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+              class="font-semibold text-muted hover:text-ink"
             >
               {{ $t('nav.register') }}
             </NuxtLink>
-            <NuxtLink
-              :to="loginTo"
-              class="rounded-md border border-neutral-300 px-3 py-1.5 transition hover:border-neutral-400 dark:border-neutral-700 dark:hover:border-neutral-500"
-            >
-              {{ $t('nav.login') }}
-            </NuxtLink>
+            <NuxtLink :to="loginTo" class="btn btn-primary">{{ $t('nav.login') }}</NuxtLink>
           </template>
 
           <LangSwitcher />
@@ -78,13 +78,11 @@ async function signOut() {
       </div>
     </header>
 
-    <main class="mx-auto max-w-4xl px-4 py-8">
+    <main class="mx-auto max-w-5xl px-4 py-8">
       <NuxtPage />
     </main>
 
-    <footer
-      class="mt-16 border-t border-neutral-200 py-8 text-center text-sm text-neutral-500 dark:border-neutral-800"
-    >
+    <footer class="mt-16 border-t border-line py-8 text-center text-sm text-muted">
       {{ $t('footer.disclaimer') }}
     </footer>
   </div>

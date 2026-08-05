@@ -242,6 +242,12 @@ func (s *Server) handleCodeStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 數據儀表板是 Pro 賣點之一，免費方案不能看——paywall 上就是這樣賣的。
+	if pro, _ := s.isPro(r, userID); !pro {
+		writeError(w, http.StatusForbidden, codeProRequired, "查看曝光/點擊數據需要升級 Pro")
+		return
+	}
+
 	days := 30
 	if v, err := strconv.Atoi(r.URL.Query().Get("days")); err == nil && v > 0 && v <= 365 {
 		days = v

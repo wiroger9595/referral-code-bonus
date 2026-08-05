@@ -8,9 +8,10 @@ import zhTW from './locales/zh-TW.json'
 
 const KEY_LANG = 'refcode_lang'
 
+// 日文先停用（付費服務還沒做日本市場的功能／文案），翻譯檔留著沒刪，
+// 之後要重開直接把這行加回來就好。
 export const SUPPORTED = [
   { code: 'zh-TW', name: '繁體中文' },
-  { code: 'ja', name: '日本語' },
   { code: 'en', name: 'English' },
 ] as const
 
@@ -23,7 +24,6 @@ function fromDevice(): LocaleCode {
   for (const tag of tags) {
     const lower = tag.toLowerCase()
     if (lower.startsWith('zh')) return 'zh-TW'
-    if (lower.startsWith('ja')) return 'ja'
     if (lower.startsWith('en')) return 'en'
   }
   return 'zh-TW'

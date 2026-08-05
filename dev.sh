@@ -39,6 +39,40 @@ EOF
 
 port_pid() { lsof -ti:"$1" 2>/dev/null | head -1; }
 
+# 佔著 port 的那個 process 是不是這個 workspace 起的。判斷看它的工作目錄 ——
+# `go run` 真正 listen 的是編在 /var/folders 底下的暫存執行檔，從路徑完全看不出
+# 是誰的，但 cwd 一定還留在 refcode-* 裡面。
+port_pid_is_ours() {
+  cwd=$(lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1)
+  case "$cwd" in
+    "$ROOT"|"$ROOT"/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# 撞埠時要停掉舊的才啟動得起來。舊的如果是這個 workspace 自己留下的（多半是
+# `./dev.sh all` 背景起的，terminal 關掉之後變成孤兒，Ctrl+C 碰不到），就直接停掉
+# 再繼續 —— 那是使用者本來就要的結果，多問一次只是多一個步驟。
+# 不是我們的就停在這裡：別人的 process 不該被這個腳本殺掉。
+free_port_or_die() {
+  mod=$1
+  port=$(port_of "$mod")
+  pid=$(port_pid "$port")
+  [ -z "$pid" ] && return 0
+
+  if port_pid_is_ours "$pid"; then
+    echo "port $port 還被舊的 ${mod} 佔著（pid ${pid}），先停掉它"
+    cmd_stop "$mod" >/dev/null
+    return 0
+  fi
+
+  echo "port $port 被別的程式佔著，不是這個 workspace 起的，我不會去動它："
+  echo "  pid $pid  $(ps -o command= -p "$pid" 2>/dev/null | head -1)"
+  echo
+  echo "確定要停掉的話：kill $pid"
+  exit 1
+}
+
 ensure_deps() {
   mod=$1
   dir="$ROOT/$(dir_of "$mod")"
@@ -59,6 +93,7 @@ ensure_deps() {
 start_fg() {
   mod=$1
   dir="$ROOT/$(dir_of "$mod")"
+  free_port_or_die "$mod"
   ensure_deps "$mod"
   # 全形括號緊接在 $mod 後面會被 bash 3.2 當成變數名的一部分，一律加大括號。
   echo "啟動 ${mod}（port $(port_of "$mod")）"

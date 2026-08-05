@@ -68,21 +68,19 @@ const {
 
 <template>
   <div class="mx-auto max-w-sm">
-    <h1 class="text-2xl font-semibold">
+    <h1 class="text-2xl font-bold tracking-tight">
       {{ isRegister ? $t('auth.registerTitle') : $t('auth.loginTitle') }}
     </h1>
-    <p class="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+    <p class="mt-2 text-sm/relaxed text-muted">
       {{ isRegister ? $t('auth.registerLead') : $t('auth.loginLead') }}
     </p>
 
-    <p
-      v-if="error"
-      class="mt-6 rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
-    >
+    <p v-if="error" class="mt-6 rounded-card bg-alert-soft p-3 text-sm text-alert-ink">
       {{ error }}
     </p>
 
-    <form class="mt-6 space-y-4" @submit.prevent="submit">
+    <!-- 表單放進卡片，跟目錄頁的卡片式版面同一套語言。 -->
+    <form class="app-card mt-6 space-y-4 p-5" @submit.prevent="submit">
       <div>
         <label for="email" class="block text-sm font-medium">{{ $t('auth.email') }}</label>
         <input
@@ -91,7 +89,7 @@ const {
           type="email"
           required
           autocomplete="email"
-          class="mt-1 w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-300"
+          class="mt-1 w-full rounded-card border border-line-strong bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
       </div>
 
@@ -105,9 +103,9 @@ const {
           type="text"
           autocomplete="nickname"
           :placeholder="$t('auth.displayNamePlaceholder')"
-          class="mt-1 w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-neutral-400 focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-300"
+          class="mt-1 w-full rounded-card border border-line-strong bg-surface px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-brand"
         />
-        <p class="mt-1 text-xs text-neutral-500">{{ $t('auth.displayNameHint') }}</p>
+        <p class="mt-1 text-xs text-muted">{{ $t('auth.displayNameHint') }}</p>
       </div>
 
       <div v-if="isRegister">
@@ -116,12 +114,12 @@ const {
           id="country"
           v-model="country"
           autocomplete="country"
-          class="mt-1 w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:bg-neutral-950 dark:focus:border-neutral-300"
+          class="mt-1 w-full rounded-card border border-line-strong bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         >
           <option value="">{{ $t('auth.countryUnset') }}</option>
           <option v-for="c in countryOptions" :key="c.code" :value="c.code">{{ c.label }}</option>
         </select>
-        <p class="mt-1 text-xs text-neutral-500">{{ $t('auth.countryHint') }}</p>
+        <p class="mt-1 text-xs text-muted">{{ $t('auth.countryHint') }}</p>
       </div>
 
       <div>
@@ -132,13 +130,13 @@ const {
           type="password"
           required
           :autocomplete="isRegister ? 'new-password' : 'current-password'"
-          class="mt-1 w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-300"
+          class="mt-1 w-full rounded-card border border-line-strong bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
-        <p v-if="isRegister" class="mt-1 text-xs text-neutral-500">{{ $t('auth.passwordHint') }}</p>
+        <p v-if="isRegister" class="mt-1 text-xs text-muted">{{ $t('auth.passwordHint') }}</p>
         <p v-else class="mt-1 text-right text-xs">
           <NuxtLink
             :to="localePath('/forgot-password')"
-            class="text-neutral-500 hover:underline"
+            class="text-muted hover:underline"
           >
             {{ $t('auth.forgotLink') }}
           </NuxtLink>
@@ -148,7 +146,7 @@ const {
       <button
         type="submit"
         :disabled="pending"
-        class="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm text-white transition hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+        class="btn btn-primary w-full disabled:opacity-50"
       >
         {{
           pending
@@ -161,25 +159,25 @@ const {
     </form>
 
     <div v-if="googleEnabled" class="mt-6">
-      <div class="mb-4 flex items-center gap-3 text-xs text-neutral-400">
-        <span class="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+      <div class="mb-4 flex items-center gap-3 text-xs text-muted">
+        <span class="h-px flex-1 bg-line" />
         {{ $t('auth.or') }}
-        <span class="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+        <span class="h-px flex-1 bg-line" />
       </div>
 
       <div ref="googleTarget" class="flex justify-center" />
 
-      <p v-if="googleFailed" class="mt-2 text-center text-xs text-neutral-500">
+      <p v-if="googleFailed" class="mt-2 text-center text-xs text-muted">
         {{ $t('auth.googleFailed') }}
       </p>
     </div>
 
-    <p class="mt-8 text-center text-sm text-neutral-500">
+    <p class="mt-8 text-center text-sm text-muted">
       <template v-if="isRegister">
         {{ $t('auth.haveAccount') }}
         <NuxtLink
           :to="localePath('/login')"
-          class="text-neutral-900 hover:underline dark:text-neutral-100"
+          class="font-semibold text-brand hover:underline"
         >
           {{ $t('auth.toLogin') }}
         </NuxtLink>
@@ -188,7 +186,7 @@ const {
         {{ $t('auth.noAccount') }}
         <NuxtLink
           :to="localePath('/register')"
-          class="text-neutral-900 hover:underline dark:text-neutral-100"
+          class="font-semibold text-brand hover:underline"
         >
           {{ $t('auth.toRegister') }}
         </NuxtLink>

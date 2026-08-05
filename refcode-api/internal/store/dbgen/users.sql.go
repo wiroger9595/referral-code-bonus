@@ -26,6 +26,19 @@ func (q *Queries) AnonymizeUserEvents(ctx context.Context, userID *uuid.UUID) er
 	return err
 }
 
+const countUsersAdmin = `-- name: CountUsersAdmin :one
+SELECT count(*) FROM referral_code_bonus.users u
+WHERE u.status <> 'deleted'
+  AND ($1::text = '' OR u.email ILIKE '%' || $1::text || '%')
+`
+
+func (q *Queries) CountUsersAdmin(ctx context.Context, q_ string) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsersAdmin, q_)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAdmin = `-- name: CreateAdmin :one
 INSERT INTO referral_code_bonus.admins (email, password_hash, display_name, role)
 VALUES ($1, $2, $3, $4)
@@ -302,6 +315,72 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 	return i, err
 }
 
+const listUsersAdmin = `-- name: ListUsersAdmin :many
+SELECT
+    u.id, u.email, u.display_name, u.status, u.created_at,
+    COALESCE(s.is_active, false) AND (s.expires_at IS NULL OR s.expires_at > now()) AS is_pro,
+    s.expires_at  AS pro_expires_at,
+    s.store       AS pro_store,
+    s.product_id  AS pro_product_id
+FROM referral_code_bonus.users u
+LEFT JOIN referral_code_bonus.subscriptions s ON s.user_id = u.id
+WHERE u.status <> 'deleted'
+  AND ($3::text = '' OR u.email ILIKE '%' || $3::text || '%')
+ORDER BY u.created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersAdminParams struct {
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
+	Q      string `json:"q"`
+}
+
+type ListUsersAdminRow struct {
+	ID           uuid.UUID  `json:"id"`
+	Email        string     `json:"email"`
+	DisplayName  string     `json:"display_name"`
+	Status       string     `json:"status"`
+	CreatedAt    time.Time  `json:"created_at"`
+	IsPro        *bool      `json:"is_pro"`
+	ProExpiresAt *time.Time `json:"pro_expires_at"`
+	ProStore     *string    `json:"pro_store"`
+	ProProductID *string    `json:"pro_product_id"`
+}
+
+// 後台的使用者查詢，客服/退款爭議時用來看誰是 Pro、手動補發或撤銷。
+// is_pro 的判斷跟 s.isPro() 同一套邏輯（is_active 且未過期），這裡用 SQL 重算一次
+// 是因為要一次列一頁，不能逐筆呼叫 Go 那個函式。
+func (q *Queries) ListUsersAdmin(ctx context.Context, arg ListUsersAdminParams) ([]ListUsersAdminRow, error) {
+	rows, err := q.db.Query(ctx, listUsersAdmin, arg.Limit, arg.Offset, arg.Q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUsersAdminRow{}
+	for rows.Next() {
+		var i ListUsersAdminRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.DisplayName,
+			&i.Status,
+			&i.CreatedAt,
+			&i.IsPro,
+			&i.ProExpiresAt,
+			&i.ProStore,
+			&i.ProProductID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markEmailVerified = `-- name: MarkEmailVerified :exec
 UPDATE referral_code_bonus.users
 SET email_verified_at = now(), updated_at = now()
@@ -333,6 +412,22 @@ WHERE user_id = $1 AND revoked_at IS NULL
 func (q *Queries) RevokeAllUserTokens(ctx context.Context, userID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, revokeAllUserTokens, userID)
 	return err
+}
+
+const revokeSubscription = `-- name: RevokeSubscription :execrows
+UPDATE referral_code_bonus.subscriptions
+SET is_active = false, will_renew = false, updated_at = now()
+WHERE user_id = $1 AND is_active
+`
+
+// 客服手動撤銷 Pro（退款爭議、誤發）。只關掉 is_active，事件紀錄不動——
+// 跟 RevenueCat webhook 進來的撤銷用同一份狀態，之後真的 webhook 送到時會再 upsert 一次。
+func (q *Queries) RevokeSubscription(ctx context.Context, userID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeSubscription, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const revokeTokenFamily = `-- name: RevokeTokenFamily :exec

@@ -4,7 +4,7 @@ interface SitemapEntry {
 }
 
 interface Category {
-  slug: string
+  id: string
 }
 
 // 跟 nuxt.config 的 i18n.locales 對齊。前綴策略是 prefix_except_default，
@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
   const pages: Page[] = [
     { path: '', priority: '1.0' },
     { path: '/about', priority: '0.3' },
-    ...categories.categories.map((c) => ({ path: `/category/${c.slug}`, priority: '0.7' })),
+    ...categories.categories.map((c) => ({ path: `/category/${c.id}`, priority: '0.7' })),
     ...merchants.entries.map((m) => ({
       path: `/referral/${m.slug}`,
       priority: '0.9',

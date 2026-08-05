@@ -54,7 +54,12 @@ export default defineNuxtConfig({
       ],
       // favicon 移進 public/images/ 之後不再有 /favicon.ico 這條路徑，
       // 瀏覽器預設的隱性請求會 404，所以要明確宣告。
-      link: [{ rel: 'icon', type: 'image/x-icon', href: '/images/favicon.ico' }],
+      // SVG 版擺前面：它靠內嵌的 prefers-color-scheme 在深色分頁列上換色，
+      // ico 是給不吃 SVG favicon 的環境的退路。
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/images/favicon.svg' },
+        { rel: 'icon', type: 'image/x-icon', href: '/images/favicon.ico' },
+      ],
     },
   },
 

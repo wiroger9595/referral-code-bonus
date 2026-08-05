@@ -83,7 +83,7 @@ function submit() {
 <template>
   <div class="mx-auto max-w-sm">
     <h1 class="text-2xl font-semibold">{{ $t('auth.forgotTitle') }}</h1>
-    <p class="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+    <p class="mt-2 text-sm text-muted">
       {{
         step === 'email'
           ? $t('auth.forgotLeadEmail')
@@ -93,7 +93,7 @@ function submit() {
 
     <p
       v-if="error"
-      class="mt-6 rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-200"
+      class="mt-6 rounded-card bg-alert-soft p-3 text-sm text-alert-ink"
     >
       {{ error }}
     </p>
@@ -113,14 +113,14 @@ function submit() {
           type="email"
           required
           autocomplete="email"
-          class="mt-1 w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-300"
+          class="mt-1 w-full rounded-card border border-line-strong bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
       </div>
 
       <button
         type="submit"
         :disabled="pending"
-        class="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm text-white transition hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+        class="btn btn-primary w-full disabled:opacity-50"
       >
         {{ pending ? $t('auth.pending') : $t('auth.forgotSendCode') }}
       </button>
@@ -138,7 +138,7 @@ function submit() {
           autocomplete="one-time-code"
           maxlength="6"
           :placeholder="$t('auth.forgotCodePlaceholder')"
-          class="mt-1 w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm tracking-widest outline-none placeholder:tracking-normal placeholder:text-neutral-400 focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-300"
+          class="mt-1 w-full rounded-card border border-line-strong bg-surface px-3 py-2 text-sm tracking-widest outline-none placeholder:tracking-normal placeholder:text-muted focus:border-brand"
         />
       </div>
 
@@ -152,15 +152,15 @@ function submit() {
           type="password"
           required
           autocomplete="new-password"
-          class="mt-1 w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-300"
+          class="mt-1 w-full rounded-card border border-line-strong bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
         />
-        <p class="mt-1 text-xs text-neutral-500">{{ $t('auth.passwordHint') }}</p>
+        <p class="mt-1 text-xs text-muted">{{ $t('auth.passwordHint') }}</p>
       </div>
 
       <button
         type="submit"
         :disabled="pending"
-        class="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm text-white transition hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+        class="btn btn-primary w-full disabled:opacity-50"
       >
         {{ pending ? $t('auth.pending') : $t('auth.forgotSubmit') }}
       </button>
@@ -168,17 +168,17 @@ function submit() {
       <button
         type="button"
         :disabled="pending"
-        class="w-full text-center text-sm text-neutral-500 hover:underline disabled:opacity-50"
+        class="w-full text-center text-sm text-muted hover:underline disabled:opacity-50"
         @click="resend"
       >
         {{ $t('auth.forgotResend') }}
       </button>
     </form>
 
-    <p class="mt-8 text-center text-sm text-neutral-500">
+    <p class="mt-8 text-center text-sm text-muted">
       <NuxtLink
         :to="localePath('/login')"
-        class="text-neutral-900 hover:underline dark:text-neutral-100"
+        class="font-semibold text-brand hover:underline"
       >
         {{ $t('auth.backToLogin') }}
       </NuxtLink>

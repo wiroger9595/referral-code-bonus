@@ -20,6 +20,9 @@ type Candidate struct {
 	QualityScore int32
 	Impressions  int64
 	CreatedAt    time.Time
+	// 上架者是不是 Pro——這是付費賣點之一（paywall 上寫「優先曝光」），
+	// 不是排序演算法自己要的概念，純粹為了兌現那個賣點才加進來。
+	IsPro bool
 }
 
 type Params struct {
@@ -28,6 +31,9 @@ type Params struct {
 	FreshnessHalfDay float64
 	// 曝光懲罰的軟上限：累積這麼多次曝光時權重約打對折。
 	ImpressionSoftCap float64
+	// Pro 上架者的加權比例，例如 0.15 代表 +15%。故意設得比新鮮度加成小很多——
+	// 這是加分不是分區，爛碼不該因為 Pro 就贏過品質好的免費碼太多。
+	ProBoost float64
 }
 
 func DefaultParams() Params {
@@ -35,14 +41,16 @@ func DefaultParams() Params {
 		FreshnessBoost:    0.5,
 		FreshnessHalfDay:  7,
 		ImpressionSoftCap: 100,
+		ProBoost:          0.15,
 	}
 }
 
-// Weight 是單一候選的權重。三個因子相乘：
+// Weight 是單一候選的權重。四個因子相乘：
 //
 //	品質分數   —— 回報數據決定，爛碼自然沉下去
 //	新鮮度加成 —— 剛上架的碼給一段時間的加成，否則新人永遠排不上
 //	曝光懲罰   —— 已經拿到很多曝光的碼權重下降，把機會讓出來
+//	Pro 加成   —— 兌現 paywall 上的「優先曝光」賣點，幅度刻意壓低
 //
 // 第三項是這套機制的重點：沒有它，前幾名會被同一批碼長期佔據，
 // 新上架的人看不到成效就不會再回來上架，供給端會枯竭。
@@ -60,7 +68,12 @@ func (p Params) Weight(c Candidate, now time.Time) float64 {
 
 	exposure := 1 / (1 + float64(c.Impressions)/p.ImpressionSoftCap)
 
-	return quality * freshness * exposure
+	pro := 1.0
+	if c.IsPro {
+		pro = 1 + p.ProBoost
+	}
+
+	return quality * freshness * exposure * pro
 }
 
 // Rank 依權重做無放回加權抽樣，回傳打散後的順序。

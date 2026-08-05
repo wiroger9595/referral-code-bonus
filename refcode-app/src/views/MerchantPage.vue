@@ -7,6 +7,7 @@ import {
   IonButton,
   IonButtons,
   IonContent,
+  IonFooter,
   IonHeader,
   IonIcon,
   IonPage,
@@ -21,9 +22,10 @@ import {
   lockClosedOutline,
   openOutline,
   shareOutline,
+  shieldCheckmarkOutline,
   ticketOutline,
 } from 'ionicons/icons'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -92,6 +94,10 @@ async function sendReport(code: CodeItem, result: ReportResult) {
   }
 }
 
+// 底部的固定操作列拿的是清單第一個碼 —— 後端已經照品質排過，第一個就是最推薦的那組。
+// 捲到第三張卡以後上面的按鈕就看不到了，這條列是那時候唯一的出口。
+const topCode = computed(() => detail.value?.codes[0] ?? null)
+
 async function shareMerchant() {
   if (!detail.value) return
   await Share.share({
@@ -130,22 +136,31 @@ async function shareMerchant() {
       />
 
       <template v-else-if="detail">
-        <!-- 獎勵內容是使用者往下滑之前唯一想知道的事，放在最上面用最大的字。 -->
-        <div class="hero page-pad">
-          <div class="logo">
-            <img
-              v-if="detail.merchant.logo_url"
-              :src="detail.merchant.logo_url"
-              :alt="detail.merchant.name"
-            />
-            <span v-else>{{ detail.merchant.name.trim().charAt(0) }}</span>
-          </div>
-          <h1>{{ detail.merchant.reward_desc }}</h1>
-          <div class="hero-meta">
-            <span class="pill neutral">{{ detail.merchant.category_name }}</span>
-            <span class="pill" :class="detail.total > 0 ? 'success' : 'neutral'">
-              {{ $t('merchant.activeCodes', { count: detail.total }, detail.total) }}
-            </span>
+        <!-- 獎勵內容是使用者往下滑之前唯一想知道的事，放在最上面用最大的字。
+             整塊做成一張卡（商品頁的品牌頭），下面的碼才讀得出是隸屬於它的。 -->
+        <div class="page-pad hero-wrap">
+          <div class="app-card hero">
+            <div class="logo">
+              <img
+                v-if="detail.merchant.logo_url"
+                :src="detail.merchant.logo_url"
+                :alt="detail.merchant.name"
+              />
+              <span v-else>{{ detail.merchant.name.trim().charAt(0) }}</span>
+            </div>
+            <p class="brand">{{ detail.merchant.name }}</p>
+            <h1>{{ detail.merchant.reward_desc }}</h1>
+            <div class="hero-meta">
+              <span class="pill neutral">{{ detail.merchant.category_name }}</span>
+              <span class="pill" :class="detail.total > 0 ? 'success' : 'neutral'">
+                {{ $t('merchant.activeCodes', { count: detail.total }, detail.total) }}
+              </span>
+            </div>
+
+            <p class="trust">
+              <IonIcon :icon="shieldCheckmarkOutline" />
+              {{ $t('merchant.reviewed') }}
+            </p>
           </div>
         </div>
 
@@ -222,13 +237,54 @@ async function shareMerchant() {
         </EmptyState>
       </template>
     </IonContent>
+
+    <!-- 固定在底部的轉換列。沒有碼的時候不出現 —— 那時候按下去也沒有東西可以帶走。 -->
+    <IonFooter v-if="topCode" class="cta">
+      <div class="cta-inner">
+        <template v-if="topCode.masked">
+          <IonButton expand="block" class="wide" @click="goLoginToReveal">
+            <IonIcon slot="start" :icon="lockClosedOutline" />
+            {{ $t('merchant.loginToReveal') }}
+          </IonButton>
+        </template>
+        <template v-else>
+          <p class="cta-hint tiny muted">{{ $t('merchant.ctaBest') }}</p>
+          <div class="cta-actions">
+            <IonButton
+              class="wide"
+              fill="outline"
+              :color="copiedId === topCode.id ? 'success' : 'primary'"
+              @click="copyCode(topCode)"
+            >
+              <IonIcon slot="start" :icon="copiedId === topCode.id ? checkmarkOutline : copyOutline" />
+              {{ copiedId === topCode.id ? $t('merchant.copied') : $t('merchant.copy') }}
+            </IonButton>
+            <IonButton class="wide grow" @click="openSignup(topCode)">
+              {{ $t('merchant.goSignup') }}
+              <IonIcon slot="end" :icon="openOutline" />
+            </IonButton>
+          </div>
+        </template>
+      </div>
+    </IonFooter>
   </IonPage>
 </template>
 
 <style scoped>
-.hero {
+.hero-wrap {
   padding-top: 4px;
-  padding-bottom: 22px;
+  padding-bottom: 18px;
+}
+
+.hero {
+  padding: 18px;
+}
+
+.brand {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-muted);
 }
 
 .logo {
@@ -252,7 +308,7 @@ async function shareMerchant() {
 }
 
 .hero h1 {
-  margin: 0;
+  margin: 3px 0 0;
   font-size: 25px;
   font-weight: 700;
   line-height: 1.28;
@@ -266,8 +322,26 @@ async function shareMerchant() {
   margin-top: 14px;
 }
 
+.trust {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--app-line);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-muted);
+}
+
+.trust ion-icon {
+  color: var(--ion-color-success);
+  font-size: 15px;
+}
+
+/* 底部有固定的操作列，清單要多留一段，最後一張卡才不會被蓋住。 */
 .list {
-  padding-bottom: 28px;
+  padding-bottom: 20px;
 }
 
 .card {
@@ -329,5 +403,38 @@ async function shareMerchant() {
 .report-actions {
   display: flex;
   gap: 2px;
+}
+
+/* ── 底部操作列 ─────────────────────────────────────── */
+
+/* ion-footer 預設會畫一條上框線，這裡改用陰影往上打，跟卡片式版面比較搭。
+   ion-padding 的 safe area 只有 ion-content 有，底部的 home indicator 要自己讓。 */
+.cta {
+  background: var(--app-surface);
+  box-shadow: 0 -2px 12px rgba(64, 72, 90, 0.1);
+}
+
+.cta::before {
+  display: none;
+}
+
+.cta-inner {
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+}
+
+.cta-hint {
+  margin: 0 0 6px;
+}
+
+.cta-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .cta {
+    border-top: 1px solid var(--app-line);
+    box-shadow: none;
+  }
 }
 </style>

@@ -85,3 +85,32 @@ WHERE user_id = $1;
 -- subscription_events.user_id 是 ON DELETE SET NULL（回報內容留著但匿名）。
 -- name: DeleteUser :exec
 DELETE FROM referral_code_bonus.users WHERE id = $1;
+
+-- 後台的使用者查詢，客服/退款爭議時用來看誰是 Pro、手動補發或撤銷。
+-- is_pro 的判斷跟 s.isPro() 同一套邏輯（is_active 且未過期），這裡用 SQL 重算一次
+-- 是因為要一次列一頁，不能逐筆呼叫 Go 那個函式。
+-- name: ListUsersAdmin :many
+SELECT
+    u.id, u.email, u.display_name, u.status, u.created_at,
+    COALESCE(s.is_active, false) AND (s.expires_at IS NULL OR s.expires_at > now()) AS is_pro,
+    s.expires_at  AS pro_expires_at,
+    s.store       AS pro_store,
+    s.product_id  AS pro_product_id
+FROM referral_code_bonus.users u
+LEFT JOIN referral_code_bonus.subscriptions s ON s.user_id = u.id
+WHERE u.status <> 'deleted'
+  AND (sqlc.arg(q)::text = '' OR u.email ILIKE '%' || sqlc.arg(q)::text || '%')
+ORDER BY u.created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: CountUsersAdmin :one
+SELECT count(*) FROM referral_code_bonus.users u
+WHERE u.status <> 'deleted'
+  AND (sqlc.arg(q)::text = '' OR u.email ILIKE '%' || sqlc.arg(q)::text || '%');
+
+-- 客服手動撤銷 Pro（退款爭議、誤發）。只關掉 is_active，事件紀錄不動——
+-- 跟 RevenueCat webhook 進來的撤銷用同一份狀態，之後真的 webhook 送到時會再 upsert 一次。
+-- name: RevokeSubscription :execrows
+UPDATE referral_code_bonus.subscriptions
+SET is_active = false, will_renew = false, updated_at = now()
+WHERE user_id = $1 AND is_active;

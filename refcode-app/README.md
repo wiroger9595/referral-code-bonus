@@ -113,6 +113,86 @@ install referrer 與 `com.facebook.katana` 的 queries 塞進合併後的 manife
 Play 的資料安全性表單就必須申報使用廣告 ID，也跟隱私權政策衝突。
 改了那段要重跑 `npx cap sync`，並依 `store/play-store/data-safety.md` 的指令重驗 manifest。
 
+## 包版
+
+送商店的正式版。**每次包版一定從 `npm run build` 開始** —— `cap sync` 只是把 `dist/`
+複製進兩個原生專案，它不會幫你重新 build 前端，忘了這步就是拿舊的 `dist/` 去送審。
+
+### 版本號
+
+兩個平台各記各的，**沒有共用來源**（`package.json` 的 `version` 沒有人讀，別改那個）：
+
+| 平台 | 檔案 | 欄位 |
+|---|---|---|
+| Android | `android/app/build.gradle` | `versionName`（給人看的 1.2.0）、`versionCode`（整數，只能往上加） |
+| iOS | `ios/App/App.xcodeproj/project.pbxproj` | `MARKETING_VERSION`（對應 versionName）、`CURRENT_PROJECT_VERSION`（對應 versionCode） |
+
+規則：`versionName` / `MARKETING_VERSION` 兩邊要一樣，使用者在兩家商店看到的是同一個版本。
+`versionCode` / `CURRENT_PROJECT_VERSION` **每上傳一次就 +1**，就算版本名沒變也要加 ——
+兩家商店都不接受重複的 build 號，被退回來才發現要整包重出。
+
+### Android → `.aab`
+
+```bash
+npm run build && npx cap sync android
+cd android && ./gradlew :app:bundleRelease      # 產物：app/build/outputs/bundle/release/app-release.aab
+```
+
+簽章由 `android/keystore.properties` 帶進來（gitignore 掉，裡面有密碼），keystore 本體
+放在 repo 外面。**那把金鑰掉了就換不回來** —— Play 上的 app 認的是簽章，補不了，
+只能用新的 package name 重上一個 app。備份它。
+
+`keystore.properties` 不存在時 build 不會掛，只是出來的 aab 沒簽章（見
+`android/app/build.gradle` 開頭）——CI 或別台機器上沒有金鑰也要能跑 debug build。
+所以**上傳前先確認產物真的簽過**：
+
+```bash
+keytool -printcert -jarfile android/app/build/outputs/bundle/release/app-release.aab
+```
+
+印得出 `CN=RefCode` 才是簽好的；印不出來就是 `keystore.properties` 沒被讀到。
+
+上傳走 Play Console → 正式版 → 建立新版本，把 `.aab` 拉進去。
+
+### iOS → `.ipa`
+
+```bash
+npm run build && npx cap sync ios
+xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+  -sdk iphoneos -archivePath ios/App/output/App.xcarchive archive
+xcodebuild -exportArchive -archivePath ios/App/output/App.xcarchive \
+  -exportOptionsPlist ios/App/ExportOptions.plist -exportPath ios/App/output
+```
+
+`ios/App/output/` 已經在 `ios/.gitignore` 裡，產物不會進版控。
+
+**目前第二步（export）跑不過**，卡在憑證：archive 這步用開發憑證就能簽，實測會過；
+但 export 要的是 **iOS Distribution 憑證**，那個要有付費的 Apple Developer Program
+帳號才申請得到，現在沒有。錯誤長這樣：
+
+```
+error: exportArchive No signing certificate "iOS Distribution" found
+error: exportArchive No profiles for 'tw.refcode.app' were found
+```
+
+這是已知的送審阻斷項，見 `store/README.md` 的「5. 原生平台」。帳號下來之後，
+**先用 Xcode 走一次** `npx cap open ios` → Product → Archive → Distribute App，
+讓它把 Distribution 憑證與描述檔建起來，之後上面那條指令列的路才會通。
+
+不要為了繞過這個錯誤而在指令後面加 `-allowProvisioningUpdates` —— 那會直接在
+Apple 帳號上申請憑證，而 Distribution 憑證的數量有上限，該由人決定什麼時候建。
+
+上傳用 `xcrun altool` 或 Xcode 的 Organizer；TestFlight 內部測試不必等審核，
+正式送審走 App Store Connect。
+
+**`ExportOptions.plist` 的 `manageAppVersionAndBuildNumber` 是 `false`，不要改成 true。**
+開著的話 Xcode 會自己把 build number 往上加，專案裡的 `CURRENT_PROJECT_VERSION`
+就跟送出去的版本對不起來，日後要查哪個 build 對應哪份原始碼會找不到。
+
+### 送審前
+
+`store/checklist.md` 走一遍。**目前還有阻斷項沒解決**，見 `store/README.md`。
+
 ## 還沒做
 加原生平台後，實機連本機 API 要把 `.env` 的 `VITE_API_BASE_URL` 指到電腦的區網 IP
 （模擬器上的 localhost 是裝置自己）。

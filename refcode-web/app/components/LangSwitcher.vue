@@ -24,7 +24,7 @@ function change(event: Event) {
     <span class="sr-only">{{ $t('lang.label') }}</span>
     <select
       :value="locale"
-      class="cursor-pointer rounded-md border border-neutral-300 bg-transparent py-1.5 pr-7 pl-2 text-sm outline-none dark:border-neutral-700"
+      class="cursor-pointer rounded-full border border-line-strong bg-surface py-1.5 pr-7 pl-2 text-sm font-semibold outline-none"
       @change="change"
     >
       <option v-for="o in options" :key="o.code" :value="o.code">{{ o.name }}</option>

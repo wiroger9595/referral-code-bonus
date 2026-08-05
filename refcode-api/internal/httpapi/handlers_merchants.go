@@ -18,13 +18,14 @@ import (
 )
 
 type merchantSummary struct {
-	ID              uuid.UUID  `json:"id"`
-	Slug            string     `json:"slug"`
-	Name            string     `json:"name"`
-	LogoURL         *string    `json:"logo_url"`
-	SignupURL       string     `json:"signup_url"`
-	RewardDesc      string     `json:"reward_desc"`
-	CategorySlug    string     `json:"category_slug"`
+	ID         uuid.UUID `json:"id"`
+	Slug       string    `json:"slug"`
+	Name       string    `json:"name"`
+	LogoURL    *string   `json:"logo_url"`
+	SignupURL  string    `json:"signup_url"`
+	RewardDesc string    `json:"reward_desc"`
+	// 分類一律用 id 認：分類頁的網址與 ?category= 篩選都是它，沒有 slug 這個東西。
+	CategoryID      uuid.UUID  `json:"category_id"`
 	CategoryName    string     `json:"category_name"`
 	ActiveCodeCount int64      `json:"active_code_count"`
 	SoonestExpires  *time.Time `json:"soonest_expires_at"`
@@ -75,10 +76,15 @@ func (s *Server) handleListCategories(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"categories": rows})
 }
 
-// handleGetCategory 存在的理由只有一個：slug 可以改，官網拿到舊 slug 時要問得出
-// 現在的 slug 是什麼才能 301。回傳的 slug 一定是現用的，呼叫端拿它跟網址上的比對。
+// handleGetCategory 給分類頁用：網址上只有 id，但頁面要顯示分類名稱。
 func (s *Server) handleGetCategory(w http.ResponseWriter, r *http.Request) {
-	cat, err := s.store.GetCategoryBySlug(r.Context(), chi.URLParam(r, "slug"))
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		badRequest(w, codeInvalidID, "id 格式錯誤")
+		return
+	}
+
+	cat, err := s.store.GetCategoryByID(r.Context(), id)
 	if err != nil {
 		if store.IsNotFound(err) {
 			notFound(w, codeCategoryNotFound, "找不到這個分類")
@@ -115,8 +121,15 @@ func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 		// 匿名訪客拿到的 SSR 內容因此不會因人而異。
 		ViewerCountry: s.viewerCountry(r),
 	}
+	// 分類一律用 id。認不出來就是不篩，不要靜靜地回全部又讓人以為篩過了 ——
+	// 這裡直接擋掉比較好抓錯。
 	if v := r.URL.Query().Get("category"); v != "" {
-		params.CategorySlug = &v
+		id, err := uuid.Parse(v)
+		if err != nil {
+			badRequest(w, codeInvalidID, "category 要是分類的 id")
+			return
+		}
+		params.CategoryID = &id
 	}
 	if v := r.URL.Query().Get("q"); v != "" {
 		params.Search = &v
@@ -133,7 +146,7 @@ func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 		out[i] = merchantSummary{
 			ID: m.ID, Slug: m.Slug, Name: m.Name,
 			LogoURL: m.LogoUrl, SignupURL: m.SignupUrl, RewardDesc: m.RewardDesc,
-			CategorySlug: m.CategorySlug, CategoryName: m.CategoryName,
+			CategoryID: m.CategoryID, CategoryName: m.CategoryName,
 			ActiveCodeCount: m.ActiveCodeCount,
 			SoonestExpires:  soonestExpiry(m.SoonestExpiresAt),
 			Countries:       m.Countries,
@@ -180,6 +193,7 @@ func (s *Server) handleGetMerchant(w http.ResponseWriter, r *http.Request) {
 			QualityScore: row.QualityScore,
 			Impressions:  row.Impressions,
 			CreatedAt:    row.CreatedAt,
+			IsPro:        row.OwnerIsPro,
 		}
 		byID[row.ID] = row
 	}
@@ -214,8 +228,8 @@ func (s *Server) handleGetMerchant(w http.ResponseWriter, r *http.Request) {
 		"merchant": merchantSummary{
 			ID: merchant.ID, Slug: merchant.Slug, Name: merchant.Name,
 			LogoURL: merchant.LogoUrl, SignupURL: merchant.SignupUrl,
-			RewardDesc:   merchant.RewardDesc,
-			CategorySlug: merchant.CategorySlug, CategoryName: merchant.CategoryName,
+			RewardDesc: merchant.RewardDesc,
+			CategoryID: merchant.CategoryID, CategoryName: merchant.CategoryName,
 			ActiveCodeCount: int64(len(rows)),
 			Countries:       merchant.Countries,
 		},

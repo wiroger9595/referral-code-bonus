@@ -82,6 +82,8 @@ const (
 	codeNameRequired         = "name_required"
 	codeCategoryNotFound     = "category_not_found"
 	codeCategoryInUse        = "category_in_use"
+	codeImageInvalid         = "image_invalid"
+	codeUserNotFound         = "user_not_found"
 )
 
 // 基礎設施與 webhook。前兩個是機器對機器，不會顯示給使用者。

@@ -29,6 +29,8 @@ const loadError = ref('')
 const showForm = ref(false)
 const editing = ref<AdminMerchant | null>(null)
 const submitting = ref(false)
+const uploading = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 function emptyForm(): MerchantInput {
   return {
@@ -91,6 +93,26 @@ function openEdit(m: AdminMerchant) {
     countries: m.countries,
   }
   showForm.value = true
+}
+
+function pickImage() {
+  fileInput.value?.click()
+}
+
+async function onImageSelected(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  uploading.value = true
+  try {
+    form.value.logo_url = await api.uploadImage(file, 'merchants')
+  } catch (e) {
+    message.error(e instanceof ApiError ? e.message : '上傳失敗')
+  } finally {
+    uploading.value = false
+    input.value = ''
+  }
 }
 
 async function submit() {
@@ -203,13 +225,6 @@ const categoryOptions = () =>
       style="width: 560px"
     >
       <NForm>
-        <NFormItem label="slug">
-          <NInput v-model:value="form.slug" placeholder="ooo-bank（小寫英數與連字號）" />
-          <template #feedback>
-            出現在 /referral/{slug} 的網址上。改掉之後舊網址會自動 301 轉到新的，
-            但搜尋引擎重新收錄要一段時間，沒必要不要改。
-          </template>
-        </NFormItem>
         <NFormItem label="名稱">
           <NInput v-model:value="form.name" placeholder="OOO 銀行" />
         </NFormItem>
@@ -222,8 +237,31 @@ const categoryOptions = () =>
         <NFormItem label="獎勵說明">
           <NInput v-model:value="form.reward_desc" placeholder="雙方各得 500 元" />
         </NFormItem>
-        <NFormItem label="Logo URL">
-          <NInput v-model:value="form.logo_url as string" placeholder="留空代表沒有" />
+        <NFormItem label="Logo">
+          <NSpace vertical style="width: 100%">
+            <NSpace align="center">
+              <img
+                v-if="form.logo_url"
+                :src="form.logo_url"
+                style="width: 56px; height: 56px; object-fit: cover; border-radius: 6px"
+              />
+              <NButton size="small" :loading="uploading" @click="pickImage">
+                {{ form.logo_url ? '更換圖片' : '上傳圖片' }}
+              </NButton>
+              <NButton v-if="form.logo_url" size="small" quaternary @click="form.logo_url = null">
+                移除
+              </NButton>
+              <input
+                ref="fileInput"
+                type="file"
+                accept="image/*"
+                style="display: none"
+                @change="onImageSelected"
+              />
+            </NSpace>
+            <!-- 也留手動貼網址的路，之後要指到外部 CDN 圖檔不用先下載再重傳。 -->
+            <NInput v-model:value="form.logo_url as string" placeholder="或直接貼圖片網址" />
+          </NSpace>
         </NFormItem>
         <NFormItem label="適用國家">
           <!-- 留空＝不分地區（串流、雲端這種）。使用者的所在地對得上就排前面，

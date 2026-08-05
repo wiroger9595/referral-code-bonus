@@ -1,6 +1,7 @@
 import type {
   AdminLoginResponse,
   AdminMerchant,
+  AdminUserItem,
   Category,
   Merchant,
   MerchantInput,
@@ -70,7 +71,43 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return body as T
 }
 
+// 檔案上傳走 multipart，不能用 request()——那支固定送 JSON。
+// 401 處理跟 request() 各自寫一份，換取這裡不用硬把 body 型別塞進共用函式。
+async function uploadImage(file: File, folder: 'merchants' | 'categories'): Promise<string> {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('folder', folder)
+
+  const headers = new Headers()
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
+
+  const res = await fetch(`${BASE_URL}/v1/admin/uploads/image`, {
+    method: 'POST',
+    headers,
+    body: form,
+  })
+
+  if (res.status === 401) {
+    setToken(null)
+    onUnauthorized()
+  }
+
+  const body = await res.json().catch(() => null)
+
+  if (!res.ok) {
+    const detail = body?.error
+    throw new ApiError(
+      res.status,
+      detail?.code ?? 'unknown',
+      detail?.message ?? '上傳失敗，請稍後再試',
+    )
+  }
+  return body.url as string
+}
+
 export const api = {
+  uploadImage,
+
   login(email: string, password: string) {
     return request<AdminLoginResponse>('/v1/admin/login', {
       method: 'POST',
@@ -95,16 +132,15 @@ export const api = {
     return request<{ categories: Category[] }>('/v1/categories')
   },
 
-  createCategory(input: { slug: string; name: string; sort_order: number }) {
+  createCategory(input: { name: string; sort_order: number; image_url: string | null }) {
     return request<Category>('/v1/admin/categories', {
       method: 'POST',
       body: JSON.stringify(input),
     })
   },
 
-  // slug 改得動。舊網址不會死 —— 後端把舊的存進 category_slug_history，
-  // 官網抓到舊 slug 會 301 轉到新的。
-  updateCategory(id: string, input: { slug: string; name: string; sort_order: number }) {
+  // 分類沒有 slug：網址與 ?category= 篩選都用 id。
+  updateCategory(id: string, input: { name: string; sort_order: number; image_url: string | null }) {
     return request<Category>(`/v1/admin/categories/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(input),
@@ -128,11 +164,29 @@ export const api = {
     })
   },
 
-  // slug 改得動，舊網址由後端的 merchant_slug_history 撐著（官網會 301）。
+  // 服務商的 slug 改得動，但舊網址不會轉址，改了就是死連結。
   updateMerchant(id: string, input: MerchantInput) {
     return request<Merchant>(`/v1/admin/merchants/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(input),
     })
+  },
+
+  listUsers(q = '', limit = 50, offset = 0) {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+    if (q) params.set('q', q)
+    return request<{ users: AdminUserItem[]; total: number }>(`/v1/admin/users?${params}`)
+  },
+
+  // expiresAt 是 null 代表永久授權（promotional）。
+  grantPro(id: string, expiresAt: string | null) {
+    return request<void>(`/v1/admin/users/${id}/pro`, {
+      method: 'POST',
+      body: JSON.stringify({ expires_at: expiresAt }),
+    })
+  },
+
+  revokePro(id: string) {
+    return request<void>(`/v1/admin/users/${id}/pro`, { method: 'DELETE' })
   },
 }

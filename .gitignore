@@ -1,2 +1,19 @@
 .logs/
 .DS_Store
+
+# 相依與建置產物，都由 CI 重新產生
+node_modules/
+dist/
+.output/
+.nuxt/
+.vite/
+refcode-api/bin/
+
+# Xcode 的索引與建置快取，幾百 MB 且每次開專案都變
+refcode-app/ios/DerivedData/
+refcode-app/ios/App/Pods/
+
+# 憑證與連線字串一律不進 repo，正式值填在 Vercel / Northflank 的環境變數
+.env
+.env.*
+!.env.example

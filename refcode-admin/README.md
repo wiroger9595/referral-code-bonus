@@ -42,8 +42,10 @@ cd ../refcode-api && make seed EMAIL=admin@local.test PASSWORD=admin12345
 
 **拒絕和下架一定要填原因。** 原因會寫進 `code_reviews`，使用者申訴時要拿得出當初的判斷依據。
 
-**分類的 slug 不給改**，跟服務商 slug 同一條規則 —— 出現在 `/category/[slug]` 的網址跟
-`?category=` 篩選參數裡，改掉會讓外部連結與搜尋索引失效。要改名或排序沒關係，只有 slug 鎖住。
+**分類沒有 slug**，一律用 id：分類頁的網址是 `/category/{id}`，`?category=` 篩選也是 id。
+
+**服務商的 slug 改得動，但改了舊網址就死了**——沒有轉址。`/referral/{slug}` 是官網
+吃自然搜尋的主力頁，改 slug 等於放棄那頁已經累積的排名，沒必要不要動。
 
 **刪分類前先確認底下沒有服務商。** `merchant_categories` 沒有 `ON DELETE CASCADE`，
 還有服務商掛著會被後端擋下來（`category_in_use`），不會意外把整批服務商連坐刪掉，

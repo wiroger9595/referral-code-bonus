@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/cors"
 
 	"refcode-api/internal/auth"
+	"refcode-api/internal/cloudinary"
 	"refcode-api/internal/config"
 	"refcode-api/internal/mailer"
 	"refcode-api/internal/ranking"
@@ -22,6 +23,7 @@ type Server struct {
 	oidc     *auth.OIDCVerifier
 	reset    *auth.ResetService
 	mailer   mailer.Mailer
+	images   *cloudinary.Client
 	rankOpts ranking.Params
 }
 
@@ -32,6 +34,7 @@ func NewServer(
 	oidcVerifier *auth.OIDCVerifier,
 	reset *auth.ResetService,
 	mail mailer.Mailer,
+	images *cloudinary.Client,
 ) *Server {
 	return &Server{
 		cfg:      cfg,
@@ -40,6 +43,7 @@ func NewServer(
 		oidc:     oidcVerifier,
 		reset:    reset,
 		mailer:   mail,
+		images:   images,
 		rankOpts: ranking.DefaultParams(),
 	}
 }
@@ -81,7 +85,7 @@ func (s *Server) Routes() http.Handler {
 			r.Use(s.optionalUser)
 
 			r.Get("/categories", s.handleListCategories)
-			r.Get("/categories/{slug}", s.handleGetCategory)
+			r.Get("/categories/{id}", s.handleGetCategory)
 			r.Get("/merchants", s.handleListMerchants)
 			r.Get("/merchants/sitemap", s.handleMerchantSitemap)
 			r.Get("/merchants/{slug}", s.handleGetMerchant)
@@ -118,6 +122,10 @@ func (s *Server) Routes() http.Handler {
 					r.Get("/merchants", s.handleListMerchantsForAdmin)
 					r.Post("/merchants", s.handleCreateMerchant)
 					r.Patch("/merchants/{id}", s.handleUpdateMerchant)
+					r.Post("/uploads/image", s.handleUploadImage)
+					r.Get("/users", s.handleAdminListUsers)
+					r.Post("/users/{id}/pro", s.handleAdminGrantPro)
+					r.Delete("/users/{id}/pro", s.handleAdminRevokePro)
 				})
 			})
 		})

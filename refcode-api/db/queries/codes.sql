@@ -16,6 +16,7 @@ ORDER BY c.created_at DESC;
 -- 服務商頁的候選池。權重計算放在 Go 端（internal/ranking），SQL 只負責撈素材：
 -- 一次上限 200 筆，超過這個數量的長尾對抽樣結果影響已經很小。
 -- name: ListActiveCodesForMerchant :many
+-- 上架者是 Pro 才給排序加成（is_pro），跟免費上架張數上限是同一個賣點延伸。
 SELECT
     c.id, c.user_id, c.code, c.note, c.quality_score, c.impressions,
     c.expires_at, c.created_at, c.activated_at,
@@ -24,7 +25,13 @@ SELECT
     (SELECT count(*) FROM referral_code_bonus.code_reports r
       WHERE r.code_id = c.id AND r.result = 'worked') AS worked_count,
     (SELECT count(*) FROM referral_code_bonus.code_reports r
-      WHERE r.code_id = c.id AND r.result <> 'worked') AS failed_count
+      WHERE r.code_id = c.id AND r.result <> 'worked') AS failed_count,
+    EXISTS (
+        SELECT 1 FROM referral_code_bonus.subscriptions s
+        WHERE s.user_id = c.user_id
+          AND s.is_active
+          AND (s.expires_at IS NULL OR s.expires_at > now())
+    ) AS owner_is_pro
 FROM referral_code_bonus.referral_codes c
 JOIN referral_code_bonus.users u ON u.id = c.user_id
 WHERE c.merchant_id = $1

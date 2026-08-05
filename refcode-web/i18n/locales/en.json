@@ -15,6 +15,10 @@
   "lang": {
     "label": "Language"
   },
+  "common": {
+    "expiresToday": "expires today",
+    "expiresInDays": "expires in {count} day | expires in {count} days"
+  },
   "home": {
     "seoTitle": "Find and share referral codes",
     "seoDescription": "Referral codes for banks, brokerages, food delivery and streaming. Enter a valid code when you sign up and both you and the sharer get a reward from the service.",
@@ -24,7 +28,14 @@
     "lead": "Enter a referral code when you sign up for a bank, brokerage, delivery or streaming service, and both you and the person who shared it get a reward from that service. This site only connects the two sides — every reward comes from the service itself.",
     "categories": "Categories",
     "allMerchants": "All services",
-    "empty": "No services yet."
+    "empty": "No services yet.",
+    "bannerTag": "Human reviewed",
+    "statMerchants": "services",
+    "statCodes": "active codes",
+    "summary": "{count} service, all within validity | {count} services, all within validity",
+    "sectionExpiring": "Ending soon",
+    "sectionHot": "Popular",
+    "limited": "Ending soon"
   },
   "category": {
     "seoTitle": "{name} referral codes",
@@ -47,7 +58,6 @@
     "sharedBy": "shared by {name}",
     "maskedPlaceholder": "Sign in to see the code",
     "loginToReveal": "Sign in to view",
-    "expiresIn": "expires in {count} day | expires in {count} days",
     "workedReports": "{count} person says it worked | {count} people say it worked",
     "copy": "Copy",
     "copied": "Copied",
@@ -56,7 +66,9 @@
     "worked": "It worked",
     "failed": "Didn't work",
     "thanks": "Thanks — this affects how it ranks from now on.",
-    "empty": "No codes are within their validity period right now."
+    "empty": "No codes are within their validity period right now.",
+    "reviewed": "Every code here has been reviewed by a human",
+    "ctaBest": "We picked the highest-rated code for you"
   },
   "about": {
     "seoTitle": "About",

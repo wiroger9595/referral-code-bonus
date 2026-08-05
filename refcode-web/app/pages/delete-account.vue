@@ -47,9 +47,9 @@ async function submit() {
 
     <!-- 刪完之後 user 已經被清掉，不要再 render 下面的表單。 -->
     <template v-if="done">
-      <div class="rounded-lg border border-emerald-600/30 bg-emerald-50 p-4 dark:bg-emerald-950/30">
+      <div class="rounded-card bg-ok-soft p-4 text-ok-ink">
         <h2 class="font-medium">{{ $t('deleteAccount.doneTitle') }}</h2>
-        <p class="mt-1 text-neutral-600 dark:text-neutral-400">{{ $t('deleteAccount.doneBody') }}</p>
+        <p class="mt-1 text-muted">{{ $t('deleteAccount.doneBody') }}</p>
       </div>
       <NuxtLink :to="localePath('/')" class="inline-block underline">
         {{ $t('deleteAccount.backHome') }}
@@ -57,11 +57,11 @@ async function submit() {
     </template>
 
     <template v-else>
-      <p class="text-neutral-600 dark:text-neutral-400">{{ $t('deleteAccount.lead') }}</p>
+      <p class="text-muted">{{ $t('deleteAccount.lead') }}</p>
 
       <section class="space-y-2">
         <h2 class="font-medium">{{ $t('deleteAccount.whatHappensTitle') }}</h2>
-        <ul class="list-disc space-y-1 pl-5 text-neutral-600 dark:text-neutral-400">
+        <ul class="list-disc space-y-1 pl-5 text-muted">
           <li v-for="(item, i) in ($tm('deleteAccount.whatHappens') as unknown[])" :key="i">
             {{ $rt(item as string) }}
           </li>
@@ -70,28 +70,28 @@ async function submit() {
 
       <section class="space-y-2">
         <h2 class="font-medium">{{ $t('deleteAccount.keptTitle') }}</h2>
-        <p class="text-neutral-600 dark:text-neutral-400">{{ $t('deleteAccount.kept') }}</p>
+        <p class="text-muted">{{ $t('deleteAccount.kept') }}</p>
       </section>
 
       <!-- 訂閱不會因為刪帳號而停止扣款，這件事一定要在按下去之前講清楚。 -->
-      <section class="rounded-lg border border-amber-500/40 bg-amber-50 p-4 dark:bg-amber-950/30">
+      <section class="rounded-card bg-brand-soft p-4 text-brand-ink">
         <h2 class="font-medium">{{ $t('deleteAccount.subscriptionTitle') }}</h2>
-        <p class="mt-1 text-neutral-700 dark:text-neutral-300">
+        <p class="mt-1 text-muted">
           {{ $t('deleteAccount.subscriptionNote') }}
         </p>
       </section>
 
       <section v-if="!isLoggedIn" class="space-y-3">
-        <p class="text-neutral-600 dark:text-neutral-400">{{ $t('deleteAccount.signInFirst') }}</p>
+        <p class="text-muted">{{ $t('deleteAccount.signInFirst') }}</p>
         <NuxtLink
           :to="localePath('/login')"
-          class="inline-block rounded-lg bg-neutral-900 px-4 py-2 text-white dark:bg-white dark:text-neutral-900"
+          class="btn btn-primary"
         >
           {{ $t('deleteAccount.signIn') }}
         </NuxtLink>
       </section>
 
-      <section v-else class="space-y-3 rounded-lg border border-red-500/40 p-4">
+      <section v-else class="space-y-3 rounded-card border border-alert/40 p-4">
         <label class="block space-y-1">
           <span class="font-medium">{{ $t('deleteAccount.confirmLabel') }}</span>
           <input
@@ -100,27 +100,27 @@ async function submit() {
             autocapitalize="off"
             autocorrect="off"
             :placeholder="user?.email"
-            class="w-full rounded-lg border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+            class="w-full rounded-card border border-line-strong bg-surface px-3 py-2"
           />
         </label>
 
-        <p v-if="errorMessage" class="text-sm text-red-600 dark:text-red-400">{{ errorMessage }}</p>
+        <p v-if="errorMessage" class="text-sm text-alert-ink">{{ errorMessage }}</p>
 
-        <p class="text-sm text-neutral-600 dark:text-neutral-400">
+        <p class="text-sm text-muted">
           {{ $t('deleteAccount.irreversible') }}
         </p>
 
         <button
           type="button"
           :disabled="submitting || !confirmText"
-          class="rounded-lg bg-red-600 px-4 py-2 text-white disabled:opacity-50"
+          class="btn bg-alert text-on-alert disabled:opacity-50"
           @click="submit"
         >
           {{ $t('deleteAccount.submit') }}
         </button>
       </section>
 
-      <p v-if="cfg.supportEmail" class="text-sm text-neutral-500">
+      <p v-if="cfg.supportEmail" class="text-sm text-muted">
         {{ $t('deleteAccount.contactNote', { email: cfg.supportEmail }) }}
       </p>
     </template>

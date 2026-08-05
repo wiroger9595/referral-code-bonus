@@ -93,7 +93,8 @@ app 與官網的日文／英文介面沒辦法直接顯示，它們拿 code 去�
 | Method | Path | 說明 |
 |---|---|---|
 | GET | `/v1/categories` | 分類列表 |
-| GET | `/v1/merchants` | `?category=&q=&limit=&offset=` |
+| GET | `/v1/categories/{id}` | 單一分類，分類頁拿它顯示名稱 |
+| GET | `/v1/merchants` | `?category=&q=&limit=&offset=`，category 是分類 id |
 | GET | `/v1/merchants/{slug}` | 服務商 + 排序後的推薦碼，同時記錄曝光。未登入時 `codes[].code` 是 `null`（見下） |
 | GET | `/v1/merchants/sitemap` | slug + updated_at，給 Nuxt 產 sitemap |
 | POST | `/v1/events` | `{code_id, event_type: click\|copy}` |
@@ -113,12 +114,19 @@ app 與官網的日文／英文介面沒辦法直接顯示，它們拿 code 去�
 | GET | `/v1/admin/codes/pending` | reviewer |
 | POST | `/v1/admin/codes/{id}/review` | reviewer，`{action: approve\|reject\|disable\|restore, reason}` |
 | POST | `/v1/admin/categories` | owner |
-| PATCH | `/v1/admin/categories/{id}` | owner，slug 不給改 |
+| PATCH | `/v1/admin/categories/{id}` | owner |
 | DELETE | `/v1/admin/categories/{id}` | owner，還有服務商掛著會回 409 `category_in_use` |
-| POST | `/v1/admin/merchants` | owner |
-| PATCH | `/v1/admin/merchants/{id}` | owner，slug 不給改 |
+| POST | `/v1/admin/merchants` | owner，`category_id` 指到不存在的分類回 400 `category_not_found` |
+| PATCH | `/v1/admin/merchants/{id}` | owner，slug 可改（舊網址不轉址），`category_id` 同上 |
 
 ## 幾個容易誤解的設計
+
+**分類只有 id，服務商才有 slug。** 分類頁的網址是 `/category/{merchant_category_id}`，
+`?category=` 也只收 id ——分類的 slug 欄位在 00007 已經刪掉了。服務商的 slug 留著，
+`/referral/{slug}` 是官網吃自然搜尋的主力頁。
+
+**改服務商的 slug 不會留轉址。** 舊網址直接 404，搜尋排名要重新累積。
+後台的表單有提示，但沒有機制擋 —— 要改之前想清楚。
 
 **要註冊才能拿到推薦碼。** `handleGetMerchant` 檢查 `auth.UserID(ctx)`，沒登入時
 `codeItem.Code` 是 `nil`、`Masked` 是 `true`，其餘欄位（家數、評價、備註、分享者）

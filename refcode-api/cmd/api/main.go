@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"refcode-api/internal/auth"
+	"refcode-api/internal/cloudinary"
 	"refcode-api/internal/config"
 	"refcode-api/internal/httpapi"
 	"refcode-api/internal/kv"
@@ -87,11 +88,16 @@ func run() error {
 		FromName: cfg.MailFromName,
 	})
 
+	images := cloudinary.New(cfg.CloudinaryCloudName, cfg.CloudinaryAPIKey, cfg.CloudinaryAPISecret)
+	if !images.Enabled() {
+		slog.Warn("CLOUDINARY_* 未設定，後台圖片上傳暫時停用")
+	}
+
 	go worker.New(st).Run(ctx)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           httpapi.NewServer(cfg, st, tokens, oidcVerifier, reset, mail).Routes(),
+		Handler:           httpapi.NewServer(cfg, st, tokens, oidcVerifier, reset, mail, images).Routes(),
 		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
@@ -113,6 +119,16 @@ func run() error {
 
 	// 收到訊號後給進行中的請求 15 秒收尾。
 	slog.Info("收到關閉訊號，正在停止")
+
+	// srv.Shutdown 逾時只代表它自己放棄等待，不會強制斷開還沒還回 pool 的
+	// DB 連線；接下來的 defer st.Close()/rdb.Close() 沒有 timeout，卡住的話
+	// process 永遠不退出、port 也永遠放不掉。這裡設一個硬上限兜底。
+	go func() {
+		time.Sleep(20 * time.Second)
+		slog.Error("關閉流程逾時，強制結束")
+		os.Exit(1)
+	}()
+
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutdownCtx)

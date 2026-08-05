@@ -60,6 +60,12 @@ type Config struct {
 	RevenueCatWebhookAuth string
 	ProEntitlement        string
 	FreeActiveCodeLimit   int
+
+	// 後台上傳圖片（服務商 logo、分類圖）存去 Cloudinary。留空就是沒設定，
+	// 上傳端點會直接回錯誤，不影響其他功能。
+	CloudinaryCloudName string
+	CloudinaryAPIKey    string
+	CloudinaryAPISecret string
 }
 
 func Load() (*Config, error) {
@@ -101,6 +107,10 @@ func Load() (*Config, error) {
 		RevenueCatWebhookAuth: env("REVENUECAT_WEBHOOK_AUTH", ""),
 		ProEntitlement:        env("PRO_ENTITLEMENT", "pro"),
 		FreeActiveCodeLimit:   envInt("FREE_ACTIVE_CODE_LIMIT", 3),
+
+		CloudinaryCloudName: env("CLOUDINARY_CLOUD_NAME", ""),
+		CloudinaryAPIKey:    env("CLOUDINARY_API_KEY", ""),
+		CloudinaryAPISecret: env("CLOUDINARY_API_SECRET", ""),
 	}
 
 	if cfg.DatabaseURL == "" {

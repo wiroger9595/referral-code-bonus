@@ -15,6 +15,10 @@
   "lang": {
     "label": "語言"
   },
+  "common": {
+    "expiresToday": "今天到期",
+    "expiresInDays": "{count} 天後到期"
+  },
   "home": {
     "seoTitle": "找推薦碼、分享推薦碼",
     "seoDescription": "銀行、券商、外送、串流的推薦碼都在這裡。註冊時填一組還在有效期內的推薦碼，雙方各自從服務商拿到獎勵。",
@@ -24,7 +28,14 @@
     "lead": "註冊銀行、券商、外送或串流服務時填一組推薦碼，你和分享的人都能從該服務商拿到獎勵。本站只做媒合，獎勵由服務商各自發放。",
     "categories": "分類",
     "allMerchants": "所有服務商",
-    "empty": "目前還沒有服務商。"
+    "empty": "目前還沒有服務商。",
+    "bannerTag": "人工審核",
+    "statMerchants": "家服務商",
+    "statCodes": "組可用的碼",
+    "summary": "{count} 家・都在有效期內",
+    "sectionExpiring": "快到期",
+    "sectionHot": "熱門",
+    "limited": "限時"
   },
   "category": {
     "seoTitle": "{name}推薦碼",
@@ -47,7 +58,6 @@
     "sharedBy": "{name} 分享",
     "maskedPlaceholder": "登入才能看到完整碼",
     "loginToReveal": "登入查看",
-    "expiresIn": "{count} 天後到期",
     "workedReports": "{count} 人回報可用",
     "copy": "複製",
     "copied": "已複製",
@@ -56,7 +66,9 @@
     "worked": "可以用",
     "failed": "不能用",
     "thanks": "謝謝回報，這會影響它之後的排序。",
-    "empty": "目前沒有還在有效期內的推薦碼。"
+    "empty": "目前沒有還在有效期內的推薦碼。",
+    "reviewed": "這裡的每一組碼都經過人工審核",
+    "ctaBest": "已為你挑出品質最高的一組"
   },
   "about": {
     "seoTitle": "這是什麼",

@@ -15,6 +15,10 @@
   "lang": {
     "label": "言語"
   },
+  "common": {
+    "expiresToday": "本日期限切れ",
+    "expiresInDays": "あと{count}日で期限切れ"
+  },
   "home": {
     "seoTitle": "紹介コードを探す・共有する",
     "seoDescription": "銀行、証券、フードデリバリー、動画配信の紹介コードを掲載。登録時に有効な紹介コードを入力すると、紹介した人とされた人の双方が各サービスから特典を受け取れます。",
@@ -24,7 +28,14 @@
     "lead": "銀行、証券、フードデリバリー、動画配信サービスの登録時に紹介コードを入力すると、あなたと共有した人の双方がそのサービスから特典を受け取れます。当サイトはマッチングのみを行い、特典は各サービスが付与します。",
     "categories": "カテゴリ",
     "allMerchants": "すべてのサービス",
-    "empty": "現在、掲載中のサービスはありません。"
+    "empty": "現在、掲載中のサービスはありません。",
+    "bannerTag": "人による審査",
+    "statMerchants": "サービス",
+    "statCodes": "有効なコード",
+    "summary": "{count}件・すべて有効期限内",
+    "sectionExpiring": "まもなく終了",
+    "sectionHot": "人気",
+    "limited": "期限間近"
   },
   "category": {
     "seoTitle": "{name}の紹介コード",
@@ -47,7 +58,6 @@
     "sharedBy": "{name} が共有",
     "maskedPlaceholder": "ログインするとコードが表示されます",
     "loginToReveal": "ログインして見る",
-    "expiresIn": "あと{count}日で期限切れ",
     "workedReports": "{count}人が使えたと報告",
     "copy": "コピー",
     "copied": "コピーしました",
@@ -56,7 +66,9 @@
     "worked": "使えた",
     "failed": "使えなかった",
     "thanks": "ご報告ありがとうございます。今後の表示順に反映されます。",
-    "empty": "現在、有効期限内の紹介コードはありません。"
+    "empty": "現在、有効期限内の紹介コードはありません。",
+    "reviewed": "掲載中のコードはすべて人による審査を通っています",
+    "ctaBest": "品質がいちばん高いコードです"
   },
   "about": {
     "seoTitle": "このサイトについて",

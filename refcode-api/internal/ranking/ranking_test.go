@@ -75,6 +75,20 @@ func TestRankKeepsAllCandidates(t *testing.T) {
 	}
 }
 
+// Pro 加成要是真的加成，不是裝飾——付費賣的是「優先曝光」，權重就得真的比同條件的免費碼高。
+func TestWeightFavorsPro(t *testing.T) {
+	p := DefaultParams()
+	now := time.Now()
+	created := now.Add(-30 * 24 * time.Hour)
+
+	free := Candidate{QualityScore: 60, Impressions: 10, CreatedAt: created}
+	pro := Candidate{QualityScore: 60, Impressions: 10, CreatedAt: created, IsPro: true}
+
+	if p.Weight(pro, now) <= p.Weight(free, now) {
+		t.Fatalf("Pro 候選權重應該較高：pro=%v free=%v", p.Weight(pro, now), p.Weight(free, now))
+	}
+}
+
 // 品質分數為 0 的碼仍要留最低權重，否則一旦沉底就再也拿不到翻身的曝光。
 func TestZeroQualityStillRankable(t *testing.T) {
 	p := DefaultParams()

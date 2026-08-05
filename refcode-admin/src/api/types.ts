@@ -20,9 +20,9 @@ export interface AdminLoginResponse {
 
 export interface Category {
   id: string
-  slug: string
   name: string
   sort_order: number
+  image_url: string | null
   created_at: string
 }
 
@@ -50,14 +50,12 @@ export interface MerchantSummary {
   logo_url: string | null
   signup_url: string
   reward_desc: string
-  category_slug: string
   category_name: string
   active_code_count: number
 }
 
 // 後台列表：包含停用的服務商，欄位比公開的 MerchantSummary 齊全。
 export interface AdminMerchant extends Merchant {
-  category_slug: string
   category_name: string
   active_code_count: number
 }
@@ -95,6 +93,19 @@ export interface ReferralCode {
   created_at: string
   activated_at: string | null
   updated_at: string
+}
+
+// 客服查帳號、查訂閱狀態用的（退款爭議、手動補發/撤銷 Pro）。
+export interface AdminUserItem {
+  id: string
+  email: string
+  display_name: string
+  status: 'active' | 'suspended' | 'deleted'
+  created_at: string
+  is_pro: boolean
+  pro_expires_at: string | null
+  pro_store: string | null
+  pro_product_id: string | null
 }
 
 export interface MerchantInput {

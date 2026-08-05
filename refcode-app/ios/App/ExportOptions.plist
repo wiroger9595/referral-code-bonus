@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- xcodebuild -exportArchive 的設定。Xcode 圖形介面走 Distribute App 時不會用到
+     這份，只有指令列出包才會 —— 兩條路的產物要一致，改這裡也要確認 Xcode 那邊。
+
+     manageAppVersionAndBuildNumber 一定要 false：開著的話 Xcode 會自己把 build
+     number 往上加，專案裡的 CURRENT_PROJECT_VERSION 就跟送出去的版本對不起來，
+     之後要對照哪個 build 是哪份原始碼會找不到。 -->
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>teamID</key>
+	<string>49S99762CG</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>uploadSymbols</key>
+	<true/>
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+	<key>destination</key>
+	<string>export</string>
+</dict>
+</plist>
