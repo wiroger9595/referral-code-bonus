@@ -1,7 +1,7 @@
 // Package mailer 負責把信送出去，不管信裡寫什麼 —— 內容由呼叫端組好再交進來。
 //
-// 用標準庫的 net/smtp，沒有額外相依。之後要換成 Resend / SendGrid 那種 HTTP API，
-// 多寫一個實作 Mailer 的型別即可，呼叫端不用動。
+// 兩種實作：本機開發預設用標準庫 net/smtp（不用先架一台 SMTP，留空就退回印 log）；
+// 設了 RESEND_API_KEY 的話優先走 Resend 的 HTTP API。呼叫端只認 Mailer 介面，不用管是哪一種。
 package mailer
 
 import (
@@ -14,6 +14,8 @@ import (
 	"net/smtp"
 	"strings"
 	"time"
+
+	"github.com/resend/resend-go/v3"
 )
 
 type Message struct {
@@ -33,16 +35,51 @@ type Config struct {
 	Password string
 	From     string
 	FromName string
+
+	// Resend。設了就優先於 SMTP —— 兩邊都設的話沒道理跑本機 SMTP 那條慢路。
+	ResendAPIKey string
 }
 
-// New 在 Host 留空時回傳把信印進 log 的實作，本機開發不用先架一台 SMTP。
-// 正式環境不會走到這條 —— config.Load 已經擋掉了。
+// New 依序挑實作：Resend > SMTP > 印進 log。本機開發兩個都不設也能跑，
+// 正式環境兩個都不設會在啟動時被 config.Load 擋下來。
 func New(cfg Config) Mailer {
+	if cfg.ResendAPIKey != "" {
+		return &resendMailer{
+			client:   resend.NewClient(cfg.ResendAPIKey),
+			from:     cfg.From,
+			fromName: cfg.FromName,
+		}
+	}
 	if cfg.Host == "" {
-		slog.Warn("SMTP_HOST 未設定，信件只會印進 log 不會寄出")
+		slog.Warn("SMTP_HOST 與 RESEND_API_KEY 都未設定，信件只會印進 log 不會寄出")
 		return logMailer{}
 	}
 	return &smtpMailer{cfg: cfg}
+}
+
+type resendMailer struct {
+	client   *resend.Client
+	from     string
+	fromName string
+}
+
+func (m *resendMailer) Send(ctx context.Context, msg Message) error {
+	from := m.from
+	if m.fromName != "" {
+		// Resend 吃的是 JSON API，UTF-8 字串直接放就好，不像 SMTP headers 要 encoded-word。
+		from = fmt.Sprintf("%s <%s>", m.fromName, m.from)
+	}
+
+	_, err := m.client.Emails.SendWithContext(ctx, &resend.SendEmailRequest{
+		From:    from,
+		To:      []string{msg.To},
+		Subject: msg.Subject,
+		Text:    msg.Body,
+	})
+	if err != nil {
+		return fmt.Errorf("Resend 寄信: %w", err)
+	}
+	return nil
 }
 
 type logMailer struct{}

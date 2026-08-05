@@ -24,13 +24,16 @@ type Config struct {
 	RedisTLS      bool
 
 	// 寄信。SMTPHost 留空時不會真的寄出去，改成把信印進 log（見 mailer），
-	// 本機開發不用先架一台 SMTP；正式環境留空會在啟動時擋下來。
+	// 本機開發不用先架一台 SMTP；正式環境兩個都留空會在啟動時擋下來。
 	SMTPHost     string
 	SMTPPort     int
 	SMTPUsername string
 	SMTPPassword string
 	MailFrom     string
 	MailFromName string
+
+	// 設了的話優先於 SMTP（見 mailer.New）。
+	ResendAPIKey string
 
 	JWTSecret       string
 	AccessTokenTTL  time.Duration
@@ -88,6 +91,7 @@ func Load() (*Config, error) {
 		SMTPPassword: env("SMTP_PASSWORD", ""),
 		MailFrom:     env("MAIL_FROM", "no-reply@localhost"),
 		MailFromName: env("MAIL_FROM_NAME", "推薦碼交流站"),
+		ResendAPIKey: env("RESEND_API_KEY", ""),
 
 		JWTSecret:       env("JWT_SECRET", ""),
 		AccessTokenTTL:  envDuration("ACCESS_TOKEN_TTL", 15*time.Minute),
@@ -119,10 +123,10 @@ func Load() (*Config, error) {
 	if len(cfg.JWTSecret) < 32 {
 		return nil, fmt.Errorf("JWT_SECRET 至少要 32 個字元（目前 %d）", len(cfg.JWTSecret))
 	}
-	// 正式環境沒設 SMTP 的話，忘記密碼會安靜地把驗證碼印進 log 而不是寄出去 ——
+	// 正式環境兩個寄信管道都沒設的話，忘記密碼會安靜地把驗證碼印進 log 而不是寄出去 ——
 	// 那比直接壞掉更糟，寧可啟動時就擋下來。
-	if cfg.IsProduction() && cfg.SMTPHost == "" {
-		return nil, fmt.Errorf("SMTP_HOST 未設定，正式環境不能不寄信")
+	if cfg.IsProduction() && cfg.SMTPHost == "" && cfg.ResendAPIKey == "" {
+		return nil, fmt.Errorf("SMTP_HOST 或 RESEND_API_KEY 至少要設一個，正式環境不能不寄信")
 	}
 	return cfg, nil
 }

@@ -80,12 +80,13 @@ func run() error {
 	oidcVerifier := auth.NewOIDCVerifier(cfg.GoogleClientIDs, cfg.AppleClientIDs)
 	reset := auth.NewResetService(rdb, cfg.JWTSecret, cfg.PasswordResetTTL, cfg.PasswordResetMaxAttempts, cfg.PasswordResetMaxSends)
 	mail := mailer.New(mailer.Config{
-		Host:     cfg.SMTPHost,
-		Port:     cfg.SMTPPort,
-		Username: cfg.SMTPUsername,
-		Password: cfg.SMTPPassword,
-		From:     cfg.MailFrom,
-		FromName: cfg.MailFromName,
+		Host:         cfg.SMTPHost,
+		Port:         cfg.SMTPPort,
+		Username:     cfg.SMTPUsername,
+		Password:     cfg.SMTPPassword,
+		From:         cfg.MailFrom,
+		FromName:     cfg.MailFromName,
+		ResendAPIKey: cfg.ResendAPIKey,
 	})
 
 	images := cloudinary.New(cfg.CloudinaryCloudName, cfg.CloudinaryAPIKey, cfg.CloudinaryAPISecret)
