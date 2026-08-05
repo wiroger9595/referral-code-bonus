@@ -1,5 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nuxtjs",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
+  "framework": "nuxtjs"
 }
