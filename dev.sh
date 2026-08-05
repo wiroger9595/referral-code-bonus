@@ -109,8 +109,16 @@ start_bg() {
   dir="$ROOT/$(dir_of "$mod")"
   port=$(port_of "$mod")
 
-  if [ -n "$(port_pid "$port")" ]; then
-    echo "$mod 已經在 port $port 跑著，跳過"
+  pid=$(port_pid "$port")
+  if [ -n "$pid" ]; then
+    # 背景啟動不自己停舊的：`./dev.sh all` 的用意是「把沒跑的補起來」，
+    # 已經在跑的重啟一次反而會打斷正在用它的人。
+    if port_pid_is_ours "$pid"; then
+      echo "$mod 已經在 port $port 跑著，跳過（要重啟：./dev.sh stop $mod && ./dev.sh $mod）"
+    else
+      echo "$mod 沒起來：port $port 被別的程式佔著"
+      echo "  pid $pid  $(ps -o command= -p "$pid" 2>/dev/null | head -1)"
+    fi
     return
   fi
 

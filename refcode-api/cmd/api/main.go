@@ -50,7 +50,7 @@ func run() error {
 	ln, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
 		if errors.Is(err, syscall.EADDRINUSE) {
-			return fmt.Errorf("port %s 已經被%s佔用，先停掉舊的（./dev.sh stop api）", cfg.HTTPAddr, portHolder(cfg.HTTPAddr))
+			return fmt.Errorf("port %s 已經被%s佔用。停掉它：%s", cfg.HTTPAddr, portHolder(cfg.HTTPAddr), killHint(cfg.HTTPAddr))
 		}
 		return err
 	}
@@ -134,20 +134,46 @@ func run() error {
 	return srv.Shutdown(shutdownCtx)
 }
 
-// portHolder 回傳佔著這個 port 的 pid，查不到就回空字串——只是為了讓撞埠的
-// 錯誤訊息好懂，查不到也不影響結果。
+// portHolder 回傳佔著這個 port 的 pid 與執行檔，查不到就回空字串——只是為了讓
+// 撞埠的錯誤訊息好懂，查不到也不影響結果。
+//
+// 執行檔名要一起印：`go run` 真正 listen 的是編在 /var/folders 底下的暫存檔，
+// 只給 pid 的話看不出那是自己剛才那支 api 還是別的程式。
 func portHolder(addr string) string {
-	_, port, err := net.SplitHostPort(addr)
-	if err != nil || port == "" {
-		return ""
-	}
-	out, err := exec.Command("lsof", "-ti:"+port).Output()
-	if err != nil {
-		return ""
-	}
-	pids := strings.Fields(string(out))
+	pids := portPIDs(addr)
 	if len(pids) == 0 {
 		return ""
 	}
-	return " pid " + strings.Join(pids, "/") + " "
+
+	out, err := exec.Command("ps", "-o", "comm=", "-p", strings.Join(pids, ",")).Output()
+	names := strings.Fields(string(out))
+	if err != nil || len(names) == 0 {
+		return " pid " + strings.Join(pids, "/") + " "
+	}
+	return fmt.Sprintf(" pid %s（%s）", strings.Join(pids, "/"), strings.Join(names, " "))
+}
+
+// killHint 給一句在任何工作目錄下都能直接貼進 terminal 的指令。
+//
+// 這裡刻意不寫「跑 ./dev.sh stop api」——`go run ./cmd/api` 的工作目錄是
+// refcode-api/，而 dev.sh 在 workspace 根目錄，那個相對路徑在這個情境下必定
+// 找不到檔案，看起來就像「照著做了但停不掉」。
+func killHint(addr string) string {
+	_, port, err := net.SplitHostPort(addr)
+	if err != nil || port == "" {
+		return "lsof -ti tcp:<port> | xargs kill"
+	}
+	return fmt.Sprintf("lsof -ti tcp:%s | xargs kill", port)
+}
+
+func portPIDs(addr string) []string {
+	_, port, err := net.SplitHostPort(addr)
+	if err != nil || port == "" {
+		return nil
+	}
+	out, err := exec.Command("lsof", "-ti:"+port).Output()
+	if err != nil {
+		return nil
+	}
+	return strings.Fields(string(out))
 }
