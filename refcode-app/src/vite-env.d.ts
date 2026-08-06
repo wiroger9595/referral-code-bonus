@@ -11,6 +11,7 @@ interface ImportMetaEnv {
   readonly VITE_REVENUECAT_IOS_KEY?: string
   readonly VITE_REVENUECAT_ANDROID_KEY?: string
   readonly VITE_REVENUECAT_ENTITLEMENT?: string
+  readonly VITE_REVENUECAT_TEST_KEY?: string
 }
 
 interface ImportMeta {

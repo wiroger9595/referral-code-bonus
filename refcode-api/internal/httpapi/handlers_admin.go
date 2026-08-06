@@ -120,6 +120,9 @@ func (s *Server) handleCreateCategory(w http.ResponseWriter, r *http.Request) {
 		Name      string  `json:"name"`
 		SortOrder int32   `json:"sort_order"`
 		ImageURL  *string `json:"image_url"`
+		// 譯文留空代表還沒翻，公開 API 會退回中文那份（見 handlers_merchants 的 localized）。
+		NameEn *string `json:"name_en"`
+		NameJa *string `json:"name_ja"`
 	}
 	if err := decodeJSON(w, r, &req); err != nil {
 		badRequest(w, codeInvalidRequest, "請求格式錯誤")
@@ -134,6 +137,8 @@ func (s *Server) handleCreateCategory(w http.ResponseWriter, r *http.Request) {
 		Name:      strings.TrimSpace(req.Name),
 		SortOrder: req.SortOrder,
 		ImageUrl:  req.ImageURL,
+		NameEn:    trimmedOrNil(req.NameEn),
+		NameJa:    trimmedOrNil(req.NameJa),
 	})
 	if err != nil {
 		internalError(w, r, err)
@@ -153,6 +158,9 @@ func (s *Server) handleUpdateCategory(w http.ResponseWriter, r *http.Request) {
 		Name      string  `json:"name"`
 		SortOrder int32   `json:"sort_order"`
 		ImageURL  *string `json:"image_url"`
+		// 譯文留空代表還沒翻，公開 API 會退回中文那份（見 handlers_merchants 的 localized）。
+		NameEn *string `json:"name_en"`
+		NameJa *string `json:"name_ja"`
 	}
 	if err := decodeJSON(w, r, &req); err != nil {
 		badRequest(w, codeInvalidRequest, "請求格式錯誤")
@@ -168,6 +176,8 @@ func (s *Server) handleUpdateCategory(w http.ResponseWriter, r *http.Request) {
 		Name:      strings.TrimSpace(req.Name),
 		SortOrder: req.SortOrder,
 		ImageUrl:  req.ImageURL,
+		NameEn:    trimmedOrNil(req.NameEn),
+		NameJa:    trimmedOrNil(req.NameJa),
 	})
 	if err != nil {
 		if store.IsNotFound(err) {
@@ -207,6 +217,10 @@ type merchantInput struct {
 	RewardDesc      string  `json:"reward_desc"`
 	CodeFormatRegex *string `json:"code_format_regex"`
 	IsActive        *bool   `json:"is_active"`
+	// 獎勵說明的譯文。留空代表還沒翻，公開 API 會退回中文那份。
+	// 服務商名（Name）刻意沒有譯文欄位 —— 那是品牌名。
+	RewardDescEn *string `json:"reward_desc_en"`
+	RewardDescJa *string `json:"reward_desc_ja"`
 	// 適用國家（ISO 3166-1 alpha-2）。留空代表不分地區，目錄排序時當中性處理。
 	Countries []string `json:"countries"`
 }
@@ -249,6 +263,19 @@ type validationError string
 func (e validationError) Error() string { return string(e) }
 func errValidation(msg string) error    { return validationError(msg) }
 
+// trimmedOrNil 把譯文欄位正規化成「有值」或 NULL。後台的輸入框清空之後送過來的是
+// 空字串，直接存進去會讓公開 API 把那個語言顯示成一片空白 —— 存 NULL 才會退回中文。
+func trimmedOrNil(v *string) *string {
+	if v == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*v)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
 func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 	var in merchantInput
 	if err := decodeJSON(w, r, &in); err != nil {
@@ -268,6 +295,8 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 		LogoUrl:         in.LogoURL,
 		SignupUrl:       in.SignupURL,
 		RewardDesc:      in.RewardDesc,
+		RewardDescEn:    trimmedOrNil(in.RewardDescEn),
+		RewardDescJa:    trimmedOrNil(in.RewardDescJa),
 		CodeFormatRegex: in.CodeFormatRegex,
 		Countries:       countries,
 	})
@@ -319,6 +348,8 @@ func (s *Server) handleUpdateMerchant(w http.ResponseWriter, r *http.Request) {
 		LogoUrl:         in.LogoURL,
 		SignupUrl:       in.SignupURL,
 		RewardDesc:      in.RewardDesc,
+		RewardDescEn:    trimmedOrNil(in.RewardDescEn),
+		RewardDescJa:    trimmedOrNil(in.RewardDescJa),
 		CodeFormatRegex: in.CodeFormatRegex,
 		IsActive:        isActive,
 		Countries:       countries,

@@ -26,6 +26,10 @@
 - [ ] Play Console 的訂閱 `pro` 與兩個基本方案已建立並掛進 RevenueCat
 - [ ] offering 已設為 current，`getOfferings()` 拿得到方案
 - [ ] `refcode-app/.env` 的 `VITE_REVENUECAT_IOS_KEY` / `VITE_REVENUECAT_ANDROID_KEY` 已填
+- [ ] `refcode-app/.env` 的 `VITE_REVENUECAT_TEST_KEY` **已清空** ——
+      Test Store 的 key 會蓋掉平台 key，帶著它送審等於真實購買全部收不到
+- [ ] RevenueCat 的 Play service account credentials 已上傳且驗證通過
+      （做法見 `refcode-app/README.md`，權限傳播最久 36 小時）
 - [ ] `refcode-api/.env` 的 `REVENUECAT_WEBHOOK_AUTH` 已填，且與 RevenueCat 後台的
       Authorization 標頭值一致
 - [ ] RevenueCat 後台的 webhook URL 指向正式環境的 `https://.../v1/webhooks/revenuecat`

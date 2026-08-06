@@ -29,7 +29,14 @@ const editing = ref<Category | null>(null)
 const submitting = ref(false)
 const uploading = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
-const form = ref({ name: '', sort_order: 0, image_url: null as string | null })
+// name_en / name_ja 留空就存 NULL，公開 API 那邊會退回中文（見 refcode-api 的 localized）。
+const form = ref({
+  name: '',
+  name_en: '',
+  name_ja: '',
+  sort_order: 0,
+  image_url: null as string | null,
+})
 
 async function load() {
   loading.value = true
@@ -47,13 +54,19 @@ onMounted(load)
 
 function openCreate() {
   editing.value = null
-  form.value = { name: '', sort_order: 0, image_url: null }
+  form.value = { name: '', name_en: '', name_ja: '', sort_order: 0, image_url: null }
   showForm.value = true
 }
 
 function openEdit(c: Category) {
   editing.value = c
-  form.value = { name: c.name, sort_order: c.sort_order, image_url: c.image_url }
+  form.value = {
+    name: c.name,
+    name_en: c.name_en ?? '',
+    name_ja: c.name_ja ?? '',
+    sort_order: c.sort_order,
+    image_url: c.image_url,
+  }
   showForm.value = true
 }
 
@@ -84,6 +97,8 @@ async function submit() {
     if (editing.value) {
       await api.updateCategory(editing.value.id, {
         name: form.value.name,
+        name_en: form.value.name_en,
+        name_ja: form.value.name_ja,
         sort_order: form.value.sort_order,
         image_url: form.value.image_url,
       })
@@ -171,8 +186,14 @@ const columns: DataTableColumns<Category> = [
       style="width: 460px"
     >
       <NForm>
-        <NFormItem label="名稱">
+        <NFormItem label="名稱（中文）">
           <NInput v-model:value="form.name" placeholder="銀行信用卡" />
+        </NFormItem>
+        <NFormItem label="名稱（English）">
+          <NInput v-model:value="form.name_en" placeholder="留空的話英文站顯示中文" />
+        </NFormItem>
+        <NFormItem label="名稱（日本語）">
+          <NInput v-model:value="form.name_ja" placeholder="留空的話日文站顯示中文" />
         </NFormItem>
         <NFormItem label="排序">
           <NInputNumber v-model:value="form.sort_order" />

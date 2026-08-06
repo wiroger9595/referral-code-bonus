@@ -1,7 +1,7 @@
 import { Preferences } from '@capacitor/preferences'
 import { createI18n } from 'vue-i18n'
 
-import { ApiError } from '../api/client'
+import { ApiError, setApiLang } from '../api/client'
 import en from './locales/en.json'
 import ja from './locales/ja.json'
 import zhTW from './locales/zh-TW.json'
@@ -46,11 +46,14 @@ export const i18n = createI18n({
 export async function initLocale() {
   const saved = await Preferences.get({ key: KEY_LANG })
   i18n.global.locale.value = isSupported(saved.value) ? saved.value : fromDevice()
+  setApiLang(i18n.global.locale.value)
 }
 
 // 使用者手動選過語言就記住，之後不再跟著裝置語言跑。
 export async function setLocale(code: LocaleCode) {
   i18n.global.locale.value = code
+  // 資料欄位的語言跟著切，不然換了介面語言之後分類名還停在上一個語言。
+  setApiLang(code)
   await Preferences.set({ key: KEY_LANG, value: code })
 }
 

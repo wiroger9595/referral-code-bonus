@@ -13,19 +13,27 @@ import (
 )
 
 const createCategory = `-- name: CreateCategory :one
-INSERT INTO referral_code_bonus.merchant_categories (name, sort_order, image_url)
-VALUES ($1, $2, $3)
-RETURNING id, name, sort_order, created_at, image_url
+INSERT INTO referral_code_bonus.merchant_categories (name, sort_order, image_url, name_en, name_ja)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, sort_order, created_at, image_url, name_en, name_ja
 `
 
 type CreateCategoryParams struct {
 	Name      string  `json:"name"`
 	SortOrder int32   `json:"sort_order"`
 	ImageUrl  *string `json:"image_url"`
+	NameEn    *string `json:"name_en"`
+	NameJa    *string `json:"name_ja"`
 }
 
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (MerchantCategory, error) {
-	row := q.db.QueryRow(ctx, createCategory, arg.Name, arg.SortOrder, arg.ImageUrl)
+	row := q.db.QueryRow(ctx, createCategory,
+		arg.Name,
+		arg.SortOrder,
+		arg.ImageUrl,
+		arg.NameEn,
+		arg.NameJa,
+	)
 	var i MerchantCategory
 	err := row.Scan(
 		&i.ID,
@@ -33,14 +41,16 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 		&i.SortOrder,
 		&i.CreatedAt,
 		&i.ImageUrl,
+		&i.NameEn,
+		&i.NameJa,
 	)
 	return i, err
 }
 
 const createMerchant = `-- name: CreateMerchant :one
-INSERT INTO referral_code_bonus.merchants (slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, countries)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries
+INSERT INTO referral_code_bonus.merchants (slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, countries, reward_desc_en, reward_desc_ja)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries, reward_desc_en, reward_desc_ja
 `
 
 type CreateMerchantParams struct {
@@ -52,6 +62,8 @@ type CreateMerchantParams struct {
 	RewardDesc      string    `json:"reward_desc"`
 	CodeFormatRegex *string   `json:"code_format_regex"`
 	Countries       []string  `json:"countries"`
+	RewardDescEn    *string   `json:"reward_desc_en"`
+	RewardDescJa    *string   `json:"reward_desc_ja"`
 }
 
 func (q *Queries) CreateMerchant(ctx context.Context, arg CreateMerchantParams) (Merchant, error) {
@@ -64,6 +76,8 @@ func (q *Queries) CreateMerchant(ctx context.Context, arg CreateMerchantParams) 
 		arg.RewardDesc,
 		arg.CodeFormatRegex,
 		arg.Countries,
+		arg.RewardDescEn,
+		arg.RewardDescJa,
 	)
 	var i Merchant
 	err := row.Scan(
@@ -79,6 +93,8 @@ func (q *Queries) CreateMerchant(ctx context.Context, arg CreateMerchantParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Countries,
+		&i.RewardDescEn,
+		&i.RewardDescJa,
 	)
 	return i, err
 }
@@ -95,7 +111,7 @@ func (q *Queries) DeleteCategory(ctx context.Context, id uuid.UUID) error {
 }
 
 const getCategoryByID = `-- name: GetCategoryByID :one
-SELECT id, name, sort_order, created_at, image_url FROM referral_code_bonus.merchant_categories WHERE id = $1
+SELECT id, name, sort_order, created_at, image_url, name_en, name_ja FROM referral_code_bonus.merchant_categories WHERE id = $1
 `
 
 func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (MerchantCategory, error) {
@@ -107,12 +123,14 @@ func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (MerchantCa
 		&i.SortOrder,
 		&i.CreatedAt,
 		&i.ImageUrl,
+		&i.NameEn,
+		&i.NameJa,
 	)
 	return i, err
 }
 
 const getMerchantByID = `-- name: GetMerchantByID :one
-SELECT id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries FROM referral_code_bonus.merchants WHERE id = $1
+SELECT id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries, reward_desc_en, reward_desc_ja FROM referral_code_bonus.merchants WHERE id = $1
 `
 
 func (q *Queries) GetMerchantByID(ctx context.Context, id uuid.UUID) (Merchant, error) {
@@ -131,12 +149,14 @@ func (q *Queries) GetMerchantByID(ctx context.Context, id uuid.UUID) (Merchant, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Countries,
+		&i.RewardDescEn,
+		&i.RewardDescJa,
 	)
 	return i, err
 }
 
 const getMerchantBySlug = `-- name: GetMerchantBySlug :one
-SELECT m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, c.name AS category_name
+SELECT m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, m.reward_desc_en, m.reward_desc_ja, c.name AS category_name, c.name_en AS category_name_en, c.name_ja AS category_name_ja
 FROM referral_code_bonus.merchants m
 JOIN referral_code_bonus.merchant_categories c ON c.id = m.category_id
 WHERE m.slug = $1 AND m.is_active
@@ -155,7 +175,11 @@ type GetMerchantBySlugRow struct {
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	Countries       []string  `json:"countries"`
+	RewardDescEn    *string   `json:"reward_desc_en"`
+	RewardDescJa    *string   `json:"reward_desc_ja"`
 	CategoryName    string    `json:"category_name"`
+	CategoryNameEn  *string   `json:"category_name_en"`
+	CategoryNameJa  *string   `json:"category_name_ja"`
 }
 
 func (q *Queries) GetMerchantBySlug(ctx context.Context, slug string) (GetMerchantBySlugRow, error) {
@@ -174,13 +198,17 @@ func (q *Queries) GetMerchantBySlug(ctx context.Context, slug string) (GetMercha
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Countries,
+		&i.RewardDescEn,
+		&i.RewardDescJa,
 		&i.CategoryName,
+		&i.CategoryNameEn,
+		&i.CategoryNameJa,
 	)
 	return i, err
 }
 
 const listCategories = `-- name: ListCategories :many
-SELECT id, name, sort_order, created_at, image_url FROM referral_code_bonus.merchant_categories ORDER BY sort_order, name
+SELECT id, name, sort_order, created_at, image_url, name_en, name_ja FROM referral_code_bonus.merchant_categories ORDER BY sort_order, name
 `
 
 func (q *Queries) ListCategories(ctx context.Context) ([]MerchantCategory, error) {
@@ -198,6 +226,8 @@ func (q *Queries) ListCategories(ctx context.Context) ([]MerchantCategory, error
 			&i.SortOrder,
 			&i.CreatedAt,
 			&i.ImageUrl,
+			&i.NameEn,
+			&i.NameJa,
 		); err != nil {
 			return nil, err
 		}
@@ -241,8 +271,10 @@ func (q *Queries) ListMerchantSlugs(ctx context.Context) ([]ListMerchantSlugsRow
 
 const listMerchants = `-- name: ListMerchants :many
 SELECT
-    m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries,
+    m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, m.reward_desc_en, m.reward_desc_ja,
     c.name AS category_name,
+    c.name_en AS category_name_en,
+    c.name_ja AS category_name_ja,
     coalesce(stat.active_code_count, 0) AS active_code_count,
     stat.soonest_expires_at
 FROM referral_code_bonus.merchants m
@@ -287,7 +319,11 @@ type ListMerchantsRow struct {
 	CreatedAt        time.Time   `json:"created_at"`
 	UpdatedAt        time.Time   `json:"updated_at"`
 	Countries        []string    `json:"countries"`
+	RewardDescEn     *string     `json:"reward_desc_en"`
+	RewardDescJa     *string     `json:"reward_desc_ja"`
 	CategoryName     string      `json:"category_name"`
+	CategoryNameEn   *string     `json:"category_name_en"`
+	CategoryNameJa   *string     `json:"category_name_ja"`
 	ActiveCodeCount  int64       `json:"active_code_count"`
 	SoonestExpiresAt interface{} `json:"soonest_expires_at"`
 }
@@ -333,7 +369,11 @@ func (q *Queries) ListMerchants(ctx context.Context, arg ListMerchantsParams) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Countries,
+			&i.RewardDescEn,
+			&i.RewardDescJa,
 			&i.CategoryName,
+			&i.CategoryNameEn,
+			&i.CategoryNameJa,
 			&i.ActiveCodeCount,
 			&i.SoonestExpiresAt,
 		); err != nil {
@@ -349,7 +389,7 @@ func (q *Queries) ListMerchants(ctx context.Context, arg ListMerchantsParams) ([
 
 const listMerchantsForAdmin = `-- name: ListMerchantsForAdmin :many
 SELECT
-    m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries,
+    m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, m.reward_desc_en, m.reward_desc_ja,
     c.name AS category_name,
     (SELECT count(*) FROM referral_code_bonus.referral_codes rc
       WHERE rc.merchant_id = m.id AND rc.status = 'active' AND rc.expires_at > now()) AS active_code_count
@@ -371,6 +411,8 @@ type ListMerchantsForAdminRow struct {
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	Countries       []string  `json:"countries"`
+	RewardDescEn    *string   `json:"reward_desc_en"`
+	RewardDescJa    *string   `json:"reward_desc_ja"`
 	CategoryName    string    `json:"category_name"`
 	ActiveCodeCount int64     `json:"active_code_count"`
 }
@@ -399,6 +441,8 @@ func (q *Queries) ListMerchantsForAdmin(ctx context.Context) ([]ListMerchantsFor
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Countries,
+			&i.RewardDescEn,
+			&i.RewardDescJa,
 			&i.CategoryName,
 			&i.ActiveCodeCount,
 		); err != nil {
@@ -414,9 +458,9 @@ func (q *Queries) ListMerchantsForAdmin(ctx context.Context) ([]ListMerchantsFor
 
 const updateCategory = `-- name: UpdateCategory :one
 UPDATE referral_code_bonus.merchant_categories
-SET name = $2, sort_order = $3, image_url = $4
+SET name = $2, sort_order = $3, image_url = $4, name_en = $5, name_ja = $6
 WHERE id = $1
-RETURNING id, name, sort_order, created_at, image_url
+RETURNING id, name, sort_order, created_at, image_url, name_en, name_ja
 `
 
 type UpdateCategoryParams struct {
@@ -424,6 +468,8 @@ type UpdateCategoryParams struct {
 	Name      string    `json:"name"`
 	SortOrder int32     `json:"sort_order"`
 	ImageUrl  *string   `json:"image_url"`
+	NameEn    *string   `json:"name_en"`
+	NameJa    *string   `json:"name_ja"`
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (MerchantCategory, error) {
@@ -432,6 +478,8 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 		arg.Name,
 		arg.SortOrder,
 		arg.ImageUrl,
+		arg.NameEn,
+		arg.NameJa,
 	)
 	var i MerchantCategory
 	err := row.Scan(
@@ -440,6 +488,8 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 		&i.SortOrder,
 		&i.CreatedAt,
 		&i.ImageUrl,
+		&i.NameEn,
+		&i.NameJa,
 	)
 	return i, err
 }
@@ -447,9 +497,10 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 const updateMerchant = `-- name: UpdateMerchant :one
 UPDATE referral_code_bonus.merchants
 SET slug = $2, name = $3, category_id = $4, logo_url = $5, signup_url = $6,
-    reward_desc = $7, code_format_regex = $8, is_active = $9, countries = $10, updated_at = now()
+    reward_desc = $7, code_format_regex = $8, is_active = $9, countries = $10,
+    reward_desc_en = $11, reward_desc_ja = $12, updated_at = now()
 WHERE id = $1
-RETURNING id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries
+RETURNING id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries, reward_desc_en, reward_desc_ja
 `
 
 type UpdateMerchantParams struct {
@@ -463,6 +514,8 @@ type UpdateMerchantParams struct {
 	CodeFormatRegex *string   `json:"code_format_regex"`
 	IsActive        bool      `json:"is_active"`
 	Countries       []string  `json:"countries"`
+	RewardDescEn    *string   `json:"reward_desc_en"`
+	RewardDescJa    *string   `json:"reward_desc_ja"`
 }
 
 func (q *Queries) UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) (Merchant, error) {
@@ -477,6 +530,8 @@ func (q *Queries) UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) 
 		arg.CodeFormatRegex,
 		arg.IsActive,
 		arg.Countries,
+		arg.RewardDescEn,
+		arg.RewardDescJa,
 	)
 	var i Merchant
 	err := row.Scan(
@@ -492,6 +547,8 @@ func (q *Queries) UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Countries,
+		&i.RewardDescEn,
+		&i.RewardDescJa,
 	)
 	return i, err
 }

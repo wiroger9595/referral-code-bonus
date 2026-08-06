@@ -67,13 +67,70 @@ func soonestExpiry(v any) *time.Time {
 	return &t
 }
 
+// pickLang 從 ?lang= 決定這次要回哪個語言的內容。認不出來就當中文 ——
+// 語言錯了顯示中文，比回 400 讓整個頁面掛掉好。
+func pickLang(r *http.Request) string {
+	switch r.URL.Query().Get("lang") {
+	case "en":
+		return "en"
+	case "ja":
+		return "ja"
+	default:
+		return "zh"
+	}
+}
+
+// localized 挑出這個語言的字。譯文是 NULL 或空字串（後台還沒填）就退回中文，
+// 而不是給出一格空白 —— 空白的分類磁磚比顯示中文更難懂。
+func localized(zh string, en, ja *string, lang string) string {
+	var v *string
+	switch lang {
+	case "en":
+		v = en
+	case "ja":
+		v = ja
+	}
+	if v == nil || *v == "" {
+		return zh
+	}
+	return *v
+}
+
+// 分類的對外形狀。name 已經照 ?lang= 挑好，name_en / name_ja 原樣附著 ——
+// 後台的分類編輯頁就是打這支拿三語的值，沒有另外的 admin 列表 API。
+type categoryDTO struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	NameEn    *string   `json:"name_en"`
+	NameJa    *string   `json:"name_ja"`
+	SortOrder int32     `json:"sort_order"`
+	ImageURL  *string   `json:"image_url"`
+}
+
+func toCategoryDTO(c dbgen.MerchantCategory, lang string) categoryDTO {
+	return categoryDTO{
+		ID:        c.ID,
+		Name:      localized(c.Name, c.NameEn, c.NameJa, lang),
+		NameEn:    c.NameEn,
+		NameJa:    c.NameJa,
+		SortOrder: c.SortOrder,
+		ImageURL:  c.ImageUrl,
+	}
+}
+
 func (s *Server) handleListCategories(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.store.ListCategories(r.Context())
 	if err != nil {
 		internalError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"categories": rows})
+
+	lang := pickLang(r)
+	out := make([]categoryDTO, len(rows))
+	for i, c := range rows {
+		out[i] = toCategoryDTO(c, lang)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"categories": out})
 }
 
 // handleGetCategory 給分類頁用：網址上只有 id，但頁面要顯示分類名稱。
@@ -93,7 +150,7 @@ func (s *Server) handleGetCategory(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, cat)
+	writeJSON(w, http.StatusOK, toCategoryDTO(cat, pickLang(r)))
 }
 
 // viewerCountry 是目錄排序要用的所在地：登入的人才有，沒填就是 nil。
@@ -141,12 +198,16 @@ func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	lang := pickLang(r)
 	out := make([]merchantSummary, len(rows))
 	for i, m := range rows {
 		out[i] = merchantSummary{
 			ID: m.ID, Slug: m.Slug, Name: m.Name,
-			LogoURL: m.LogoUrl, SignupURL: m.SignupUrl, RewardDesc: m.RewardDesc,
-			CategoryID: m.CategoryID, CategoryName: m.CategoryName,
+			LogoURL: m.LogoUrl, SignupURL: m.SignupUrl,
+			// 服務商名不翻（品牌名），獎勵說明與分類名跟著語言走。
+			RewardDesc:      localized(m.RewardDesc, m.RewardDescEn, m.RewardDescJa, lang),
+			CategoryID:      m.CategoryID,
+			CategoryName:    localized(m.CategoryName, m.CategoryNameEn, m.CategoryNameJa, lang),
 			ActiveCodeCount: m.ActiveCodeCount,
 			SoonestExpires:  soonestExpiry(m.SoonestExpiresAt),
 			Countries:       m.Countries,
@@ -224,12 +285,14 @@ func (s *Server) handleGetMerchant(w http.ResponseWriter, r *http.Request) {
 
 	s.recordImpressions(r, merchant.ID, ranked)
 
+	lang := pickLang(r)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"merchant": merchantSummary{
 			ID: merchant.ID, Slug: merchant.Slug, Name: merchant.Name,
 			LogoURL: merchant.LogoUrl, SignupURL: merchant.SignupUrl,
-			RewardDesc: merchant.RewardDesc,
-			CategoryID: merchant.CategoryID, CategoryName: merchant.CategoryName,
+			RewardDesc:      localized(merchant.RewardDesc, merchant.RewardDescEn, merchant.RewardDescJa, lang),
+			CategoryID:      merchant.CategoryID,
+			CategoryName:    localized(merchant.CategoryName, merchant.CategoryNameEn, merchant.CategoryNameJa, lang),
 			ActiveCodeCount: int64(len(rows)),
 			Countries:       merchant.Countries,
 		},

@@ -63,6 +63,8 @@ type Merchant struct {
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	Countries       []string  `json:"countries"`
+	RewardDescEn    *string   `json:"reward_desc_en"`
+	RewardDescJa    *string   `json:"reward_desc_ja"`
 }
 
 type MerchantCategory struct {
@@ -71,6 +73,8 @@ type MerchantCategory struct {
 	SortOrder int32     `json:"sort_order"`
 	CreatedAt time.Time `json:"created_at"`
 	ImageUrl  *string   `json:"image_url"`
+	NameEn    *string   `json:"name_en"`
+	NameJa    *string   `json:"name_ja"`
 }
 
 type OAuthIdentity struct {

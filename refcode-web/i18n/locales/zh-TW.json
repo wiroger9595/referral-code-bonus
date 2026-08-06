@@ -81,6 +81,14 @@
     "rankingTitle": "排序是怎麼決定的",
     "rankingBody": "每次進頁面順序都會重新抽一次。回報成功率高的碼權重較高，但已經拿到大量曝光的碼權重會下降，把機會讓給新上架的人。所以你看到的順序跟別人不一樣是正常的。"
   },
+  "legal": {
+    "privacySeoTitle": "隱私權政策",
+    "privacySeoDescription": "推薦碼交流站如何蒐集、使用與保護您的個人資料。",
+    "termsSeoTitle": "服務條款",
+    "termsSeoDescription": "使用推薦碼交流站前應該知道的規則與限制。",
+    "jaFallbackNotice": "日文版尚未提供，以下顯示中文版。",
+    "zhOnlyNotice": "此文件目前僅提供中文版。"
+  },
   "auth": {
     "loginTitle": "登入",
     "registerTitle": "註冊",

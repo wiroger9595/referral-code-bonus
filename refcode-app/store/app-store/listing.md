@@ -18,7 +18,7 @@ App Store Connect 各欄位要填的內容。**方框裡的就是要貼上去的
 | 次要類別 | 工具程式（Utilities） |
 | 價格 | 免費 |
 | App 內購買 | **有**：自動續訂訂閱「推薦碼 Pro」（月 / 年），透過 RevenueCat 管理 |
-| 版權 | `{{西元年}} {{開發者姓名}}` |
+| 版權 | `{{西元年}} wiwilab` |
 
 > Pro 訂閱走 IAP 是正確的（賣的是 app 內的功能）。但 Phase 3 的**廣告儲值仍然不要放進 app**，
 > 那是兩件事：Pro 是功能解鎖，儲值是買曝光。儲值只在官網做（`PLAN.md` 第八節第 1 點）。
@@ -119,7 +119,7 @@ product id 兩邊必須完全一致（見 `../../src/api/purchases.ts` 的 `PRO_
 
 隱私權政策：https://{{官網網域}}/privacy
 服務條款：https://{{官網網域}}/terms
-聯絡我們：{{聯絡email}}
+聯絡我們：robertsmart1989@gmail.com
 ```
 
 ## 版本更新說明
@@ -225,5 +225,5 @@ No ad SDKs, no third-party analytics, no cross-app tracking. Browsing the direct
 
 Privacy policy: https://{{官網網域}}/privacy
 Terms: https://{{官網網域}}/terms
-Contact: {{聯絡email}}
+Contact: robertsmart1989@gmail.com
 ```

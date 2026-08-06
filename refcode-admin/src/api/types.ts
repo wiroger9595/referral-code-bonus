@@ -21,6 +21,9 @@ export interface AdminLoginResponse {
 export interface Category {
   id: string
   name: string
+  // 譯文。null 代表還沒填，公開站會退回中文那份。
+  name_en: string | null
+  name_ja: string | null
   sort_order: number
   image_url: string | null
   created_at: string
@@ -34,6 +37,10 @@ export interface Merchant {
   logo_url: string | null
   signup_url: string
   reward_desc: string
+  // 獎勵說明的譯文。null 代表還沒填，公開站會退回中文那份。
+  // 服務商名沒有譯文欄位 —— 那是品牌名，不翻。
+  reward_desc_en: string | null
+  reward_desc_ja: string | null
   code_format_regex: string | null
   is_active: boolean
   // 適用國家（ISO 3166-1 alpha-2）。空陣列代表不分地區。
@@ -115,6 +122,8 @@ export interface MerchantInput {
   logo_url: string | null
   signup_url: string
   reward_desc: string
+  reward_desc_en: string | null
+  reward_desc_ja: string | null
   code_format_regex: string | null
   is_active?: boolean
   countries: string[]

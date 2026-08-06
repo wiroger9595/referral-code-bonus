@@ -70,6 +70,15 @@ export function hasSession() {
   return accessToken !== null
 }
 
+// 分類名與獎勵說明是資料庫欄位，要靠 ?lang= 決定後端回哪個語言（見 refcode-api 的
+// pickLang）。這裡用 setter 而不是直接 import i18n —— i18n/index.ts 已經 import 了
+// 這個檔（拿 ApiError），反向再 import 一次就成了循環相依。
+let apiLang = 'zh'
+
+export function setApiLang(locale: string) {
+  apiLang = locale.startsWith('zh') ? 'zh' : locale
+}
+
 let onUnauthorized: () => void = () => {}
 
 export function setUnauthorizedHandler(fn: () => void) {
@@ -201,18 +210,18 @@ export const api = {
   },
 
   listCategories() {
-    return request<{ categories: Category[] }>('/v1/categories')
+    return request<{ categories: Category[] }>(`/v1/categories?lang=${apiLang}`)
   },
 
   listMerchants(params: { category?: string; q?: string } = {}) {
-    const qs = new URLSearchParams({ limit: '50' })
+    const qs = new URLSearchParams({ limit: '50', lang: apiLang })
     if (params.category) qs.set('category', params.category)
     if (params.q) qs.set('q', params.q)
     return request<{ merchants: MerchantSummary[] }>(`/v1/merchants?${qs}`)
   },
 
   getMerchant(slug: string) {
-    return request<MerchantDetail>(`/v1/merchants/${slug}`)
+    return request<MerchantDetail>(`/v1/merchants/${slug}?lang=${apiLang}`)
   },
 
   listMyCodes() {

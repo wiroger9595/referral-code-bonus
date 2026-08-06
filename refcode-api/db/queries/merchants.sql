@@ -2,13 +2,13 @@
 SELECT * FROM referral_code_bonus.merchant_categories ORDER BY sort_order, name;
 
 -- name: CreateCategory :one
-INSERT INTO referral_code_bonus.merchant_categories (name, sort_order, image_url)
-VALUES ($1, $2, $3)
+INSERT INTO referral_code_bonus.merchant_categories (name, sort_order, image_url, name_en, name_ja)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: UpdateCategory :one
 UPDATE referral_code_bonus.merchant_categories
-SET name = $2, sort_order = $3, image_url = $4
+SET name = $2, sort_order = $3, image_url = $4, name_en = $5, name_ja = $6
 WHERE id = $1
 RETURNING *;
 
@@ -33,6 +33,8 @@ DELETE FROM referral_code_bonus.merchant_categories WHERE id = $1;
 SELECT
     m.*,
     c.name AS category_name,
+    c.name_en AS category_name_en,
+    c.name_ja AS category_name_ja,
     coalesce(stat.active_code_count, 0) AS active_code_count,
     stat.soonest_expires_at
 FROM referral_code_bonus.merchants m
@@ -60,7 +62,7 @@ ORDER BY
 LIMIT $1 OFFSET $2;
 
 -- name: GetMerchantBySlug :one
-SELECT m.*, c.name AS category_name
+SELECT m.*, c.name AS category_name, c.name_en AS category_name_en, c.name_ja AS category_name_ja
 FROM referral_code_bonus.merchants m
 JOIN referral_code_bonus.merchant_categories c ON c.id = m.category_id
 WHERE m.slug = $1 AND m.is_active;
@@ -69,14 +71,15 @@ WHERE m.slug = $1 AND m.is_active;
 SELECT * FROM referral_code_bonus.merchants WHERE id = $1;
 
 -- name: CreateMerchant :one
-INSERT INTO referral_code_bonus.merchants (slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, countries)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO referral_code_bonus.merchants (slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, countries, reward_desc_en, reward_desc_ja)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
 -- name: UpdateMerchant :one
 UPDATE referral_code_bonus.merchants
 SET slug = $2, name = $3, category_id = $4, logo_url = $5, signup_url = $6,
-    reward_desc = $7, code_format_regex = $8, is_active = $9, countries = $10, updated_at = now()
+    reward_desc = $7, code_format_regex = $8, is_active = $9, countries = $10,
+    reward_desc_en = $11, reward_desc_ja = $12, updated_at = now()
 WHERE id = $1
 RETURNING *;
 

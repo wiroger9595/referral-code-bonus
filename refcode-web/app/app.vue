@@ -83,7 +83,16 @@ async function signOut() {
     </main>
 
     <footer class="mt-16 border-t border-line py-8 text-center text-sm text-muted">
-      {{ $t('footer.disclaimer') }}
+      <p>{{ $t('footer.disclaimer') }}</p>
+      <p class="mt-3 flex items-center justify-center gap-3">
+        <NuxtLink :to="localePath('/privacy')" class="hover:text-ink">
+          {{ $t('legal.privacySeoTitle') }}
+        </NuxtLink>
+        <span aria-hidden="true">·</span>
+        <NuxtLink :to="localePath('/terms')" class="hover:text-ink">
+          {{ $t('legal.termsSeoTitle') }}
+        </NuxtLink>
+      </p>
     </footer>
   </div>
 </template>

@@ -88,14 +88,14 @@ RevenueCat 的 entitlement `pro` 要把這兩個基本方案都掛進去，
 隱私權政策：https://{{官網網域}}/privacy
 服務條款：https://{{官網網域}}/terms
 刪除帳號：https://{{官網網域}}/delete-account
-聯絡我們：{{聯絡email}}
+聯絡我們：robertsmart1989@gmail.com
 ```
 
 ## 聯絡資訊
 
 | 欄位 | 值 | 必填 |
 |---|---|---|
-| 電子郵件 | `{{聯絡email}}` | ✅ 會公開顯示在商店頁 |
+| 電子郵件 | `robertsmart1989@gmail.com` | ✅ 會公開顯示在商店頁 |
 | 網站 | `https://{{官網網域}}` | 建議填 |
 | 電話 | 個人開發者可留空 | |
 
@@ -184,7 +184,7 @@ No ad SDKs, no third-party analytics, no cross-app tracking. Browsing the direct
 Privacy policy: https://{{官網網域}}/privacy
 Terms: https://{{官網網域}}/terms
 Delete your account: https://{{官網網域}}/delete-account
-Contact: {{聯絡email}}
+Contact: robertsmart1989@gmail.com
 ```
 
 ---

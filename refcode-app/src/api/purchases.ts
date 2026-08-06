@@ -9,8 +9,15 @@ const ANDROID_KEY = import.meta.env.VITE_REVENUECAT_ANDROID_KEY ?? ''
 // 後端的 PRO_ENTITLEMENT 要跟這個一致，兩邊對的是 RevenueCat 上同一個 entitlement。
 export const PRO_ENTITLEMENT = import.meta.env.VITE_REVENUECAT_ENTITLEMENT ?? 'pro'
 
+// Test Store 的 key（test_ 開頭，也是 public）。不分平台，購買不經過 App Store /
+// Play，所以商店那邊還沒建好商品也能測完整流程。
+// 有填就蓋掉平台 key —— 只給開發用，**送商店的版本一定要清空這行**，
+// 拿 test key 包版的話真實購買會全部失效。
+const TEST_KEY = import.meta.env.VITE_REVENUECAT_TEST_KEY ?? ''
+
 const platform = Capacitor.getPlatform()
-const apiKey = platform === 'ios' ? IOS_KEY : platform === 'android' ? ANDROID_KEY : ''
+const platformKey = platform === 'ios' ? IOS_KEY : platform === 'android' ? ANDROID_KEY : ''
+const apiKey = TEST_KEY || platformKey
 
 // 這個 plugin 的 web 實作要另外接 RevenueCat 的 web billing，沒接就不能用。
 // 瀏覽器裡開發時整組購買功能停用，Pro 狀態改看後端 /v1/me 的 is_pro。

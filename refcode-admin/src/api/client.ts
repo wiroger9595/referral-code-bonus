@@ -132,7 +132,7 @@ export const api = {
     return request<{ categories: Category[] }>('/v1/categories')
   },
 
-  createCategory(input: { name: string; sort_order: number; image_url: string | null }) {
+  createCategory(input: { name: string; name_en: string; name_ja: string; sort_order: number; image_url: string | null }) {
     return request<Category>('/v1/admin/categories', {
       method: 'POST',
       body: JSON.stringify(input),
@@ -140,7 +140,7 @@ export const api = {
   },
 
   // 分類沒有 slug：網址與 ?category= 篩選都用 id。
-  updateCategory(id: string, input: { name: string; sort_order: number; image_url: string | null }) {
+  updateCategory(id: string, input: { name: string; name_en: string; name_ja: string; sort_order: number; image_url: string | null }) {
     return request<Category>(`/v1/admin/categories/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(input),

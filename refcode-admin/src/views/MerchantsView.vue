@@ -40,6 +40,8 @@ function emptyForm(): MerchantInput {
     logo_url: null,
     signup_url: 'https://',
     reward_desc: '',
+    reward_desc_en: null,
+    reward_desc_ja: null,
     code_format_regex: null,
     is_active: true,
     countries: [],
@@ -88,6 +90,8 @@ function openEdit(m: AdminMerchant) {
     logo_url: m.logo_url,
     signup_url: m.signup_url,
     reward_desc: m.reward_desc,
+    reward_desc_en: m.reward_desc_en,
+    reward_desc_ja: m.reward_desc_ja,
     code_format_regex: m.code_format_regex,
     is_active: m.is_active,
     countries: m.countries,
@@ -236,6 +240,12 @@ const categoryOptions = () =>
         </NFormItem>
         <NFormItem label="獎勵說明">
           <NInput v-model:value="form.reward_desc" placeholder="雙方各得 500 元" />
+        </NFormItem>
+        <NFormItem label="獎勵說明（English）">
+          <NInput v-model:value="form.reward_desc_en" placeholder="留空的話英文站顯示中文" />
+        </NFormItem>
+        <NFormItem label="獎勵說明（日本語）">
+          <NInput v-model:value="form.reward_desc_ja" placeholder="留空的話日文站顯示中文" />
         </NFormItem>
         <NFormItem label="Logo">
           <NSpace vertical style="width: 100%">

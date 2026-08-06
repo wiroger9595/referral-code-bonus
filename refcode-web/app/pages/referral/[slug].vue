@@ -7,6 +7,7 @@ const { track, report } = useTracking()
 const { t } = useI18n()
 const localePath = useLocalePath()
 const { expiryLabel, isUrgent } = useExpiry()
+const lang = useApiLang()
 
 // 要註冊才能拿到推薦碼：帶著 redirect 讓登入完直接回到這頁。
 const loginLink = computed(() => ({ path: localePath('/login'), query: { redirect: route.fullPath } }))
@@ -17,6 +18,7 @@ const slug = computed(() => String(route.params.slug))
 // 不轉發的話後端看到的 UA/IP 全是 node 的 —— 曝光會歸錯，bot 也擋不掉。
 const { data, error } = await useFetch<MerchantDetail>(() => `/v1/merchants/${slug.value}`, {
   baseURL: cfg.apiBase,
+  query: { lang },
   headers: useRequestHeaders(['user-agent', 'x-forwarded-for']),
 })
 

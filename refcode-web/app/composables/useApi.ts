@@ -49,3 +49,10 @@ export function useTracking() {
 
   return { track, report }
 }
+
+// 後端只認 zh / en / ja，前端的 locale 是 zh-TW / ja / en。分類名與獎勵說明
+// 是資料庫欄位，要靠這個參數決定回哪個語言（見 refcode-api 的 pickLang）。
+export function useApiLang() {
+  const { locale } = useI18n()
+  return computed(() => (locale.value.startsWith('zh') ? 'zh' : locale.value))
+}

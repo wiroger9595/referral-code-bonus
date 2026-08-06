@@ -6,15 +6,17 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const { authHeaders } = useAuth()
 const { daysLeft, expiryLabel, isUrgent } = useExpiry()
+const lang = useApiLang()
 
 const { data: categories } = await useFetch<{ categories: Category[] }>('/v1/categories', {
   baseURL: cfg.apiBase,
+  query: { lang },
 })
 
 // 帶上 token 後端才知道要不要把在地服務商排前面（沒登入就是原本的排序）。
 const { data: merchants } = await useFetch<{ merchants: MerchantSummary[] }>('/v1/merchants', {
   baseURL: cfg.apiBase,
-  query: { limit: 30 },
+  query: { limit: 30, lang },
   headers: authHeaders(),
 })
 

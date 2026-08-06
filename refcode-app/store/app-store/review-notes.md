@@ -65,7 +65,7 @@ Referral codes and their notes are user-generated. Our moderation stack:
 - Automatic delisting: a code whose recent reports exceed our failure threshold is taken
   down automatically without waiting for a moderator.
 - Mandatory expiry: every code must carry an expiry date and is delisted when it passes.
-- Contact: {{聯絡email}}, also reachable from the Account tab in the app. We act on
+- Contact: robertsmart1989@gmail.com, also reachable from the Account tab in the app. We act on
   reports of objectionable content within 24 hours.
 - Terms of use with a zero-tolerance policy for objectionable content and abusive users:
   https://{{官網網域}}/terms
@@ -134,7 +134,7 @@ investment advice. The listings only point to the merchants' own public sign-up 
 
 CONTACT
 
-{{聯絡email}}
+robertsmart1989@gmail.com
 ```
 
 ---

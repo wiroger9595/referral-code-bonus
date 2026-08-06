@@ -32,7 +32,12 @@ npm run dev          # http://localhost:5174（瀏覽器就能開發）
 - 切換入口在「帳號」分頁，**登入與未登入都看得到** —— 看不懂介面的人多半還沒登入。
 - `formatDate` 跟著當下語言走，不要寫死 `'zh-TW'`。
 
-**服務商名稱、分類名、獎勵說明不翻譯**，那些是資料庫欄位。
+**分類名與獎勵說明是資料庫欄位，但有多語版本**（`merchant_categories.name_en/ja`、
+`merchants.reward_desc_en/ja`）。API 靠 `?lang=zh|en|ja` 決定回哪一份，譯文沒填就退回中文。
+`client.ts` 的 `apiLang` 由 `setApiLang()` 注入 —— 不直接 import i18n，那會跟
+`i18n/index.ts` 形成循環相依。**切語言時三個 API 都要重打**，不然分類名還停在上一個語言。
+
+**服務商名稱（`merchants.name`）不翻**，那是品牌名。
 
 **忘記密碼的信是後端寄的，前端沒有機會翻譯**，所以 `/v1/auth/password/forgot`
 要把當下的 `locale` 一起送過去。信件文案在 `refcode-api/internal/httpapi/mailtext.go`。
@@ -91,6 +96,73 @@ Web client 的 Authorized JavaScript origins 要加 `http://localhost:5174`（ap
 
 改完要重啟 api 與 vite：`import.meta.env` 是 build 時代入的，熱更新不會帶進去。
 
+## 測訂閱：先用 Test Store
+
+商店那邊的商品、憑證都還沒好之前，用 RevenueCat 的 Test Store 就能把購買流程從頭到尾走一次
+——購買不經過 App Store / Play，所以**不需要 Play Console 商品、不需要 service account
+credentials、不需要先把 app 上傳到測試軌**。
+
+1. RevenueCat 後台 → Product Catalog 建好 product 與 offering（設為 current），entitlement 掛 `pro`
+2. Project settings → API keys 拿 Test Store 的 key（`test_` 開頭，也是 public key）
+3. 填進 `.env` 的 `VITE_REVENUECAT_TEST_KEY`
+4. `npm run build && npx cap sync android && npx cap open android`，用實機或模擬器跑
+
+`purchases.ts` 裡 `VITE_REVENUECAT_TEST_KEY` 有值就蓋掉平台 key，兩把 `goog_` / `appl_`
+不用動。**瀏覽器還是測不到** —— 這個 plugin 的 web 實作要另外接 RevenueCat Web Billing，
+`purchasesAvailable` 在 web 一律 false。
+
+Test Store 的行為跟正式的不一樣，別拿它當上架前的最後驗證：訂閱**最多自動續訂 5 次**就取消，
+續訂週期被壓縮成 5–60 分鐘（依方案長度），資料一律記為 sandbox。
+
+⚠️ **絕對不要拿 test key 包版送商店。** 送出去的話真實購買全部不會生效。
+`.env` 的 `VITE_REVENUECAT_TEST_KEY` 只在開發時填，包版前清空。
+
+## 產生 RevenueCat 的 Play service account credentials
+
+`.env` 裡那兩把 `VITE_REVENUECAT_*_KEY` 只是 SDK 用的 public key，**沒有它 RevenueCat 也讀不到
+Google Play 的訂閱狀態** —— RevenueCat 要用一組 Google Cloud 的 service account 去打 Play
+Developer API 查購買、查續訂、收退款通知。那把金鑰是 JSON 檔，只貼進 RevenueCat 後台，
+不進 `.env`、不進版控。
+
+### 1. Google Cloud Console
+
+Play Console → 設定 → API 存取，先確認已經連到一個 Google Cloud 專案（沒有就在那頁建），
+接著在**那個專案底下**做：
+
+1. 啟用兩個 API：**Google Play Android Developer API** 與 **Google Play Developer Reporting API**。
+2. IAM 與管理 → 服務帳戶 → 建立服務帳戶，名字隨意（例如 `revenuecat`），角色給
+   **Pub/Sub Editor**（RevenueCat 要用即時開發者通知才知道續訂／退款）與
+   **Monitoring Viewer**（讓它自己看得到通知佇列有沒有塞住）。
+3. 進那個服務帳戶 → 金鑰 → 新增金鑰 → 建立新的金鑰 → 選 **JSON** → 下載。
+   **這個檔只會給你一次**，弄丟就重建一把新的。
+
+### 2. Play Console 授權
+
+回 Play Console → 使用者和權限 → 邀請新使用者，填剛才那個服務帳戶的 email
+（`xxx@專案id.iam.gserviceaccount.com`），帳戶權限勾這三個，少一個 RevenueCat 就會報憑證無效：
+
+- 查看應用程式資訊並下載大量報表（唯讀）
+- 查看財務資料、訂單和取消問卷回覆
+- 管理訂單和訂閱項目
+
+### 3. 貼進 RevenueCat
+
+RevenueCat Dashboard → 專案 → 該 Google Play app 的設定 → 上傳那份 JSON，存檔。
+
+**存完當下多半會顯示憑證無效，那是正常的** —— Google 那邊權限傳播最久要 36 小時，
+這段期間 RevenueCat 驗證會回 503 / 521。**不要因為報錯就重建一把金鑰**，只會從頭再等一次。
+
+### 幾個會卡住的點
+
+**金鑰一旦外流，Google 會直接停用整個服務帳戶**，訂閱狀態會全部查不到。所以 JSON 放
+repo 外面（跟 keystore 放一起），不要為了方便丟進 `android/` 或 `.env`。
+
+**2024/5/3 之後建立的 Google Cloud 組織預設禁止建立服務帳戶金鑰**
+（`iam.disableServiceAccountKeyCreation` 這條組織政策）。個人帳號不受影響；
+如果是公司的組織，第 3 步會直接被擋，要請組織管理員先關掉那條政策。
+
+iOS 那邊不用這套，走的是 App Store Connect 的 In-App Purchase Key，另外產生。
+
 ## 上架
 
 送審要用的所有文件在 `store/`（隱私權政策、服務條款、兩家商店的文案與問卷填答、
@@ -117,6 +189,9 @@ Play 的資料安全性表單就必須申報使用廣告 ID，也跟隱私權政
 
 送商店的正式版。**每次包版一定從 `npm run build` 開始** —— `cap sync` 只是把 `dist/`
 複製進兩個原生專案，它不會幫你重新 build 前端，忘了這步就是拿舊的 `dist/` 去送審。
+
+**build 之前先確認 `.env` 的 `VITE_REVENUECAT_TEST_KEY` 是空的**，那把 key 會蓋掉平台 key，
+帶著它送出去的版本收不到任何真實購買。
 
 ### 版本號
 

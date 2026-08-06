@@ -6,11 +6,13 @@ const { public: cfg } = useRuntimeConfig()
 const { t } = useI18n()
 const localePath = useLocalePath()
 const { authHeaders } = useAuth()
+const lang = useApiLang()
 // 分類一律用 id 認，網址上就是 id。
 const id = computed(() => String(route.params.id))
 
 const { data: category, error } = await useFetch<Category>(() => `/v1/categories/${id.value}`, {
   baseURL: cfg.apiBase,
+  query: { lang },
 })
 
 // 分類不存在時回 404 而不是顯示空列表，免得產生一堆內容重複的可索引頁面。
@@ -22,12 +24,13 @@ if (error.value) {
 // 不是回首頁再點一次。
 const { data: categories } = await useFetch<{ categories: Category[] }>('/v1/categories', {
   baseURL: cfg.apiBase,
+  query: { lang },
 })
 
 // 帶上 token 後端才知道要不要把在地服務商排前面（沒登入就是原本的排序）。
 const { data: merchants } = await useFetch<{ merchants: MerchantSummary[] }>('/v1/merchants', {
   baseURL: cfg.apiBase,
-  query: { category: computed(() => category.value?.id), limit: 50 },
+  query: { category: computed(() => category.value?.id), limit: 50, lang },
   headers: authHeaders(),
 })
 

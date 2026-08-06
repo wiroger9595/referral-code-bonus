@@ -43,7 +43,11 @@ npm run dev          # http://localhost:3000
 - sitemap 每個頁面會出現三次（每種語言各一），而且每一筆都列出全部語言的
   `xhtml:link` alternate。
 
-**服務商名稱、分類名、獎勵說明不翻譯**，那些是資料庫欄位，三種語言都顯示原文。
+**分類名與獎勵說明是資料庫欄位，但有多語版本**（`merchant_categories.name_en/ja`、
+`merchants.reward_desc_en/ja`）。每支 `useFetch` 都要帶 `query: { lang }`（`useApiLang()`
+把 `zh-TW` 轉成後端認得的 `zh`），漏帶的那一頁就會固定顯示中文。譯文沒填時 API 會退回中文。
+
+**服務商名稱（`merchants.name`）不翻**，那是品牌名。
 
 **錯誤訊息一律走 code。** `useApiError()` 拿後端回的 `error.code` 去查 `errors.*`，
 查不到才退回後端那句中文（代表後端加了新 code 但語系檔還沒跟上）。
