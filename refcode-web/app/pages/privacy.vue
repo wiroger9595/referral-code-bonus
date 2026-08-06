@@ -16,7 +16,6 @@ useSeoMeta({
 // 現在設定的網域，之後 NUXT_PUBLIC_SITE_URL 改成正式網域會自動跟著換。
 const domain = config.public.siteUrl.replace(/^https?:\/\//, '')
 
-// 日文版還沒有翻譯，先退回中文版並提示——不要假裝有日文版。
 const source = computed(() => (locale.value === 'en' ? privacyEn : privacyZhTW))
 const html = computed(() =>
   marked.parse(source.value.replaceAll('{{官網網域}}', domain), { async: false }) as string,
@@ -25,7 +24,6 @@ const html = computed(() =>
 
 <template>
   <article class="legal">
-    <p v-if="locale === 'ja'" class="notice">{{ $t('legal.jaFallbackNotice') }}</p>
     <!-- eslint-disable-next-line vue/no-v-html -->
     <div class="prose" v-html="html" />
   </article>

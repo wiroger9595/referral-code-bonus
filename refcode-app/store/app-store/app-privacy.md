@@ -57,6 +57,28 @@ RevenueCat 是訂閱計費的服務商（處理者），只拿到訂閱必要的
 > 在標籤上歸在「使用者內容」與「識別碼 → 使用者 ID」之間都說得通，
 > 保守起見兩邊都已涵蓋。
 
+### 使用者內容 → 照片或影片
+
+| | |
+|---|---|
+| 有蒐集嗎 | 是 |
+| 內容 | 使用者自己上傳的大頭照 |
+| 用途 | **App 功能**（顯示在帳號頁與推薦碼旁邊） |
+| 是否連結到使用者 | **是** |
+| 是否用於追蹤 | 否 |
+
+出處：`api.uploadAvatar()` → 後端 `POST /v1/me/avatar`，圖存在 Cloudinary，
+`users.avatar_url` 存網址、`avatar_public_id` 存刪圖用的識別碼。
+
+> **換掉大頭照或刪除帳號時，圖檔會一併從 Cloudinary 刪掉**
+> （`internal/cloudinary` 的 `Destroy`）。Apple 明講刪帳號要連使用者產生的內容
+> 一起刪，只把資料庫欄位清空、圖還留在公開網址上是不合格的。
+
+> **只有使用者主動選了圖才會有這筆資料**，沒換過大頭照的帳號不會蒐集到任何影像。
+> 相簿與相機是透過 WebView 的 `<input type="file">` 叫出系統選單，沒有裝 Camera plugin，
+> 所以 app 從頭到尾沒有讀取相簿的能力 —— 只拿得到使用者親手選的那一張。
+> 但 `NSCameraUsageDescription` 還是要有（見下方），選「拍照」時 iOS 會檢查。
+
 ### 識別碼 → 使用者 ID
 
 | | |
@@ -119,9 +141,12 @@ RevenueCat 是訂閱計費的服務商（處理者），只拿到訂閱必要的
 ## 未蒐集的類別（表單裡不要勾）
 
 **財務資訊**（付款方式與卡號全程在 App Store，我們拿不到）、健康與健身、
-位置（精確與概略皆無）、聯絡人、使用者的照片或影片、音訊資料、
+位置（精確與概略皆無）、聯絡人、音訊資料、
 瀏覽記錄（指跨網站的瀏覽記錄）、搜尋記錄（app 內搜尋字串目前不上傳，
 只當查詢參數用完即丟）、診斷資料（沒有崩潰回報服務）、敏感資訊。
+
+> 「使用者的照片或影片」**從 2026/8 起改成有蒐集**（大頭照）。這一欄以前是不勾的，
+> 沿用舊版填答會與實際行為不符 —— 那是 Apple 直接下架的項目，不是退件而已。
 
 > ⚠️ `api.listMerchants()` 會把搜尋字串當 query 參數送到後端。
 > 只要後端沒有**儲存**它，就不算蒐集「搜尋記錄」。
@@ -146,8 +171,12 @@ RevenueCat 是訂閱計費的服務商（處理者），只拿到訂閱必要的
 |---|---|
 | `NSPrivacyTracking` | `false` |
 | `NSPrivacyTrackingDomains` | 空陣列 |
-| `NSPrivacyCollectedDataTypes` | 對應上面蒐集的六類（含購買記錄） |
+| `NSPrivacyCollectedDataTypes` | 對應上面蒐集的七類（含購買記錄與大頭照） |
 | `NSPrivacyAccessedAPITypes` | `NSPrivacyAccessedAPICategoryUserDefaults`，理由代碼 `CA92.1` |
+
+**`Info.plist` 還要有 `NSCameraUsageDescription`。** 大頭照走 WebView 的
+`<input type="file">`，系統選單裡有「拍照」，少了用途說明使用者一點就閃退。
+這跟隱私標籤是兩件事，兩邊都要有。
 
 `UserDefaults` 那一條是因為 `@capacitor/preferences` 用它存 token 與裝置 ID。
 Capacitor 官方 plugin 與 RevenueCat SDK 各自帶了自己的 manifest，

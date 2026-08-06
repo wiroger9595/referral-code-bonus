@@ -10,7 +10,10 @@
 
 - [x] `DELETE /v1/me`（後端）＋ 帳號頁的刪除入口（app）＋ `/delete-account`（官網）三者都完成
 - [x] 刪除的語意定案，並回頭對齊隱私權政策第七、八節
-- [ ] 使用者可以自己下架 / 刪除已上架的推薦碼（目前只能新增，沒有刪除的 API）
+- [x] 使用者可以自己下架已上架的推薦碼（`POST /v1/codes/{id}/disable`，
+      「我的碼」每張卡上有入口。是 status → `disabled` 不是真刪，回報與統計保留）
+- [ ] Apple／Play 的資料申報已對齊大頭照 —— `app-privacy.md`（照片或影片）、
+      `data-safety.md`（相片）、隱私權政策三份都已改好，填表時照著填
 - [ ] 隱私權政策與服務條款掛上正式網域，免登入可直接開
 - [ ] `.env` 的 `VITE_SUPPORT_EMAIL` 與 `VITE_SITE_URL` 已填
       —— 帳號頁的「聯絡我們 / 檢舉」與條款連結沒填就不會顯示，那三列是 UGC 的送審要件
@@ -57,7 +60,10 @@
 - [ ] icon 與啟動畫面已產生（`assets.md`）
 - [ ] 版本號策略定好：`version` 對使用者、`build` / `versionCode` 每次上傳都要遞增
 - [x] iOS：`ITSAppUsesNonExemptEncryption` = `false`（已寫進 Info.plist，驗過會進 bundle）
-- [x] iOS：`PrivacyInfo.xcprivacy` 已加（六類資料 + `UserDefaults` 的 `CA92.1`），已加進 target 且驗過會進 bundle
+- [x] iOS：`NSCameraUsageDescription` 已加進 Info.plist ——
+      大頭照的 `<input type="file">` 選單有「拍照」，少了它使用者一點就閃退
+- [x] iOS：`PrivacyInfo.xcprivacy` 已加（七類資料，含大頭照的 `PhotosorVideos`，
+      加上 `UserDefaults` 的 `CA92.1`），已加進 target 且驗過會進 bundle
 - [ ] iOS：Deployment Target 設定好，Xcode 的 Signing 用正式的 Distribution 憑證
 - [x] Android：keystore 已產生在 `~/keystores/refcode-app-release.jks`，簽章接進 gradle，release AAB 出得來
       ⚠️ **還沒異地備份 —— 這件事只有你能做**

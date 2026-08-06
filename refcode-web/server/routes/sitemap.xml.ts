@@ -9,9 +9,9 @@ interface Category {
 
 // 跟 nuxt.config 的 i18n.locales 對齊。前綴策略是 prefix_except_default，
 // 所以中文沒有前綴 —— 這裡多一個 prefix 欄位就是為了那個例外。
+// 日文先停用，跟 nuxt.config 的 i18n.locales 一起拿掉的。
 const LOCALES = [
   { code: 'zh-Hant-TW', prefix: '' },
-  { code: 'ja', prefix: '/ja' },
   { code: 'en', prefix: '/en' },
 ]
 

@@ -36,6 +36,11 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- 大頭照走 WebView 的 <input type="file">，系統的選單裡有「拍照」這一項。
+	     少了這句話，使用者一選拍照 app 就會直接 crash（iOS 對相機一律要求用途說明），
+	     不是「權限被拒」而是閃退。相簿那條走 PHPicker，不需要另外的說明字串。 -->
+	<key>NSCameraUsageDescription</key>
+	<string>拍一張照片當作你的大頭照。</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

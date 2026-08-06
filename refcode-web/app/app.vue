@@ -56,7 +56,23 @@ async function signOut() {
           </NuxtLink>
 
           <template v-if="isLoggedIn">
-            <span class="max-w-32 truncate font-semibold text-muted">{{ user?.display_name }}</span>
+            <NuxtLink
+              :to="localePath('/account')"
+              class="flex min-w-0 items-center gap-2 font-semibold text-muted hover:text-ink"
+            >
+              <span
+                class="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-soft text-xs font-bold text-brand-ink"
+              >
+                <img
+                  v-if="user?.avatar_url"
+                  :src="user.avatar_url"
+                  alt=""
+                  class="size-full object-cover"
+                />
+                <template v-else>{{ (user?.display_name || '').trim().charAt(0).toUpperCase() }}</template>
+              </span>
+              <span class="max-w-32 truncate">{{ user?.display_name }}</span>
+            </NuxtLink>
             <button class="font-semibold text-muted hover:text-ink" @click="signOut">
               {{ $t('nav.logout') }}
             </button>

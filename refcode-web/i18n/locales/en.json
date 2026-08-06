@@ -86,7 +86,6 @@
     "privacySeoDescription": "How Referral Code Exchange collects, uses and protects your personal data.",
     "termsSeoTitle": "Terms of Service",
     "termsSeoDescription": "What you should know before using Referral Code Exchange.",
-    "jaFallbackNotice": "A Japanese version isn't available yet — showing the Traditional Chinese version below.",
     "zhOnlyNotice": "This document is currently only available in Traditional Chinese."
   },
   "auth": {
@@ -126,6 +125,17 @@
     "forgotResent": "Sent again. The previous code no longer works.",
     "backToLogin": "Back to sign in"
   },
+  "account": {
+    "title": "My account",
+    "signInFirst": "Sign in to manage your account.",
+    "avatarChange": "Change profile photo",
+    "avatarEdit": "Change",
+    "avatarUploading": "Uploading…",
+    "avatarHint": "Tap your photo to replace it. Images are resized before upload.",
+    "otherTitle": "Other settings",
+    "otherBody": "Your display name and country can only be changed in the mobile app for now.",
+    "deleteLink": "Delete my account"
+  },
   "errors": {
     "network": "Connection failed. Please try again shortly.",
     "invalid_request": "There's something wrong with the request",
@@ -164,7 +174,8 @@
     "reset_code_invalid": "That code is not correct.",
     "reset_too_many_attempts": "Too many wrong attempts. Request a new code.",
     "reset_too_many_requests": "Too many requests. Try again later.",
-    "reset_unavailable": "Password reset is temporarily unavailable. Please try again later."
+    "reset_unavailable": "Password reset is temporarily unavailable. Please try again later.",
+    "image_invalid": "That image is the wrong format or too large (2MB max)."
   },
   "deleteAccount": {
     "title": "Delete your account",

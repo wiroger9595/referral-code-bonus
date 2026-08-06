@@ -27,6 +27,14 @@ SET display_name = $2, avatar_url = $3, country = $4, updated_at = now()
 WHERE id = $1
 RETURNING *;
 
+-- 只動大頭照。走 UpdateUserProfile 的話得把顯示名稱與所在地一起送，
+-- 上傳圖片的當下前端手上那份可能已經是舊的。
+-- name: UpdateUserAvatar :one
+UPDATE referral_code_bonus.users
+SET avatar_url = $2, avatar_public_id = $3, updated_at = now()
+WHERE id = $1
+RETURNING *;
+
 -- name: GetOAuthIdentity :one
 SELECT * FROM referral_code_bonus.oauth_identities
 WHERE provider = $1 AND provider_user_id = $2;

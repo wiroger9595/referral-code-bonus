@@ -15,12 +15,13 @@ export default defineNuxtConfig({
 
   i18n: {
     defaultLocale: 'zh-TW',
-    // 中文維持原本的網址（/referral/xxx），日英才加前綴。既有的中文頁面
+    // 中文維持原本的網址（/referral/xxx），英文才加前綴。既有的中文頁面
     // 已經被索引了，加前綴等於整站換網址。
     strategy: 'prefix_except_default',
+    // 日文先停用（付費服務還沒做日本市場的功能／文案），翻譯檔留著沒刪
+    // （i18n/locales/ja.json），之後要重開直接把這行加回來就好。
     locales: [
       { code: 'zh-TW', language: 'zh-Hant-TW', name: '繁體中文', file: 'zh-TW.json' },
-      { code: 'ja', language: 'ja-JP', name: '日本語', file: 'ja.json' },
       { code: 'en', language: 'en-US', name: 'English', file: 'en.json' },
     ],
     // hreflang 要絕對網址，跟 sitemap 共用同一個來源。

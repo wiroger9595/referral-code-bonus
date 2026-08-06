@@ -109,6 +109,16 @@ func (s *Server) handleDeleteMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 大頭照的圖檔要一起刪 —— Apple 5.1.1(v) 要求刪帳號時連使用者產生的內容一起刪，
+	// 只清掉資料庫欄位的話，圖還留在 Cloudinary 的公開網址上。
+	// 放在交易外面：Cloudinary 掛掉不該讓已經刪掉的帳號回滾回來。
+	if user.AvatarPublicID != nil {
+		if err := s.images.Destroy(ctx, *user.AvatarPublicID); err != nil {
+			slog.Error("帳號已刪除但大頭照沒刪掉，要手動清",
+				"user_id", userID, "public_id", *user.AvatarPublicID, "err", err)
+		}
+	}
+
 	slog.Info("帳號已刪除", "user_id", userID)
 	writeJSON(w, http.StatusNoContent, nil)
 }
@@ -215,6 +225,67 @@ func (s *Server) handleListMyCodes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"codes": rows})
+}
+
+// handleDisableMyCode 讓上架者把自己的碼從架上撤下來。
+//
+// 是改 status 不是真刪：事件、回報、審核紀錄都掛在 code_id 上，真刪會把別人留下的
+// 回報一起帶走，而且同一組碼重新上架一次就能把負評洗掉。
+func (s *Server) handleDisableMyCode(w http.ResponseWriter, r *http.Request) {
+	codeID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		badRequest(w, codeInvalidID, "id 格式錯誤")
+		return
+	}
+
+	ctx := r.Context()
+	code, err := s.store.GetCodeByID(ctx, codeID)
+	if err != nil {
+		if store.IsNotFound(err) {
+			notFound(w, codeCodeNotFound, "找不到這個推薦碼")
+			return
+		}
+		internalError(w, r, err)
+		return
+	}
+
+	userID, _ := auth.UserID(ctx)
+	if code.UserID != userID {
+		// 同 handleCodeStats：不回 403，免得從錯誤碼看得出這個 id 存不存在。
+		notFound(w, codeCodeNotFound, "找不到這個推薦碼")
+		return
+	}
+
+	// 只有還在流程裡的能撤。已到期、已拒絕、已下架的再撤一次不會改變任何東西，
+	// 回錯誤讓 app 知道要重抓列表——多半是列表拿的是舊資料。
+	if code.Status != "active" && code.Status != "pending" {
+		badRequest(w, codeCodeNotActive, "這個推薦碼目前不在架上")
+		return
+	}
+
+	var updated dbgen.ReferralCode
+	if err := s.store.InTx(ctx, func(q *dbgen.Queries) error {
+		updated, err = q.SetCodeStatus(ctx, dbgen.SetCodeStatusParams{
+			ID:     codeID,
+			Status: "disabled",
+		})
+		if err != nil {
+			return err
+		}
+		// admin_id 留 null 就是「不是後台動的」，跟管理員下架的紀錄分得開。
+		_, err = q.CreateCodeReview(ctx, dbgen.CreateCodeReviewParams{
+			CodeID: codeID,
+			Action: "disable",
+			Reason: "上架者自行下架",
+		})
+		return err
+	}); err != nil {
+		internalError(w, r, err)
+		return
+	}
+
+	slog.Info("上架者自行下架", "code_id", codeID, "user_id", userID)
+	writeJSON(w, http.StatusOK, updated)
 }
 
 func (s *Server) handleCodeStats(w http.ResponseWriter, r *http.Request) {

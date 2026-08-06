@@ -178,6 +178,14 @@ export function useAuth() {
     )
   }
 
+  // 大頭照上傳完後端會直接寫回 users.avatar_url，回來的就是最新的整份使用者資料，
+  // 不用再打一次 PATCH /v1/me（那支是整份覆寫，會把中間改過的顯示名稱蓋掉）。
+  async function uploadAvatar(image: Blob) {
+    const form = new FormData()
+    form.append('file', image, 'avatar.jpg')
+    user.value = await authedFetch<User>('/v1/me/avatar', { method: 'POST', body: form })
+  }
+
   // 刪除帳號。Play 要求提供一個不必安裝 app 就能送出刪除請求的入口，
   // 這頁就是那個入口 —— 所以它必須能獨立完成整件事，不能只留一個說明。
   async function deleteAccount(confirm: string) {
@@ -215,6 +223,7 @@ export function useAuth() {
     forgotPassword,
     resetPassword,
     loginWithProvider,
+    uploadAvatar,
     deleteAccount,
     logout,
     authHeaders,

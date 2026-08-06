@@ -48,7 +48,7 @@ view their performance.
 | Email address | Provided at sign-up, or received from Google / Apple Sign-In |
 | Display name | Provided at sign-up, or received from Google / Apple; shown publicly alongside codes you list |
 | Password | Email sign-up only. Stored as a one-way hash and **cannot be reversed** |
-| Avatar URL | From Google / Apple Sign-In, if you allow it |
+| Profile photo | From Google / Apple Sign-In if you allow it, or an image you upload yourself. Images are hosted on Cloudinary and shown publicly alongside your display name |
 | Google / Apple user identifier | Used to recognise you on return visits |
 
 If you use Sign in with Apple with "Hide My Email", we receive only Apple's relay address
@@ -57,9 +57,13 @@ If you use Sign in with Apple with "Hide My Email", we receive only Apple's rela
 ### 2.3 Content you submit
 
 Referral codes, notes and expiry dates you list, plus reports you submit about other people's codes.
-**Codes, notes and your display name are shown publicly** to all users including signed-out
-visitors, and may appear on our website and be indexed by search engines. Do not put anything
-in the note field that you would not want to be public.
+**Codes, notes, your display name and your profile photo are shown publicly** to all users
+including signed-out visitors, and may appear on our website and be indexed by search engines.
+Do not put anything in the note field, or use any photo, that you would not want to be public.
+
+A profile photo is optional and **is only uploaded when you actively pick an image**. It is
+re-encoded on your device to a longest edge of 512 pixels, which normally also strips the
+EXIF metadata (such as capture location and time) carried by the original photo.
 
 ### 2.4 Subscriptions (paying users only)
 
@@ -73,8 +77,12 @@ an active subscription.
 ### 2.5 What we do not collect
 
 We do not collect your legal name (other than a display name), phone number, address, date of
-birth, gender, precise or coarse location, contacts, photos, camera, microphone, health data,
-or financial account information. The app requests none of those permissions.
+birth, gender, precise or coarse location, contacts, microphone, health data, or financial
+account information.
+
+**We do not read your photo library.** Setting a profile photo opens your device's own picker,
+and the Service receives only the single image you select there — never anything else in your
+library.
 
 **We never handle reward money.** Rewards are paid by each merchant directly to you and the
 other party; the Service only matches supply and demand.
@@ -109,14 +117,16 @@ Data leaves our systems only in these cases:
 | Cloud hosting provider | All stored data, as the place where it resides | The Service needs servers |
 | Google / Apple | Information required to verify a sign-in | Only if you choose to sign in with them |
 | RevenueCat, Inc. | Your account identifier and subscription status | Handles subscription validation and renewal state on our behalf. Only applies to subscribers |
+| Cloudinary Ltd. | The profile photo you upload | Stores and delivers images on our behalf. Only applies to users who upload one |
 | Authorities | As required by law | Legal compliance |
 
 The app contains **no third-party advertising or analytics SDKs** — no Google Analytics,
 no Firebase Analytics, no Meta SDK, no crash-reporting service — and we never track you
 across apps or websites for advertising.
 
-The only third parties that receive data are **RevenueCat** (subscription billing) and
-whichever sign-in provider you choose. Both process it solely to deliver that function.
+The only third parties that receive data are **RevenueCat** (subscription billing),
+**Cloudinary** (profile photo hosting) and whichever sign-in provider you choose. All three
+process it solely to deliver that function.
 
 When you tap "sign up" for a merchant, we open that merchant's website in an in-app browser.
 Once you leave the Service, that company's privacy policy applies and we have no control over
@@ -136,6 +146,7 @@ Area, your data may be transferred outside the EEA for processing; we apply appr
 | Usage events (impression / click / copy) | {{保存月數}} months. On account deletion the user identifier is stripped immediately; only anonymised records remain |
 | Reports | For the lifetime of the corresponding code |
 | Subscription records | Retained for a period after the subscription ends, for accounting and refund disputes |
+| Profile photo | Until you replace it or delete your account. **Replacing it or deleting your account also deletes the image file from our image provider (Cloudinary)**; copies already cached by browsers or CDNs disappear as those caches expire |
 | Device identifier | On your device only; gone when you uninstall |
 
 ## 8. Your rights

@@ -18,6 +18,7 @@ import {
 } from '@ionic/vue'
 import {
   addCircleOutline,
+  cameraOutline,
   chevronForward,
   earthOutline,
   documentTextOutline,
@@ -35,6 +36,7 @@ import { useRouter } from 'vue-router'
 
 import EmptyState from '../components/EmptyState.vue'
 import { countryOptions } from '../countries'
+import { toAvatarBlob } from '../images'
 import { SUPPORTED, apiErrorMessage, setLocale, type LocaleCode } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useSubscriptionStore } from '../stores/subscription'
@@ -87,6 +89,36 @@ async function confirmDelete() {
   }
 }
 
+// 大頭照。用原生的 file input 而不是 Camera plugin —— WebView 本來就會叫出系統的
+// 「相機／相簿」選單，裝 plugin 反而要多申報相機權限，資料安全性表單也得跟著改。
+const avatarInput = ref<HTMLInputElement | null>(null)
+const avatarUploading = ref(false)
+const avatarError = ref('')
+
+function pickAvatar() {
+  avatarInput.value?.click()
+}
+
+async function onAvatarPicked(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  // 選完就清空，不然連續選同一個檔案不會再觸發 change。
+  input.value = ''
+  if (!file) return
+
+  avatarError.value = ''
+  avatarUploading.value = true
+  try {
+    await auth.setAvatar(await toAvatarBlob(file))
+    const toast = await toastController.create({ message: t('account.avatarDone'), duration: 2000 })
+    await toast.present()
+  } catch (e) {
+    avatarError.value = apiErrorMessage(e, 'account.avatarFailed')
+  } finally {
+    avatarUploading.value = false
+  }
+}
+
 // UGC app 要有 app 內可見的聯絡方式與條款連結（Apple 審核指南 1.2、5.1.1）。
 // 兩個都從 .env 讀，沒設定就不顯示 —— 送審前一定要設，見 store/checklist.md。
 const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL ?? ''
@@ -132,12 +164,31 @@ function initial() {
     <IonContent>
       <template v-if="auth.isLoggedIn">
         <div class="profile page-pad">
-          <div class="avatar">
+          <button
+            type="button"
+            class="avatar"
+            :aria-label="$t('account.avatarChange')"
+            :disabled="avatarUploading"
+            @click="pickAvatar"
+          >
             <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" alt="" />
             <span v-else>{{ initial() }}</span>
-          </div>
+            <IonIcon :icon="cameraOutline" class="avatar-badge" />
+          </button>
+          <!-- accept 交給系統決定要開相機還是相簿，不另外裝 Camera plugin。 -->
+          <input
+            ref="avatarInput"
+            type="file"
+            accept="image/*"
+            class="avatar-input"
+            @change="onAvatarPicked"
+          />
           <h1>{{ auth.user?.display_name }}</h1>
           <p class="muted">{{ auth.user?.email }}</p>
+          <p v-if="avatarUploading" class="tiny muted">{{ $t('account.avatarUploading') }}</p>
+          <p v-else-if="avatarError" class="tiny" style="color: var(--ion-color-danger)">
+            {{ avatarError }}
+          </p>
         </div>
 
         <div class="page-pad">
@@ -290,23 +341,47 @@ function initial() {
 }
 
 .avatar {
+  position: relative;
   display: grid;
   place-items: center;
   width: 72px;
   height: 72px;
   margin-bottom: 14px;
+  padding: 0;
+  border: none;
   border-radius: 999px;
   overflow: hidden;
   background: var(--app-tint);
   color: var(--app-tint-ink);
   font-size: 28px;
   font-weight: 700;
+  cursor: pointer;
+}
+
+.avatar:disabled {
+  opacity: 0.6;
 }
 
 .avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* 沒有這顆相機圖示的話，看不出頭像是可以按的。 */
+.avatar-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  padding: 3px 0 2px;
+  background: rgb(0 0 0 / 45%);
+  color: #fff;
+  font-size: 13px;
+}
+
+.avatar-input {
+  display: none;
 }
 
 .profile h1 {

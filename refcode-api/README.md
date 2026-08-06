@@ -103,9 +103,12 @@ app 與官網的日文／英文介面沒辦法直接顯示，它們拿 code 去�
 ### 需登入
 | Method | Path | 說明 |
 |---|---|---|
-| GET/PATCH | `/v1/me` | 個人資料 |
+| GET/PATCH | `/v1/me` | 個人資料。PATCH 是整份覆寫 |
+| DELETE | `/v1/me` | 刪帳號，`{confirm}` 要等於帳號的 email |
+| POST | `/v1/me/avatar` | 大頭照。multipart `file`，上限 2MB，上傳完直接寫回 `avatar_url` 並回整份使用者資料 |
 | GET | `/v1/me/codes` | 我上架的碼 |
 | POST | `/v1/codes` | 上架，進 `pending` 等審核 |
+| POST | `/v1/codes/{id}/disable` | 自行下架。只有 `active` / `pending` 能撤，其餘回 400 `code_not_active` |
 | GET | `/v1/codes/{id}/stats` | `?days=30`，只有本人看得到 |
 
 ### 後台

@@ -137,7 +137,7 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 const createUser = `-- name: CreateUser :one
 INSERT INTO referral_code_bonus.users (email, display_name, avatar_url, password_hash, email_verified_at, country)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country
+RETURNING id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id
 `
 
 type CreateUserParams struct {
@@ -170,6 +170,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Country,
+		&i.AvatarPublicID,
 	)
 	return i, err
 }
@@ -270,7 +271,7 @@ func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country FROM referral_code_bonus.users
+SELECT id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id FROM referral_code_bonus.users
 WHERE lower(email) = lower($1::text) AND status <> 'deleted'
 `
 
@@ -288,12 +289,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Country,
+		&i.AvatarPublicID,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country FROM referral_code_bonus.users
+SELECT id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id FROM referral_code_bonus.users
 WHERE id = $1 AND status <> 'deleted'
 `
 
@@ -311,6 +313,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Country,
+		&i.AvatarPublicID,
 	)
 	return i, err
 }
@@ -442,6 +445,40 @@ func (q *Queries) RevokeTokenFamily(ctx context.Context, familyID uuid.UUID) err
 	return err
 }
 
+const updateUserAvatar = `-- name: UpdateUserAvatar :one
+UPDATE referral_code_bonus.users
+SET avatar_url = $2, avatar_public_id = $3, updated_at = now()
+WHERE id = $1
+RETURNING id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id
+`
+
+type UpdateUserAvatarParams struct {
+	ID             uuid.UUID `json:"id"`
+	AvatarUrl      *string   `json:"avatar_url"`
+	AvatarPublicID *string   `json:"avatar_public_id"`
+}
+
+// 只動大頭照。走 UpdateUserProfile 的話得把顯示名稱與所在地一起送，
+// 上傳圖片的當下前端手上那份可能已經是舊的。
+func (q *Queries) UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserAvatar, arg.ID, arg.AvatarUrl, arg.AvatarPublicID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.PasswordHash,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Country,
+		&i.AvatarPublicID,
+	)
+	return i, err
+}
+
 const updateUserPassword = `-- name: UpdateUserPassword :exec
 UPDATE referral_code_bonus.users
 SET password_hash = $2, updated_at = now()
@@ -462,7 +499,7 @@ const updateUserProfile = `-- name: UpdateUserProfile :one
 UPDATE referral_code_bonus.users
 SET display_name = $2, avatar_url = $3, country = $4, updated_at = now()
 WHERE id = $1
-RETURNING id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country
+RETURNING id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id
 `
 
 type UpdateUserProfileParams struct {
@@ -491,6 +528,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Country,
+		&i.AvatarPublicID,
 	)
 	return i, err
 }

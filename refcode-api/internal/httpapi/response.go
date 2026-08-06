@@ -67,6 +67,7 @@ const (
 	codeExpiryTooFar        = "expiry_too_far"
 	codeCodeAlreadyListed   = "code_already_listed"
 	codeCodeNotFound        = "code_not_found"
+	codeCodeNotActive       = "code_not_active"
 	codeEventTypeInvalid    = "event_type_invalid"
 	codeReportResultInvalid = "report_result_invalid"
 	codeProRequired         = "pro_required"

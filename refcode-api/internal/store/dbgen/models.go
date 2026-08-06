@@ -144,4 +144,5 @@ type User struct {
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 	Country         *string    `json:"country"`
+	AvatarPublicID  *string    `json:"avatar_public_id"`
 }

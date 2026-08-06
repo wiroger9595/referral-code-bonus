@@ -12,6 +12,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	neturl "net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -40,8 +41,11 @@ func (c *Client) Enabled() bool {
 	return c.cloudName != "" && c.apiKey != "" && c.apiSecret != ""
 }
 
-// Upload 簽名上傳一張圖到 folder 底下，回傳 Cloudinary 的 https URL。
-func (c *Client) Upload(ctx context.Context, file io.Reader, folder string) (string, error) {
+// Upload 簽名上傳一張圖到 folder 底下，回傳 Cloudinary 的 https URL 與 public_id。
+//
+// public_id 是之後要刪這張圖的唯一依據 —— 從 URL 反推得出來，但 Cloudinary 的
+// URL 中間可能插入 transformation 或版本號，反推容易錯，寧可存下來。
+func (c *Client) Upload(ctx context.Context, file io.Reader, folder string) (string, string, error) {
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 
 	// 只有這兩個參數要簽名。folder 是我們自己分的 merchants / categories，
@@ -61,41 +65,96 @@ func (c *Client) Upload(ctx context.Context, file io.Reader, folder string) (str
 	mw.WriteField("signature", signature)
 	part, err := mw.CreateFormFile("file", "upload")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if _, err := io.Copy(part, file); err != nil {
-		return "", err
+		return "", "", err
 	}
 	if err := mw.Close(); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	url := fmt.Sprintf("https://api.cloudinary.com/v1_1/%s/image/upload", c.cloudName)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, &body)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("呼叫 Cloudinary: %w", err)
+		return "", "", fmt.Errorf("呼叫 Cloudinary: %w", err)
 	}
 	defer resp.Body.Close()
 
 	var out struct {
 		SecureURL string `json:"secure_url"`
+		PublicID  string `json:"public_id"`
 		Error     struct {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return "", fmt.Errorf("解析 Cloudinary 回應: %w", err)
+		return "", "", fmt.Errorf("解析 Cloudinary 回應: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Cloudinary 上傳失敗（%d）: %s", resp.StatusCode, out.Error.Message)
+		return "", "", fmt.Errorf("Cloudinary 上傳失敗（%d）: %s", resp.StatusCode, out.Error.Message)
 	}
-	return out.SecureURL, nil
+	return out.SecureURL, out.PublicID, nil
+}
+
+// Destroy 刪掉一張已上傳的圖。Apple 要求刪帳號時連使用者產生的內容一起刪，
+// 大頭照的圖檔本身也算在內 —— 只把資料庫欄位清掉的話，圖還躺在公開網址上。
+//
+// 找不到那張圖（已經刪過、或 public_id 是舊資料）不算錯誤：Cloudinary 會回
+// {"result":"not found"}，對呼叫端來說結果一樣是「這張圖不在了」。
+func (c *Client) Destroy(ctx context.Context, publicID string) error {
+	if publicID == "" {
+		return nil
+	}
+
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	params := map[string]string{
+		"public_id": publicID,
+		"timestamp": timestamp,
+	}
+
+	form := neturl.Values{}
+	for k, v := range params {
+		form.Set(k, v)
+	}
+	form.Set("api_key", c.apiKey)
+	form.Set("signature", sign(params, c.apiSecret))
+
+	endpoint := fmt.Sprintf("https://api.cloudinary.com/v1_1/%s/image/destroy", c.cloudName)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("呼叫 Cloudinary: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var out struct {
+		Result string `json:"result"`
+		Error  struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return fmt.Errorf("解析 Cloudinary 回應: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Cloudinary 刪除失敗（%d）: %s", resp.StatusCode, out.Error.Message)
+	}
+	if out.Result != "ok" && out.Result != "not found" {
+		return fmt.Errorf("Cloudinary 刪除失敗: %s", out.Result)
+	}
+	return nil
 }
 
 // sign 是 Cloudinary 簽名上傳的固定算法：參數依 key 字母排序組成

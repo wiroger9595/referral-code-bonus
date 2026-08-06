@@ -106,6 +106,12 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
+  // 大頭照後端上傳完會直接寫回 users，所以回來的就是最新的整份資料。
+  async function setAvatar(image: Blob) {
+    if (!user.value) return
+    user.value = await api.uploadAvatar(image)
+  }
+
   return {
     user,
     ready,
@@ -116,6 +122,7 @@ export const useAuthStore = defineStore('auth', () => {
     resetPassword,
     loginWithProvider,
     setCountry,
+    setAvatar,
     logout,
     deleteAccount,
   }

@@ -126,6 +126,17 @@
     "forgotResent": "再送しました。以前のコードは無効になりました",
     "backToLogin": "ログインに戻る"
   },
+  "account": {
+    "title": "アカウント",
+    "signInFirst": "アカウントを管理するにはログインしてください。",
+    "avatarChange": "プロフィール画像を変更",
+    "avatarEdit": "変更",
+    "avatarUploading": "アップロード中…",
+    "avatarHint": "画像をタップすると変更できます。アップロード前に自動で縮小されます。",
+    "otherTitle": "その他の設定",
+    "otherBody": "表示名と地域は現在アプリからのみ変更できます。",
+    "deleteLink": "アカウントを削除"
+  },
   "errors": {
     "network": "接続に失敗しました。しばらくしてからもう一度お試しください",
     "invalid_request": "入力内容に誤りがあります",
@@ -164,7 +175,8 @@
     "reset_code_invalid": "確認コードが正しくありません",
     "reset_too_many_attempts": "失敗回数が多すぎます。確認コードを取得し直してください",
     "reset_too_many_requests": "確認コードの取得が多すぎます。しばらくしてからお試しください",
-    "reset_unavailable": "パスワード再設定は現在ご利用いただけません。しばらくしてからお試しください"
+    "reset_unavailable": "パスワード再設定は現在ご利用いただけません。しばらくしてからお試しください",
+    "image_invalid": "画像の形式が正しくないか、サイズが大きすぎます（上限 2MB）。"
   },
   "deleteAccount": {
     "title": "アカウントの削除",

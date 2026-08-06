@@ -117,7 +117,8 @@ async function refreshSession(): Promise<boolean> {
 
 async function request<T>(path: string, init: RequestInit = {}, allowRetry = true): Promise<T> {
   const headers = new Headers(init.headers)
-  headers.set('Content-Type', 'application/json')
+  // FormData 的 Content-Type 要由瀏覽器帶 boundary 一起產生，自己設就送不出去了。
+  if (!(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   headers.set('X-Device-ID', deviceId)
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
 
@@ -209,6 +210,13 @@ export const api = {
     return request<User>('/v1/me', { method: 'PATCH', body: JSON.stringify(input) })
   },
 
+  // 大頭照是上傳完後端直接寫回 users，所以回的是整份使用者資料，不用再打一次 PATCH。
+  uploadAvatar(image: Blob) {
+    const form = new FormData()
+    form.append('file', image, 'avatar.jpg')
+    return request<User>('/v1/me/avatar', { method: 'POST', body: form })
+  },
+
   listCategories() {
     return request<{ categories: Category[] }>(`/v1/categories?lang=${apiLang}`)
   },
@@ -230,6 +238,12 @@ export const api = {
 
   createCode(input: { merchant_id: string; code: string; note: string; expires_at: string }) {
     return request<MyCode>('/v1/codes', { method: 'POST', body: JSON.stringify(input) })
+  },
+
+  // 下架不是刪除：碼會留在「我的推薦碼」裡標成已下架，公開列表看不到。
+  // 回的是 referral_codes 那一列，沒有服務商欄位，所以只取得到狀態。
+  disableCode(id: string) {
+    return request<Pick<MyCode, 'id' | 'status'>>(`/v1/codes/${id}/disable`, { method: 'POST' })
   },
 
   codeStats(id: string, days = 30) {

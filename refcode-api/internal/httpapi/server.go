@@ -99,8 +99,10 @@ func (s *Server) Routes() http.Handler {
 			r.Get("/me", s.handleGetMe)
 			r.Patch("/me", s.handleUpdateMe)
 			r.Delete("/me", s.handleDeleteMe)
+			r.Post("/me/avatar", s.handleUploadAvatar)
 			r.Get("/me/codes", s.handleListMyCodes)
 			r.Post("/codes", s.handleCreateCode)
+			r.Post("/codes/{id}/disable", s.handleDisableMyCode)
 			r.Get("/codes/{id}/stats", s.handleCodeStats)
 		})
 

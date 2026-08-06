@@ -10,9 +10,11 @@ import {
   IonRefresherContent,
   IonTitle,
   IonToolbar,
+  alertController,
+  toastController,
 } from '@ionic/vue'
 import type { RefresherCustomEvent } from '@ionic/vue'
-import { addOutline, alertCircleOutline, pricetagsOutline } from 'ionicons/icons'
+import { addOutline, alertCircleOutline, arrowDownCircleOutline, pricetagsOutline } from 'ionicons/icons'
 import { onActivated, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -60,6 +62,48 @@ onActivated(load)
 async function refresh(event: RefresherCustomEvent) {
   await load()
   event.target.complete()
+}
+
+// 已經在架上或還在審的才撤得掉，其餘狀態後端會擋。
+function canDisable(status: CodeStatus) {
+  return status === 'active' || status === 'pending'
+}
+
+const disablingID = ref('')
+
+async function disable(c: MyCode) {
+  const alert = await alertController.create({
+    header: t('myCodes.disableTitle'),
+    message: t('myCodes.disableWarning', { merchant: c.merchant_name }),
+    buttons: [
+      { text: t('myCodes.disableCancel'), role: 'cancel' },
+      { text: t('myCodes.disableConfirm'), role: 'destructive' },
+    ],
+  })
+  await alert.present()
+  const { role } = await alert.onDidDismiss()
+  if (role !== 'destructive') return
+
+  disablingID.value = c.id
+  try {
+    const updated = await api.disableCode(c.id)
+    // 只改狀態不重抓整份列表：使用者要的是碼從公開列表消失，
+    // 它自己這張卡留在原位標成「已下架」比較不會以為資料不見了。
+    c.status = updated.status
+    const toast = await toastController.create({ message: t('myCodes.disableDone'), duration: 2400 })
+    await toast.present()
+  } catch (e) {
+    const toast = await toastController.create({
+      message: apiErrorMessage(e, 'myCodes.disableFailed'),
+      duration: 3200,
+      color: 'danger',
+    })
+    await toast.present()
+    // code_not_active 代表列表是舊的，重抓一次才看得到真正的狀態。
+    await load()
+  } finally {
+    disablingID.value = ''
+  }
 }
 
 // 日期格式跟著介面語言走，不然日文介面會看到中文的月／日排法。
@@ -136,6 +180,19 @@ function formatDate(iso: string) {
               <span class="tiny muted">{{ $t('myCodes.expiresAt') }}</span>
             </div>
           </div>
+
+          <IonButton
+            v-if="canDisable(c.status)"
+            fill="clear"
+            size="small"
+            color="danger"
+            class="disable"
+            :disabled="disablingID === c.id"
+            @click="disable(c)"
+          >
+            <IonIcon slot="start" :icon="arrowDownCircleOutline" />
+            {{ $t('myCodes.disable') }}
+          </IonButton>
         </div>
       </div>
     </IonContent>
@@ -216,5 +273,13 @@ function formatDate(iso: string) {
   font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.01em;
+}
+
+/* 破壞性動作靠右且不搶眼，主要動線還是看數據。 */
+.disable {
+  display: block;
+  margin: 10px -8px -6px auto;
+  --padding-start: 8px;
+  --padding-end: 8px;
 }
 </style>

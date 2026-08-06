@@ -86,7 +86,6 @@
     "privacySeoDescription": "推薦碼交流站如何蒐集、使用與保護您的個人資料。",
     "termsSeoTitle": "服務條款",
     "termsSeoDescription": "使用推薦碼交流站前應該知道的規則與限制。",
-    "jaFallbackNotice": "日文版尚未提供，以下顯示中文版。",
     "zhOnlyNotice": "此文件目前僅提供中文版。"
   },
   "auth": {
@@ -126,6 +125,17 @@
     "forgotResent": "已重新寄出，舊的驗證碼失效了",
     "backToLogin": "回登入頁"
   },
+  "account": {
+    "title": "我的帳號",
+    "signInFirst": "要先登入才能管理自己的帳號。",
+    "avatarChange": "更換大頭照",
+    "avatarEdit": "更換",
+    "avatarUploading": "上傳中…",
+    "avatarHint": "點頭像就能換一張。上傳前會自動縮小，只有你自己和推薦碼列表上會看到。",
+    "otherTitle": "其他設定",
+    "otherBody": "顯示名稱與所在地目前只能在手機 app 裡修改。",
+    "deleteLink": "刪除我的帳號"
+  },
   "errors": {
     "network": "連線失敗，請稍後再試",
     "invalid_request": "請求格式錯誤",
@@ -164,7 +174,8 @@
     "reset_code_invalid": "驗證碼不正確",
     "reset_too_many_attempts": "錯誤次數過多，請重新索取驗證碼",
     "reset_too_many_requests": "索取驗證碼太頻繁，請過一陣子再試",
-    "reset_unavailable": "忘記密碼功能暫時無法使用，請稍後再試"
+    "reset_unavailable": "忘記密碼功能暫時無法使用，請稍後再試",
+    "image_invalid": "圖片格式不對或檔案太大（上限 2MB）。"
   },
   "deleteAccount": {
     "title": "刪除帳號",

@@ -45,6 +45,20 @@
 			</array>
 		</dict>
 
+		<!-- 使用者自己上傳的大頭照。只有主動選了圖才會有，沒讀取相簿的能力。 -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePhotosorVideos</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+
 		<!-- 帳號 ID 與社群登入的 provider 使用者識別碼。 -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
