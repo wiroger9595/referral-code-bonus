@@ -35,7 +35,9 @@
     "summary": "{count}件・すべて有効期限内",
     "sectionExpiring": "まもなく終了",
     "sectionHot": "人気",
-    "limited": "期限間近"
+    "limited": "期限間近",
+    "regionShowAll": "すべての地域を表示",
+    "regionOnlyMine": "{region}のみ表示"
   },
   "category": {
     "seoTitle": "{name}の紹介コード",
@@ -45,8 +47,25 @@
     "empty": "このカテゴリにはまだサービスがありません。",
     "notFound": "このカテゴリは見つかりません"
   },
+  "search": {
+    "placeholder": "サービス・特典・カテゴリを検索",
+    "seoTitle": "紹介コードを検索",
+    "seoTitleQuery": "「{q}」の検索結果",
+    "heading": "「{q}」の検索結果",
+    "resultCount": "{count}件見つかりました",
+    "searching": "検索中…",
+    "emptyTitle": "「{q}」は見つかりませんでした",
+    "emptyHint": "ブランド名、特典の内容、カテゴリ名など、別の言い方でお試しください。",
+    "suggestionsTitle": "もしかして",
+    "popularTitle": "よく検索されている",
+    "historyTitle": "最近の検索",
+    "historyClear": "消去",
+    "historyRemove": "「{term}」を削除",
+    "startHint": "キーワードを入力して検索してください。"
+  },
   "merchant": {
-    "codesAvailable": "{count}件利用可能"
+    "codesAvailable": "{count}件利用可能",
+    "rewardPending": "特典情報はまだありません"
   },
   "referral": {
     "notFound": "このサービスは見つかりません",

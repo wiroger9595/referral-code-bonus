@@ -5,9 +5,10 @@ import type {
   Category,
   CodeStats,
   MerchantDetail,
-  MerchantSummary,
+  MerchantListResponse,
   MyCode,
   OAuthProvider,
+  PopularTerm,
   ReportResult,
   TokenPair,
   User,
@@ -221,11 +222,22 @@ export const api = {
     return request<{ categories: Category[] }>(`/v1/categories?lang=${apiLang}`)
   },
 
-  listMerchants(params: { category?: string; q?: string } = {}) {
+  // commit 代表這是使用者確定要搜的（按下搜尋、點了熱門或歷史），後端才會把它
+  // 計進熱門榜。逐字輸入不要帶，不然打一次「台新銀行」會在榜上留下四筆前綴。
+  // region 是「只看這一區的服務商」，'all' 代表不篩。不帶的話後端會退回
+  // 登入者填的所在地（匿名就是不篩），但 app 一律自己算好再送 ——
+  // 匿名使用者也要吃得到裝置地區。
+  listMerchants(params: { category?: string; q?: string; commit?: boolean; region?: string } = {}) {
     const qs = new URLSearchParams({ limit: '50', lang: apiLang })
     if (params.category) qs.set('category', params.category)
     if (params.q) qs.set('q', params.q)
-    return request<{ merchants: MerchantSummary[] }>(`/v1/merchants?${qs}`)
+    if (params.commit) qs.set('commit', '1')
+    if (params.region) qs.set('region', params.region)
+    return request<MerchantListResponse>(`/v1/merchants?${qs}`)
+  },
+
+  listPopularSearches() {
+    return request<{ terms: PopularTerm[] }>(`/v1/search/popular?lang=${apiLang}`)
   },
 
   getMerchant(slug: string) {

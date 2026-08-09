@@ -6,21 +6,40 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const { authHeaders } = useAuth()
 const { daysLeft, expiryLabel, isUrgent } = useExpiry()
+const { rewardText, rewardTone } = useReward()
 const lang = useApiLang()
+const { regionQuery } = useRegionFilter()
 
 const { data: categories } = await useFetch<{ categories: Category[] }>('/v1/categories', {
   baseURL: cfg.apiBase,
   query: { lang },
 })
 
+// 輸入框即時更新，但打去後端的 q 要debounce——服務商一多，每敲一鍵就打一次
+// API 划不來。400ms 跟 refcode-app 的 IonSearchbar debounce 對齊，兩邊手感一致。
+const searchInput = ref('')
+const search = ref('')
+let searchTimer: ReturnType<typeof setTimeout>
+watch(searchInput, (v) => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    search.value = v.trim()
+  }, 400)
+})
+
 // 帶上 token 後端才知道要不要把在地服務商排前面（沒登入就是原本的排序）。
+// query 裡的 ref（lang、search）useFetch 會自動追蹤，改變時重新打 API。
 const { data: merchants } = await useFetch<{ merchants: MerchantSummary[] }>('/v1/merchants', {
   baseURL: cfg.apiBase,
-  query: { limit: 30, lang },
+  query: { limit: 30, lang, q: search, region: regionQuery },
   headers: authHeaders(),
 })
 
 const all = computed(() => merchants.value?.merchants ?? [])
+
+// 搜尋中就不分區塊——使用者要的是篩出來的那份清單，拆成快到期／熱門
+// 只會讓剛搜到的東西看起來不見了。橫幅也跟著收起來，把版面讓給結果。
+const showSections = computed(() => !search.value)
 
 // 橫幅上的數字算的是這一頁列出來的，不是全站總數（API 一次只給 30 筆）。
 // 文案也是照這個寫的，別改成「全站共 N 組」。
@@ -29,14 +48,17 @@ const totalCodes = computed(() => all.value.reduce((sum, m) => sum + m.active_co
 // 進「快到期」區塊的門檻。門檻拉太寬會變成每一家都在倒數，倒數就不再是訊號了。
 const EXPIRING_DAYS = 7
 
-const expiring = computed(() =>
-  all.value
+const expiring = computed(() => {
+  if (!showSections.value) return []
+  return all.value
     .filter((m) => m.soonest_expires_at !== null && daysLeft(m.soonest_expires_at) <= EXPIRING_DAYS)
-    .sort((a, b) => (a.soonest_expires_at ?? '').localeCompare(b.soonest_expires_at ?? '')),
-)
+    .sort((a, b) => (a.soonest_expires_at ?? '').localeCompare(b.soonest_expires_at ?? ''))
+})
 
 // 後端已經照 active_code_count 由大到小排好，這裡不用再排一次。
-const hot = computed(() => all.value.filter((m) => m.active_code_count > 0).slice(0, 8))
+const hot = computed(() =>
+  showSections.value ? all.value.filter((m) => m.active_code_count > 0).slice(0, 8) : [],
+)
 
 useSeoMeta({
   title: () => t('home.seoTitle'),
@@ -52,6 +74,7 @@ useSeoMeta({
          這件事 —— 那才是使用者留下來而不是回去翻論壇的理由。
          h1 留在這裡，橫幅同時是這頁對搜尋引擎的標題。 -->
     <section
+      v-if="showSections"
       class="mb-10 rounded-tile bg-linear-to-br from-brand to-brand-2 p-6 text-on-brand sm:p-8"
     >
       <span
@@ -76,7 +99,23 @@ useSeoMeta({
       </div>
     </section>
 
-    <section v-if="categories?.categories?.length" class="mb-10">
+    <section class="mb-10">
+      <label class="relative block">
+        <span class="sr-only">{{ $t('home.searchPlaceholder') }}</span>
+        <AppIcon
+          name="search"
+          class="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
+        />
+        <input
+          v-model="searchInput"
+          type="search"
+          :placeholder="$t('home.searchPlaceholder')"
+          class="w-full rounded-full border border-line-strong bg-surface py-3 pr-4 pl-11 text-sm outline-none focus:border-brand"
+        />
+      </label>
+    </section>
+
+    <section v-if="showSections && categories?.categories?.length" class="mb-10">
       <h2 class="mb-4 text-lg font-bold tracking-tight">{{ $t('home.categories') }}</h2>
       <CategoryTiles :categories="categories.categories" />
     </section>
@@ -112,7 +151,9 @@ useSeoMeta({
             <template v-else>{{ m.name.trim().charAt(0) }}</template>
           </span>
           <p class="mt-3 truncate text-xs font-semibold text-muted">{{ m.name }}</p>
-          <p class="mt-0.5 line-clamp-2 text-sm font-bold text-brand">{{ m.reward_desc }}</p>
+          <p class="mt-0.5 line-clamp-2 text-sm font-bold" :class="rewardTone(m.reward_desc)">
+            {{ rewardText(m.reward_desc) }}
+          </p>
           <p
             v-if="m.soonest_expires_at"
             class="mt-2 text-xs font-semibold"
@@ -156,7 +197,9 @@ useSeoMeta({
             <template v-else>{{ m.name.trim().charAt(0) }}</template>
           </span>
           <p class="mt-3 truncate text-xs font-semibold text-muted">{{ m.name }}</p>
-          <p class="mt-0.5 line-clamp-2 text-sm font-bold text-brand">{{ m.reward_desc }}</p>
+          <p class="mt-0.5 line-clamp-2 text-sm font-bold" :class="rewardTone(m.reward_desc)">
+            {{ rewardText(m.reward_desc) }}
+          </p>
           <p class="mt-2 text-xs font-semibold text-muted">
             {{ $t('merchant.codesAvailable', { count: m.active_code_count }) }}
           </p>
@@ -166,14 +209,24 @@ useSeoMeta({
 
     <section>
       <div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 class="text-lg font-bold tracking-tight">{{ $t('home.allMerchants') }}</h2>
-        <p class="text-xs text-muted">
-          {{ $t('home.summary', { count: all.length }, all.length) }}
-        </p>
+        <h2 class="text-lg font-bold tracking-tight">
+          {{ showSections ? $t('home.allMerchants') : $t('home.searchResults') }}
+        </h2>
+        <div class="flex items-baseline gap-3">
+          <RegionToggle />
+          <p v-if="all.length" class="text-xs text-muted">
+            {{ $t('home.summary', { count: all.length }, all.length) }}
+          </p>
+        </div>
       </div>
 
       <div v-if="all.length" class="grid gap-3 sm:grid-cols-2">
         <MerchantCard v-for="m in all" :key="m.id" :merchant="m" />
+      </div>
+
+      <div v-else-if="!showSections" class="py-12 text-center">
+        <p class="font-semibold">{{ $t('home.noMatchTitle') }}</p>
+        <p class="mt-1 text-sm text-muted">{{ $t('home.noMatchDesc') }}</p>
       </div>
 
       <p v-else class="py-12 text-center text-muted">{{ $t('home.empty') }}</p>

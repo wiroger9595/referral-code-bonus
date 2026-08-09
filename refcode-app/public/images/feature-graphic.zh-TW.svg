@@ -1,0 +1,63 @@
+<svg width="1024" height="500" viewBox="0 0 1024 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff9b76" />
+      <stop offset="100%" stop-color="#f5794f" />
+    </linearGradient>
+    <radialGradient id="sheen" cx="82%" cy="12%" r="70%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.16" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <mask id="chips">
+      <rect width="1024" height="500" fill="black" />
+      <g transform="translate(700 130) scale(5.4)">
+        <circle cx="8.5" cy="24" r="6.5" fill="white" />
+        <circle cx="39.5" cy="24" r="6.5" fill="white" />
+        <g fill="black">
+          <rect x="4.5" y="21.1" width="8" height="1.9" rx="0.95" />
+          <rect x="4.5" y="25" width="5.4" height="1.9" rx="0.95" />
+          <rect x="35.5" y="21.1" width="8" height="1.9" rx="0.95" />
+          <rect x="35.5" y="25" width="5.4" height="1.9" rx="0.95" />
+        </g>
+      </g>
+    </mask>
+  </defs>
+
+  <rect width="1024" height="500" fill="url(#bg)" />
+  <rect width="1024" height="500" fill="url(#sheen)" />
+
+  <!-- 大顆的品牌記號：兩枚碼片＋雙向箭頭，跟 LogoMark.vue 同一個造型，
+       放大當右側視覺主體。用 on-brand 深墨色，不用白——主色上白字只有 2.7:1。 -->
+  <g transform="translate(700 130) scale(5.4)" stroke="#1a1e29" stroke-width="4"
+     stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.94">
+    <path d="M10.58 16.25A15.5 15.5 0 0 1 33.54 11.79" />
+    <path d="M37.42 31.75A15.5 15.5 0 0 1 14.46 36.21" />
+  </g>
+  <g transform="translate(700 130) scale(5.4)" fill="#1a1e29" opacity="0.94">
+    <path d="M38.27 15.48 36.19 8.40 30.89 15.18Z" />
+    <path d="M9.73 32.52 11.81 39.60 17.11 32.82Z" />
+  </g>
+  <rect width="1024" height="500" fill="#1a1e29" mask="url(#chips)" opacity="0.94" />
+
+  <!-- 品質分數徽章，呼應「經人工審核」的產品主張，不是純裝飾。 -->
+  <g transform="translate(792 108)">
+    <circle r="30" fill="#1a1e29" opacity="0.12" />
+    <circle r="30" fill="none" stroke="#1a1e29" stroke-width="3" opacity="0.55" />
+    <path d="M-11 1 L-3 9 L12 -8" fill="none" stroke="#1a1e29" stroke-width="4.5"
+          stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+  </g>
+
+  <!-- 文案：站名＋一句話主張。左側，留白給右側的記號。 -->
+  <text x="72" y="228" font-family="'PingFang TC','Noto Sans TC',system-ui,sans-serif"
+        font-size="68" font-weight="700" fill="#1a1e29" letter-spacing="-1">
+    推薦碼交流站
+  </text>
+  <text x="74" y="288" font-family="'PingFang TC','Noto Sans TC',system-ui,sans-serif"
+        font-size="30" font-weight="600" fill="#1a1e29" opacity="0.82">
+    找推薦碼，不用再翻論壇
+  </text>
+  <text x="74" y="336" font-family="'PingFang TC','Noto Sans TC',system-ui,sans-serif"
+        font-size="22" font-weight="500" fill="#1a1e29" opacity="0.68">
+    每個碼都經人工審核・失效自動下架
+  </text>
+</svg>

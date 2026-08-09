@@ -5,6 +5,7 @@ defineProps<{ merchant: MerchantSummary }>()
 
 const localePath = useLocalePath()
 const { expiryLabel, isUrgent } = useExpiry()
+const { rewardText, rewardTone } = useReward()
 </script>
 
 <template>
@@ -28,8 +29,8 @@ const { expiryLabel, isUrgent } = useExpiry()
     <div class="min-w-0 flex-1">
       <!-- 服務商名降成註記，獎勵內容才是使用者在比較的東西。 -->
       <p class="text-xs font-semibold text-muted">{{ merchant.name }}</p>
-      <h3 class="mt-0.5 truncate text-base font-bold tracking-tight text-brand">
-        {{ merchant.reward_desc }}
+      <h3 class="mt-0.5 truncate text-base font-bold tracking-tight" :class="rewardTone(merchant.reward_desc)">
+        {{ rewardText(merchant.reward_desc) }}
       </h3>
       <div class="mt-2 flex flex-wrap items-center gap-2">
         <span class="pill">{{ merchant.category_name }}</span>

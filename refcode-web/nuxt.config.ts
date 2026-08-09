@@ -43,6 +43,9 @@ export default defineNuxtConfig({
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || '',
       // 刪除帳號頁的求助信箱。沒填就不顯示那一行 —— 但送審前一定要填。
       supportEmail: process.env.NUXT_PUBLIC_SUPPORT_EMAIL || '',
+      // Tawk.to 即時客服。兩個都沒填就不載入 widget（見 plugins/tawk.client.ts）。
+      tawkPropertyId: process.env.NUXT_PUBLIC_TAWK_PROPERTY_ID || '',
+      tawkWidgetId: process.env.NUXT_PUBLIC_TAWK_WIDGET_ID || '',
     },
   },
 

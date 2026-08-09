@@ -7,6 +7,7 @@ const { track, report } = useTracking()
 const { t } = useI18n()
 const localePath = useLocalePath()
 const { expiryLabel, isUrgent } = useExpiry()
+const { rewardText } = useReward()
 const lang = useApiLang()
 
 // 要註冊才能拿到推薦碼：帶著 redirect 讓登入完直接回到這頁。
@@ -70,11 +71,13 @@ useSeoMeta({
   description: () =>
     t('referral.seoDescription', {
       name: merchant.value?.name ?? '',
-      reward: merchant.value?.reward_desc ?? '',
+      // 獎勵說明還沒補的服務商不能讓描述變成「xxx推薦碼：。目前有…」，
+      // 那一句斷掉的話在搜尋結果上很難看。
+      reward: rewardText(merchant.value?.reward_desc ?? ''),
       count: data.value?.total ?? 0,
     }),
   ogTitle: () => t('referral.seoTitle', { name: merchant.value?.name ?? '' }),
-  ogDescription: () => merchant.value?.reward_desc ?? '',
+  ogDescription: () => rewardText(merchant.value?.reward_desc ?? ''),
 })
 
 // 給搜尋引擎看的結構化資料，讓服務商頁在搜尋結果有機會拿到 rich result。
@@ -126,8 +129,17 @@ useHead({
         <template v-else>{{ merchant.name.trim().charAt(0) }}</template>
       </span>
 
-      <p class="mt-4 text-sm font-semibold text-muted">{{ merchant.name }}</p>
-      <h1 class="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{{ merchant.reward_desc }}</h1>
+      <!-- 有獎勵說明時它就是 h1：那是使用者往下滑之前唯一想知道的事。
+           還沒補說明的服務商（多半是剛匯入的）改用服務商名當 h1 ——
+           空的 h1 對 SEO 是硬傷，而這一頁本來就是在講這家服務商。 -->
+      <template v-if="merchant.reward_desc">
+        <p class="mt-4 text-sm font-semibold text-muted">{{ merchant.name }}</p>
+        <h1 class="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{{ merchant.reward_desc }}</h1>
+      </template>
+      <template v-else>
+        <h1 class="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">{{ merchant.name }}</h1>
+        <p class="mt-1 text-sm text-muted">{{ $t('merchant.rewardPending') }}</p>
+      </template>
 
       <div class="mt-4 flex flex-wrap gap-2">
         <span class="pill">{{ merchant.category_name }}</span>

@@ -115,8 +115,12 @@ func (c *Client) Destroy(ctx context.Context, publicID string) error {
 
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	params := map[string]string{
-		"public_id": publicID,
-		"timestamp": timestamp,
+		// 刪檔案不等於 CDN 上就看不到了 —— 實測過：destroy 之後 storage 立刻 404，
+		// 但 res.cloudinary.com 的邊緣節點還是繼續送舊的副本。invalidate 才會去清。
+		// 它要一起進簽名，漏了會被 Cloudinary 當成簽名不符。
+		"invalidate": "true",
+		"public_id":  publicID,
+		"timestamp":  timestamp,
 	}
 
 	form := neturl.Values{}

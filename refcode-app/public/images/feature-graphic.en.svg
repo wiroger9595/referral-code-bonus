@@ -1,0 +1,59 @@
+<svg width="1024" height="500" viewBox="0 0 1024 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff9b76" />
+      <stop offset="100%" stop-color="#f5794f" />
+    </linearGradient>
+    <radialGradient id="sheen" cx="82%" cy="12%" r="70%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.16" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <mask id="chips">
+      <rect width="1024" height="500" fill="black" />
+      <g transform="translate(700 130) scale(5.4)">
+        <circle cx="8.5" cy="24" r="6.5" fill="white" />
+        <circle cx="39.5" cy="24" r="6.5" fill="white" />
+        <g fill="black">
+          <rect x="4.5" y="21.1" width="8" height="1.9" rx="0.95" />
+          <rect x="4.5" y="25" width="5.4" height="1.9" rx="0.95" />
+          <rect x="35.5" y="21.1" width="8" height="1.9" rx="0.95" />
+          <rect x="35.5" y="25" width="5.4" height="1.9" rx="0.95" />
+        </g>
+      </g>
+    </mask>
+  </defs>
+
+  <rect width="1024" height="500" fill="url(#bg)" />
+  <rect width="1024" height="500" fill="url(#sheen)" />
+
+  <g transform="translate(700 130) scale(5.4)" stroke="#1a1e29" stroke-width="4"
+     stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.94">
+    <path d="M10.58 16.25A15.5 15.5 0 0 1 33.54 11.79" />
+    <path d="M37.42 31.75A15.5 15.5 0 0 1 14.46 36.21" />
+  </g>
+  <g transform="translate(700 130) scale(5.4)" fill="#1a1e29" opacity="0.94">
+    <path d="M38.27 15.48 36.19 8.40 30.89 15.18Z" />
+    <path d="M9.73 32.52 11.81 39.60 17.11 32.82Z" />
+  </g>
+  <rect width="1024" height="500" fill="#1a1e29" mask="url(#chips)" opacity="0.94" />
+
+  <g transform="translate(792 108)">
+    <circle r="30" fill="#1a1e29" opacity="0.12" />
+    <circle r="30" fill="none" stroke="#1a1e29" stroke-width="3" opacity="0.55" />
+    <path d="M-11 1 L-3 9 L12 -8" fill="none" stroke="#1a1e29" stroke-width="4.5"
+          stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+  </g>
+
+  <text x="72" y="220" font-family="system-ui,-apple-system,'Segoe UI',sans-serif"
+        font-size="60" font-weight="700" fill="#1a1e29" letter-spacing="-1">
+    RefCode
+  </text>
+  <text x="74" y="278" font-family="system-ui,-apple-system,'Segoe UI',sans-serif"
+        font-size="28" font-weight="600" fill="#1a1e29" opacity="0.82">
+    Referral codes, without the forum digging
+  </text>
+  <text x="74" y="326" font-family="system-ui,-apple-system,'Segoe UI',sans-serif"
+        font-size="21" font-weight="500" fill="#1a1e29" opacity="0.68">
+    Human reviewed &#183; stale codes removed automatically
+  </text>
+</svg>

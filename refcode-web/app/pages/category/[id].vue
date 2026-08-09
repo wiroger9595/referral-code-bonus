@@ -7,6 +7,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const { authHeaders } = useAuth()
 const lang = useApiLang()
+const { regionQuery } = useRegionFilter()
 // 分類一律用 id 認，網址上就是 id。
 const id = computed(() => String(route.params.id))
 
@@ -30,7 +31,7 @@ const { data: categories } = await useFetch<{ categories: Category[] }>('/v1/cat
 // 帶上 token 後端才知道要不要把在地服務商排前面（沒登入就是原本的排序）。
 const { data: merchants } = await useFetch<{ merchants: MerchantSummary[] }>('/v1/merchants', {
   baseURL: cfg.apiBase,
-  query: { category: computed(() => category.value?.id), limit: 50, lang },
+  query: { category: computed(() => category.value?.id), limit: 50, lang, region: regionQuery },
   headers: authHeaders(),
 })
 
@@ -55,9 +56,12 @@ useSeoMeta({
       <h1 class="text-2xl font-bold tracking-tight">
         {{ $t('category.heading', { name: category?.name ?? '' }) }}
       </h1>
-      <p v-if="all.length" class="text-xs text-muted">
-        {{ $t('home.summary', { count: all.length }, all.length) }}
-      </p>
+      <div class="flex items-baseline gap-3">
+        <RegionToggle />
+        <p v-if="all.length" class="text-xs text-muted">
+          {{ $t('home.summary', { count: all.length }, all.length) }}
+        </p>
+      </div>
     </div>
 
     <div v-if="all.length" class="grid gap-3 sm:grid-cols-2">

@@ -6,12 +6,14 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
 	"refcode-api/internal/auth"
+	"refcode-api/internal/geo"
 	"refcode-api/internal/ranking"
 	"refcode-api/internal/store"
 	"refcode-api/internal/store/dbgen"
@@ -168,15 +170,45 @@ func (s *Server) viewerCountry(r *http.Request) *string {
 	return user.Country
 }
 
+// resolveRegion 決定這次要不要把目錄限縮在某個地區。
+//
+//	?region=all  → 不篩（使用者自己選了「顯示所有地區」）
+//	?region=US   → 篩 US（app 從裝置地區推出來的預設，或使用者自己挑的）
+//	沒帶 region  → 退回登入者填的所在地；匿名或沒填就不篩
+//
+// 匿名不篩是刻意的：官網匿名的 SSR 內容不能因人而異，否則 Googlebot 從不同機房
+// 爬到的頁面會長得不一樣。要地區行為的用戶端自己帶 ?region=。
+//
+// 認不出來的地區碼當成沒帶，而不是回 400 —— 地區只是縮小範圍，
+// 值壞掉時給全部比讓整份目錄失敗有用。
+func resolveRegion(r *http.Request, userCountry *string) *string {
+	raw := strings.TrimSpace(r.URL.Query().Get("region"))
+	if strings.EqualFold(raw, "all") {
+		return nil
+	}
+	if raw == "" {
+		return userCountry
+	}
+	code, err := geo.Normalize(raw)
+	if err != nil || code == "" {
+		return userCountry
+	}
+	return &code
+}
+
 func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 	limit, offset := paginate(r, 30, 100)
+
+	// 讀一次就好：排序與過濾都要用，分開讀會變成兩次 GetUserByID。
+	country := s.viewerCountry(r)
 
 	params := dbgen.ListMerchantsParams{
 		Limit:  limit,
 		Offset: offset,
 		// 沒登入時是 nil，排序退回原本的（active_code_count DESC, name），
 		// 匿名訪客拿到的 SSR 內容因此不會因人而異。
-		ViewerCountry: s.viewerCountry(r),
+		ViewerCountry: country,
+		Region:        resolveRegion(r, country),
 	}
 	// 分類一律用 id。認不出來就是不篩，不要靜靜地回全部又讓人以為篩過了 ——
 	// 這裡直接擋掉比較好抓錯。
@@ -188,8 +220,12 @@ func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 		}
 		params.CategoryID = &id
 	}
-	if v := r.URL.Query().Get("q"); v != "" {
-		params.Search = &v
+	// 原字串留著給 similarity() 與熱門榜用：那兩條路不吃 LIKE 的萬用字元，
+	// escape 過的反斜線反而會變成要比對的內容。
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q != "" {
+		escaped := escapeLike(q)
+		params.Search = &escaped
 	}
 
 	rows, err := s.store.ListMerchants(r.Context(), params)
@@ -213,7 +249,61 @@ func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 			Countries:       m.Countries,
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"merchants": out})
+
+	// 一筆都沒有時 window function 連一列都不會回，總數就是 0。
+	var total int64
+	if len(rows) > 0 {
+		total = rows[0].TotalCount
+	}
+
+	body := map[string]any{"merchants": out, "total": total}
+
+	if q != "" {
+		body["suggestions"] = s.searchSuggestions(r, q, len(rows))
+
+		// commit 代表這是使用者「確定要搜的」（按下 Enter、點了建議或歷史、
+		// 直接開 /search?q=），逐字輸入不帶。少了這個條件，打一次「台新銀行」
+		// 會在榜上留下「台」「台新」「台新銀」四筆垃圾。
+		//
+		// 搜不到東西的詞也不記：熱門榜是拿來讓人點的，點進去是空頁就不是熱門，
+		// 是待補的服務商 —— 那是另一件事，不該混進同一份榜。
+		if len(rows) > 0 && r.URL.Query().Get("commit") == "1" {
+			if term := normalizeTerm(q); term != "" {
+				s.recordSearchTerm(r, term, lang)
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, body)
+}
+
+type searchSuggestion struct {
+	Slug string `json:"slug"`
+	Name string `json:"name"`
+}
+
+// searchSuggestions 只在一筆都搜不到時才去查 —— 有結果的時候使用者要的是結果，
+// 多打一次 similarity 查詢只是白花錢。查失敗也不讓整頁失敗：建議是加分，
+// 沒有建議的空結果頁仍然是完整的頁面。
+func (s *Server) searchSuggestions(r *http.Request, q string, found int) []searchSuggestion {
+	if found > 0 {
+		return []searchSuggestion{}
+	}
+
+	rows, err := s.store.SuggestMerchants(r.Context(), dbgen.SuggestMerchantsParams{
+		Search:     q,
+		MaxResults: suggestLimit,
+	})
+	if err != nil {
+		slog.Warn("查詢搜尋建議失敗，這次不給建議", "q", q, "err", err)
+		return []searchSuggestion{}
+	}
+
+	out := make([]searchSuggestion, len(rows))
+	for i, m := range rows {
+		out[i] = searchSuggestion{Slug: m.Slug, Name: m.Name}
+	}
+	return out
 }
 
 func (s *Server) handleMerchantSitemap(w http.ResponseWriter, r *http.Request) {

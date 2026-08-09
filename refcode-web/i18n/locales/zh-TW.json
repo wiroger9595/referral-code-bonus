@@ -29,13 +29,19 @@
     "categories": "分類",
     "allMerchants": "所有服務商",
     "empty": "目前還沒有服務商。",
+    "searchPlaceholder": "搜尋服務商",
+    "searchResults": "搜尋結果",
+    "noMatchTitle": "找不到符合的服務商",
+    "noMatchDesc": "換個關鍵字再試試看。",
     "bannerTag": "人工審核",
     "statMerchants": "家服務商",
     "statCodes": "組可用的碼",
     "summary": "{count} 家・都在有效期內",
     "sectionExpiring": "快到期",
     "sectionHot": "熱門",
-    "limited": "限時"
+    "limited": "限時",
+    "regionShowAll": "顯示所有地區",
+    "regionOnlyMine": "只看{region}"
   },
   "category": {
     "seoTitle": "{name}推薦碼",
@@ -45,8 +51,25 @@
     "empty": "這個分類還沒有服務商。",
     "notFound": "找不到這個分類"
   },
+  "search": {
+    "placeholder": "搜尋服務商、獎勵或分類",
+    "seoTitle": "搜尋推薦碼",
+    "seoTitleQuery": "「{q}」的搜尋結果",
+    "heading": "「{q}」的搜尋結果",
+    "resultCount": "找到 {count} 家",
+    "searching": "搜尋中…",
+    "emptyTitle": "找不到「{q}」",
+    "emptyHint": "換個說法試試，例如品牌名、獎勵內容或分類名稱。",
+    "suggestionsTitle": "你是不是要找",
+    "popularTitle": "大家在搜",
+    "historyTitle": "最近搜過",
+    "historyClear": "清除",
+    "historyRemove": "移除「{term}」",
+    "startHint": "輸入關鍵字開始搜尋。"
+  },
   "merchant": {
-    "codesAvailable": "{count} 個可用"
+    "codesAvailable": "{count} 個可用",
+    "rewardPending": "這家還沒有獎勵資訊"
   },
   "referral": {
     "notFound": "找不到這個服務商",

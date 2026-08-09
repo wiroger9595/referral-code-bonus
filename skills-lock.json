@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "create-skill": {
+      "source": "neokn/skill-forge",
+      "sourceType": "github",
+      "skillPath": "skills/create-skill/SKILL.md",
+      "computedHash": "a65d06212adb4ddf7f40e9042562629bd644a61502927ac2dc79fba906d5599c"
+    },
+    "eval-skill": {
+      "source": "neokn/skill-forge",
+      "sourceType": "github",
+      "skillPath": "skills/eval-skill/SKILL.md",
+      "computedHash": "5e0f3ba114afbc5c34382be31b5d17d73c17ab81b098ec2eecfac2e0935c8e4b"
+    },
+    "init-eval-infra": {
+      "source": "neokn/skill-forge",
+      "sourceType": "github",
+      "skillPath": "skills/init-eval-infra/SKILL.md",
+      "computedHash": "6fdd185a247bd2722bc766a1ae695c78428f313babb3a97ddae626f217bb1602"
+    }
+  }
+}

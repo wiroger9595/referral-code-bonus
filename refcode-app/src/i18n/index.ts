@@ -69,6 +69,13 @@ export function expiryLabel(iso: string): string {
   return days <= 0 ? t('common.expiresToday') : t('common.expiresInDays', { count: days }, days)
 }
 
+// 從 App Store 匯入的服務商只有名稱、圖示與官網，獎勵說明要後台自己補
+// （見 refcode-api 的 CreateImportedMerchant）。空字串直接 render 會變成一行
+// 空白，看起來像卡片壞掉而不是「這家還沒有資訊」。
+export function rewardText(desc: string): string {
+  return desc || i18n.global.t('merchant.rewardPending')
+}
+
 // 一律走 code：後端的每個 code 都對應到單一句話（見 refcode-api 的 response.go），
 // 這裡查得到就用譯文。查不到才退回後端那句中文 —— 那是後端加了新 code 但
 // 語系檔還沒跟上，顯示中文至少比顯示 code 好。

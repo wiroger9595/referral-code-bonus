@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  IonButton,
   IonContent,
   IonHeader,
   IonIcon,
@@ -9,6 +10,7 @@ import {
   IonSearchbar,
   IonTitle,
   IonToolbar,
+  actionSheetController,
 } from '@ionic/vue'
 import type { RefresherCustomEvent } from '@ionic/vue'
 import {
@@ -20,6 +22,7 @@ import {
   cellularOutline,
   chevronForward,
   cloudOutline,
+  earthOutline,
   fastFoodOutline,
   flameOutline,
   gameControllerOutline,
@@ -29,13 +32,18 @@ import {
   timeOutline,
   trendingUpOutline,
 } from 'ionicons/icons'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { api } from '../api/client'
-import type { Category, MerchantSummary } from '../api/types'
+import type { Category, MerchantSummary, PopularTerm, SearchSuggestion } from '../api/types'
 import EmptyState from '../components/EmptyState.vue'
 import SkeletonList from '../components/SkeletonList.vue'
-import { apiErrorMessage, daysUntilExpiry, expiryLabel } from '../i18n'
+import { countryName, countryOptions } from '../countries'
+import { apiErrorMessage, daysUntilExpiry, expiryLabel, rewardText } from '../i18n'
+import { useAuthStore } from '../stores/auth'
+import { ALL_REGIONS, useRegionStore } from '../stores/region'
+import { useSearchHistoryStore } from '../stores/searchHistory'
 
 const merchants = ref<MerchantSummary[]>([])
 const categories = ref<Category[]>([])
@@ -43,6 +51,22 @@ const activeCategory = ref<string | null>(null)
 const search = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
+// 套用 limit 之前的總筆數。搜尋時顯示的「找到 N 家」用它，不用 merchants.length
+// —— 那個被 API 的 50 筆上限截過。
+const total = ref(0)
+const suggestions = ref<SearchSuggestion[]>([])
+const popular = ref<PopularTerm[]>([])
+const history = useSearchHistoryStore()
+const auth = useAuthStore()
+const regionStore = useRegionStore()
+const { t, locale } = useI18n()
+
+// 目前生效的地區，'all' 代表不篩。優先序在 stores/region.ts。
+const region = computed(() => regionStore.effective(auth.user?.country))
+const regionLabel = computed(() =>
+  region.value === ALL_REGIONS ? t('explore.allRegions') : countryName(region.value),
+)
+const filteringByRegion = computed(() => region.value !== ALL_REGIONS)
 
 // 進「快到期」區塊的門檻。門檻拉太寬會變成每一家都在倒數，倒數就不再是訊號了。
 const EXPIRING_DAYS = 7
@@ -68,15 +92,22 @@ function categoryIcon(name: string) {
   return CATEGORY_ICONS.find((c) => c.match.test(name))?.icon ?? appsOutline
 }
 
-async function load() {
+// commit 只在使用者「確定要搜這個」時給 true（按下搜尋鍵、點了熱門或歷史），
+// 後端才會把這個詞計進熱門榜。逐字輸入不能帶 —— 打一次「台新銀行」會在榜上
+// 留下「台」「台新」「台新銀」四筆垃圾。
+async function load(commit = false) {
   loading.value = true
   errorMessage.value = ''
   try {
     const res = await api.listMerchants({
       category: activeCategory.value ?? undefined,
       q: search.value || undefined,
+      commit: commit && Boolean(search.value),
+      region: region.value,
     })
     merchants.value = res.merchants
+    total.value = res.total
+    suggestions.value = res.suggestions ?? []
   } catch (e) {
     errorMessage.value = apiErrorMessage(e, 'common.connectionFailed')
   } finally {
@@ -85,9 +116,58 @@ async function load() {
 }
 
 onMounted(async () => {
+  // 地區要在第一次查詢之前決定，不然會先閃一份全地區的清單再跳掉。
+  await regionStore.load().catch(() => {})
+  await load()
+
+  // 以下都是加分項：分類磁磚、熱門關鍵字、搜尋歷史任何一個掛掉，
+  // 都不該讓目錄跟著不見 —— 目錄才是這一頁的本體，所以擺在它後面而且各自吞錯。
+  categories.value = (await api.listCategories().catch(() => ({ categories: [] }))).categories
+  popular.value = (await api.listPopularSearches().catch(() => ({ terms: [] }))).terms
+  await history.load().catch(() => {})
+})
+
+// 分類名與獎勵說明是後端依 ?lang= 回的，換語言之後這一頁的資料就過期了。
+// Ionic 會把分頁留在記憶體裡，從「帳號」切語言再切回來不會重跑 onMounted ——
+// 所以要自己盯著 locale。熱門關鍵字與搜尋歷史是使用者打的字，不跟著換。
+watch(locale, async () => {
   categories.value = (await api.listCategories().catch(() => ({ categories: [] }))).categories
   await load()
 })
+
+// 地區選單。選項就是帳號設定那份常用清單，外加「所有地區」——
+// 人在美國出差但想找台灣的碼時走這裡，不用去改帳號的所在地。
+async function pickRegion() {
+  const sheet = await actionSheetController.create({
+    header: t('explore.regionHeader'),
+    buttons: [
+      ...countryOptions().map((c) => ({ text: c.label, handler: () => applyRegion(c.code) })),
+      { text: t('explore.allRegions'), handler: () => applyRegion(ALL_REGIONS) },
+      { text: t('common.cancel'), role: 'cancel' },
+    ],
+  })
+  await sheet.present()
+}
+
+async function applyRegion(next: string) {
+  await regionStore.choose(next)
+  await load()
+}
+
+// 按下鍵盤上的搜尋鍵才算一次「真的搜尋」：進熱門榜，也進本機歷史。
+async function commitSearch() {
+  if (!search.value.trim()) return
+  await load(true)
+  await history.add(search.value.trim())
+}
+
+// 點熱門或歷史的 chip。分類要一起清掉 —— 從關鍵字進來的人不會預期還套著
+// 上一次選的分類，那會讓他看到莫名其妙的空結果。
+async function pickTerm(term: string) {
+  search.value = term
+  activeCategory.value = null
+  await commitSearch()
+}
 
 function pickCategory(id: string | null) {
   activeCategory.value = activeCategory.value === id ? null : id
@@ -195,8 +275,43 @@ const sorted = computed(() => {
           class="app-search"
           :placeholder="$t('explore.searchPlaceholder')"
           :debounce="400"
-          @ion-input="load"
+          @ion-input="load()"
+          @keyup.enter="commitSearch"
         />
+      </div>
+
+      <!-- 最近搜過 / 大家在搜。只在「沒在搜、也沒篩分類」的預設瀏覽狀態出現，
+           而且兩份都空的時候整段不見 —— 剛裝好的 app 不會多出一排空欄位。
+           不做成聚焦才展開的浮層：那要處理 blur 比 click 早觸發的老問題，
+           在 WebView 上不值得為了一排 chips 冒這個險。 -->
+      <div
+        v-if="!search && activeCategory === null && (history.items.length || popular.length)"
+        class="terms"
+      >
+        <div v-if="history.items.length" class="term-block">
+          <div class="term-head page-pad">
+            <span class="term-label">{{ $t('explore.recentSearches') }}</span>
+            <button class="term-clear" @click="history.clear()">
+              {{ $t('explore.clearHistory') }}
+            </button>
+          </div>
+          <div class="chips">
+            <button v-for="t in history.items" :key="t" class="chip" @click="pickTerm(t)">
+              {{ t }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="popular.length" class="term-block">
+          <div class="term-head page-pad">
+            <span class="term-label">{{ $t('explore.popularSearches') }}</span>
+          </div>
+          <div class="chips">
+            <button v-for="p in popular" :key="p.term" class="chip" @click="pickTerm(p.term)">
+              {{ p.term }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- 分類做成磁磚而不是橫向 chips：一眼看得完的分類數（個位數）用磁磚
@@ -238,7 +353,38 @@ const sorted = computed(() => {
         :icon="searchOutline"
         :title="$t('explore.noMatchTitle')"
         :description="$t('explore.noMatchDesc')"
-      />
+      >
+        <!-- 打錯字時的救援，後端拿名稱相似度找的。沒有建議就退而給熱門關鍵字 ——
+             空結果頁一定要留一條出路，不然使用者只能自己把字刪掉重打。 -->
+        <div v-if="suggestions.length" class="term-block empty-terms">
+          <span class="term-label">{{ $t('explore.didYouMean') }}</span>
+          <div class="chips center">
+            <button
+              v-for="s in suggestions"
+              :key="s.slug"
+              class="chip"
+              @click="$router.push(`/merchant/${s.slug}`)"
+            >
+              {{ s.name }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 地區篩掉了一切時（例如人在美國，而目錄目前只有台灣的服務商），
+             不給出口的話使用者只會覺得 app 壞了。 -->
+        <IonButton v-if="filteringByRegion" fill="outline" size="small" @click="applyRegion(ALL_REGIONS)">
+          {{ $t('explore.showAllRegions') }}
+        </IonButton>
+
+        <div v-else-if="popular.length" class="term-block empty-terms">
+          <span class="term-label">{{ $t('explore.popularSearches') }}</span>
+          <div class="chips center">
+            <button v-for="p in popular" :key="p.term" class="chip" @click="pickTerm(p.term)">
+              {{ p.term }}
+            </button>
+          </div>
+        </div>
+      </EmptyState>
 
       <template v-else>
         <!-- 區塊：橫向捲動的小卡。獎勵內容是這張卡唯一的重點，服務商名只是註記。 -->
@@ -268,7 +414,9 @@ const sorted = computed(() => {
                   <span v-else>{{ initial(m.name) }}</span>
                 </div>
                 <p class="brand">{{ m.name }}</p>
-                <p class="reward tile-reward">{{ m.reward_desc }}</p>
+                <p class="reward tile-reward" :class="{ pending: !m.reward_desc }">
+                  {{ rewardText(m.reward_desc) }}
+                </p>
                 <span
                   v-if="m.soonest_expires_at"
                   class="countdown"
@@ -285,13 +433,27 @@ const sorted = computed(() => {
           <h2 v-if="showSections && (expiring.length || hot.length)" class="section-title">
             {{ $t('explore.allMerchants') }}
           </h2>
+          <!-- 搜尋時報的是符合的總數（可能大於列出來的 50 筆），
+               沒搜尋時維持原本那句「N 家服務商・都經過人工審核」。 -->
           <p class="count tiny muted">
-            {{ $t('explore.summary', { count: merchants.length }, merchants.length) }}
+            <template v-if="search">
+              {{ $t('explore.resultCount', { count: total }, total) }}
+            </template>
+            <template v-else>
+              {{ $t('explore.summary', { count: merchants.length }, merchants.length) }}
+            </template>
           </p>
         </div>
 
         <!-- 排序列。三個以內就全部攤開，藏進 action sheet 反而多一次點擊。 -->
         <div class="sorts">
+          <!-- 地區是過濾不是排序，所以擺在最前面並用一條分隔線隔開。 -->
+          <button class="sort region" @click="pickRegion">
+            <IonIcon :icon="earthOutline" />
+            {{ regionLabel }}
+          </button>
+          <span class="sort-sep" aria-hidden="true"></span>
+
           <button
             v-for="s in SORTS"
             :key="s.key"
@@ -317,7 +479,9 @@ const sorted = computed(() => {
 
             <div class="body">
               <p class="brand">{{ m.name }}</p>
-              <h3 class="reward">{{ m.reward_desc }}</h3>
+              <h3 class="reward" :class="{ pending: !m.reward_desc }">
+                {{ rewardText(m.reward_desc) }}
+              </h3>
               <div class="meta">
                 <span class="pill neutral">{{ m.category_name }}</span>
                 <span
@@ -587,6 +751,81 @@ const sorted = computed(() => {
   margin: 4px 0 0;
 }
 
+/* 搜尋詞的 chips。跟排序列同一套視覺（膠囊、白底、深一階的框線），
+   使用者不用學第二種可點的小東西長什麼樣。 */
+.terms {
+  padding-top: 4px;
+}
+
+.term-block + .term-block {
+  margin-top: 10px;
+}
+
+.term-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.term-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--app-muted);
+}
+
+.term-clear {
+  border: 0;
+  background: none;
+  color: var(--app-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+/* 空狀態裡的 chips 置中，而且不捲 —— 那裡只有幾個，換行比左右撥好按。 */
+.chips.center {
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 0;
+  overflow-x: visible;
+}
+
+.chip {
+  flex: none;
+  padding: 6px 13px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: var(--app-radius-full);
+  background: var(--app-surface);
+  /* 排序列的預設態是灰的（它是次要控制項），chips 是主要動作，用一般文字色。 */
+  color: var(--ion-text-color);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.empty-terms {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+
 .sorts {
   display: flex;
   gap: 8px;
@@ -611,6 +850,21 @@ const sorted = computed(() => {
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.sort.region {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ion-text-color);
+}
+
+.sort-sep {
+  flex: none;
+  align-self: center;
+  width: 1px;
+  height: 18px;
+  background: var(--app-line-strong);
 }
 
 .sort.on {
@@ -678,6 +932,13 @@ const sorted = computed(() => {
   line-height: 1.35;
   letter-spacing: -0.01em;
   color: var(--ion-color-primary);
+}
+
+/* 還沒補獎勵說明的那行。跟真的有獎勵的共用主色會讓「還沒有資訊」
+   看起來像一個賣點，所以降成一般說明文字。 */
+.reward.pending {
+  font-weight: 600;
+  color: var(--app-muted);
 }
 
 .meta {

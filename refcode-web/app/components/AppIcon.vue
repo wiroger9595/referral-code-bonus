@@ -18,6 +18,7 @@ const PATHS: Record<string, string[]> = {
   check: ['M5 12.5l4.5 4.5L19 7.5'],
   copy: ['M9 9h11v11H9z', 'M15 9V4H4v11h5'],
   external: ['M14 4h6v6', 'M20 4l-8 8', 'M18 14v6H4V6h6'],
+  search: ['M17.5 11a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0z', 'M16 16l4.5 4.5'],
 }
 
 defineProps<{ name: keyof typeof PATHS | string }>()

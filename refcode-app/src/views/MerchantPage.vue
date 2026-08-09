@@ -25,7 +25,7 @@ import {
   shieldCheckmarkOutline,
   ticketOutline,
 } from 'ionicons/icons'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -34,11 +34,11 @@ import type { CodeItem, MerchantDetail, ReportResult } from '../api/types'
 import EmptyState from '../components/EmptyState.vue'
 import QualityDot from '../components/QualityDot.vue'
 import SkeletonList from '../components/SkeletonList.vue'
-import { apiErrorMessage, expiryLabel } from '../i18n'
+import { apiErrorMessage, expiryLabel, rewardText } from '../i18n'
 
 const route = useRoute()
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const detail = ref<MerchantDetail | null>(null)
 const loading = ref(true)
 const errorMessage = ref('')
@@ -59,6 +59,10 @@ async function load() {
 }
 
 onMounted(load)
+
+// 跟探索頁同一個道理：獎勵說明與分類名是後端依 ?lang= 回的，而 Ionic 會把
+// 這一頁留在導覽堆疊裡，換語言之後再走回來不會重跑 onMounted。
+watch(locale, load)
 
 async function toast(message: string) {
   const t = await toastController.create({ message, duration: 1800, position: 'bottom' })
@@ -102,7 +106,7 @@ async function shareMerchant() {
   if (!detail.value) return
   await Share.share({
     title: t('merchant.titleSuffix', { name: detail.value.merchant.name }),
-    text: detail.value.merchant.reward_desc,
+    text: rewardText(detail.value.merchant.reward_desc),
     url: detail.value.merchant.signup_url,
   })
 }
@@ -149,7 +153,11 @@ async function shareMerchant() {
               <span v-else>{{ detail.merchant.name.trim().charAt(0) }}</span>
             </div>
             <p class="brand">{{ detail.merchant.name }}</p>
-            <h1>{{ detail.merchant.reward_desc }}</h1>
+            <!-- 還沒補獎勵說明的服務商（多半是剛匯入的）這行會是替代文案，
+                 樣式跟著降階，不然「還沒有資訊」會長得像一個賣點。 -->
+            <h1 :class="{ pending: !detail.merchant.reward_desc }">
+              {{ rewardText(detail.merchant.reward_desc) }}
+            </h1>
             <div class="hero-meta">
               <span class="pill neutral">{{ detail.merchant.category_name }}</span>
               <span class="pill" :class="detail.total > 0 ? 'success' : 'neutral'">
@@ -313,6 +321,13 @@ async function shareMerchant() {
   font-weight: 700;
   line-height: 1.28;
   letter-spacing: -0.02em;
+}
+
+/* 還沒補獎勵說明時這行是替代文案，不該用跟真獎勵一樣的份量喊出來。 */
+.hero h1.pending {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--app-muted);
 }
 
 .hero-meta {

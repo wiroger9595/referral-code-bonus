@@ -29,13 +29,19 @@
     "categories": "Categories",
     "allMerchants": "All services",
     "empty": "No services yet.",
+    "searchPlaceholder": "Search services",
+    "searchResults": "Search results",
+    "noMatchTitle": "No matching services",
+    "noMatchDesc": "Try a different keyword.",
     "bannerTag": "Human reviewed",
     "statMerchants": "services",
     "statCodes": "active codes",
     "summary": "{count} service, all within validity | {count} services, all within validity",
     "sectionExpiring": "Ending soon",
     "sectionHot": "Popular",
-    "limited": "Ending soon"
+    "limited": "Ending soon",
+    "regionShowAll": "Show all regions",
+    "regionOnlyMine": "Only {region}"
   },
   "category": {
     "seoTitle": "{name} referral codes",
@@ -45,8 +51,25 @@
     "empty": "No services in this category yet.",
     "notFound": "Category not found"
   },
+  "search": {
+    "placeholder": "Search services, rewards or categories",
+    "seoTitle": "Search referral codes",
+    "seoTitleQuery": "Search results for “{q}”",
+    "heading": "Results for “{q}”",
+    "resultCount": "{count} service found | {count} services found",
+    "searching": "Searching…",
+    "emptyTitle": "No results for “{q}”",
+    "emptyHint": "Try another wording — a brand name, the reward itself, or a category.",
+    "suggestionsTitle": "Did you mean",
+    "popularTitle": "Popular searches",
+    "historyTitle": "Recent searches",
+    "historyClear": "Clear",
+    "historyRemove": "Remove “{term}”",
+    "startHint": "Type a keyword to start searching."
+  },
   "merchant": {
-    "codesAvailable": "{count} available"
+    "codesAvailable": "{count} available",
+    "rewardPending": "No reward details yet"
   },
   "referral": {
     "notFound": "Service not found",

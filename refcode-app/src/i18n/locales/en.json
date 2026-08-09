@@ -9,11 +9,17 @@
     "loadFailed": "Couldn't load",
     "connectionFailed": "Connection failed",
     "expiresToday": "expires today",
-    "expiresInDays": "expires in {count} day | expires in {count} days"
+    "expiresInDays": "expires in {count} day | expires in {count} days",
+    "cancel": "Cancel"
   },
   "explore": {
     "title": "Explore",
     "searchPlaceholder": "Search services",
+    "resultCount": "{count} service found | {count} services found",
+    "recentSearches": "Recent searches",
+    "clearHistory": "Clear",
+    "popularSearches": "Popular searches",
+    "didYouMean": "Did you mean",
     "all": "All",
     "noMatchTitle": "No matching services",
     "noMatchDesc": "Try a different keyword, or switch the category back to \"All\".",
@@ -30,7 +36,10 @@
     "sortExpiring": "Ending soon",
     "sectionExpiring": "Ending soon",
     "sectionHot": "Popular",
-    "allMerchants": "All services"
+    "allMerchants": "All services",
+    "allRegions": "All regions",
+    "regionHeader": "Show services from",
+    "showAllRegions": "Show all regions"
   },
   "myCodes": {
     "title": "My codes",
@@ -76,7 +85,8 @@
     "thanksInline": "Thanks — this affects how it ranks from now on",
     "emptyTitle": "No valid codes right now",
     "emptyDesc": "Expired codes are removed automatically. Check back later, or share one of your own.",
-    "addMine": "Share my code"
+    "addMine": "Share my code",
+    "rewardPending": "No reward details yet"
   },
   "addCode": {
     "title": "Share a referral code",

@@ -9,11 +9,17 @@
     "loadFailed": "載入失敗",
     "connectionFailed": "連線失敗",
     "expiresToday": "今天到期",
-    "expiresInDays": "{count} 天後到期"
+    "expiresInDays": "{count} 天後到期",
+    "cancel": "取消"
   },
   "explore": {
     "title": "探索",
     "searchPlaceholder": "搜尋服務商",
+    "resultCount": "找到 {count} 家",
+    "recentSearches": "最近搜過",
+    "clearHistory": "清除",
+    "popularSearches": "大家在搜",
+    "didYouMean": "你是不是要找",
     "all": "全部",
     "noMatchTitle": "找不到符合的服務商",
     "noMatchDesc": "換個關鍵字，或把分類切回「全部」看看。",
@@ -30,7 +36,10 @@
     "sortExpiring": "快到期",
     "sectionExpiring": "快到期",
     "sectionHot": "熱門",
-    "allMerchants": "全部服務商"
+    "allMerchants": "全部服務商",
+    "allRegions": "所有地區",
+    "regionHeader": "顯示哪一區的服務商",
+    "showAllRegions": "顯示所有地區"
   },
   "myCodes": {
     "title": "我的碼",
@@ -76,7 +85,8 @@
     "thanksInline": "謝謝，這會影響它之後的排序",
     "emptyTitle": "目前沒有有效的推薦碼",
     "emptyDesc": "到期的碼會自動下架。晚點再回來看看，或自己上架一組。",
-    "addMine": "上架我的碼"
+    "addMine": "上架我的碼",
+    "rewardPending": "這家還沒有獎勵資訊"
   },
   "addCode": {
     "title": "上架推薦碼",

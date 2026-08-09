@@ -51,6 +51,12 @@ onMounted(async () => {
 
 const selected = computed(() => merchants.value.find((m) => m.id === merchantId.value))
 
+// merchant.name 是從 App Store 上架名稱整個匯進來的，例如
+// 「Klook - 全球旅遊＆玩樂體驗預訂平台」，選單裡只需要品牌名那一段。
+function shortName(name: string) {
+  return name.split(/\s*[-|｜]\s*/)[0]
+}
+
 async function submit() {
   errorMessage.value = ''
   if (!merchantId.value) {
@@ -111,7 +117,7 @@ async function submit() {
                 interface="action-sheet"
               >
                 <IonSelectOption v-for="m in merchants" :key="m.id" :value="m.id">
-                  {{ m.name }}
+                  {{ shortName(m.name) }}
                 </IonSelectOption>
               </IonSelect>
             </IonItem>

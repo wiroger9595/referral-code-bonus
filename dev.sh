@@ -34,6 +34,7 @@ usage() {
   all                 四個背景啟動，log 寫進 .logs/
   stop [模組...]      不給模組就四個全停
   logs <模組>         跟蹤某個模組的 log
+  ios [裝置關鍵字]    在 iOS 模擬器上跑 app，改前端會自動更新（Ctrl-C 結束）
 EOF
 }
 
@@ -133,6 +134,76 @@ start_bg() {
   echo "$mod 啟動中（port ${port}，log: .logs/$mod.log）"
 }
 
+# 在 iOS 模擬器上跑 app，並且讓它去載本機的 vite —— 改前端存檔就自動更新，
+# 不用重跑一次 cap run。
+#
+# 幾個一定要指定的東西，預設值都是錯的：
+#   --port  Capacitor CLI 預設 3000，那是 refcode-web 的 port，不給的話
+#           模擬器裡會載到官網。
+#   --host  預設是這台機器的區網 IP，那需要 vite 監聽 0.0.0.0。模擬器跟 Mac
+#           共用網路，用 localhost 就通，也省得改 vite 的設定。
+#           （實機不適用，那時才需要區網 IP + vite --host。）
+cmd_ios() {
+  dir="$ROOT/refcode-app"
+  port=$(port_of app)
+
+  ensure_deps app
+
+  # vite 沒在跑就先背景起來 —— cap run 只負責把 app 指向這個位址，
+  # 它不會幫你啟動 dev server，少了這步模擬器裡會是一片白。
+  #
+  # 是我們起的就要負責收掉：nohup 起來的 vite 結束時不會跟著走，會變成沒有
+  # 父行程的孤兒繼續佔著 5174，下次啟動就撞埠。本來就在跑的不動它 ——
+  # 那是使用者自己開的視窗，不該被這個指令關掉。
+  started_vite=0
+  if [ -z "$(port_pid "$port")" ]; then
+    mkdir -p "$LOGS"
+    (cd "$dir" && nohup npm run dev >"$LOGS/app.log" 2>&1 &)
+    started_vite=1
+    trap 'if [ "$started_vite" = 1 ]; then pid=$(port_pid "$port"); [ -n "$pid" ] && kill "$pid" 2>/dev/null && echo "已收掉這次啟動的 vite（pid $pid）"; fi' EXIT INT TERM
+    echo "vite 啟動中（port ${port}，log: .logs/app.log）"
+    waited=0
+    while [ -z "$(port_pid "$port")" ] && [ "$waited" -lt 30 ]; do
+      sleep 1
+      waited=$((waited + 1))
+    done
+    if [ -z "$(port_pid "$port")" ]; then
+      echo "vite 沒起來，看一下 .logs/app.log"
+      exit 1
+    fi
+  else
+    echo "vite 已經在 port ${port} 跑著，沿用"
+  fi
+
+  # 原生殼裡的 plugin 與設定是 sync 進去的，跟 live reload 無關但會過期。
+  # 這步很快，每次跑一下省得之後裝了新 plugin 找不到原因。
+  (cd "$dir" && npx cap sync ios) || exit 1
+
+  target=""
+  if [ -n "${1:-}" ]; then
+    # 用關鍵字挑模擬器，例如 ./dev.sh ios 17e
+    target=$(xcrun simctl list devices available 2>/dev/null \
+      | grep -i "$1" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')
+    if [ -z "$target" ]; then
+      echo "找不到符合「$1」的模擬器。可用的："
+      xcrun simctl list devices available | grep -E "^\s+(iPhone|iPad)" | head -10
+      exit 1
+    fi
+  fi
+
+  echo
+  echo "接下來畫面會停在「App running with live reload」——那是正常的，別關掉。"
+  echo "改 refcode-app/src 底下的東西存檔就會自動更新。**要用 Ctrl-C 結束**，"
+  echo "它才會把原生專案的設定改回來（硬殺的話下次 build 出來的 app 會一直想連這台）。"
+  echo
+
+  if [ -n "$target" ]; then
+    (cd "$dir" && npx cap run ios -l --host localhost --port "$port" --target "$target")
+  else
+    (cd "$dir" && npx cap run ios -l --host localhost --port "$port")
+  fi
+}
+
 cmd_status() {
   for mod in $ORDER; do
     port=$(port_of "$mod")
@@ -186,6 +257,7 @@ case "${1:-}" in
   all)    for mod in $ORDER; do start_bg "$mod"; done; echo; cmd_status ;;
   stop)   shift; cmd_stop "$@" ;;
   logs)   tail -f "$LOGS/${2:-api}.log" ;;
+  ios)    shift; cmd_ios "${1:-}" ;;
   api|admin|web|app) start_fg "$1" ;;
   *)      usage; exit 1 ;;
 esac

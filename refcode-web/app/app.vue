@@ -21,6 +21,7 @@ useHead(() => ({
 const isAuthPage = computed(
   () => route.path === localePath('/login') || route.path === localePath('/register'),
 )
+const isSearchPage = computed(() => route.path === localePath('/search'))
 const authRedirect = computed(() => (isAuthPage.value ? {} : { redirect: route.fullPath }))
 const loginTo = computed(() => ({ path: localePath('/login'), query: authRedirect.value }))
 const registerTo = computed(() => ({ path: localePath('/register'), query: authRedirect.value }))
@@ -43,11 +44,25 @@ async function signOut() {
           :to="localePath('/')"
           class="flex items-center gap-2 text-lg font-bold tracking-tight"
         >
-          <LogoMark class="size-8 shrink-0 text-brand" />
+          <img src="/images/app-icon-1024.png" alt="" class="size-8 shrink-0 rounded-[22%]" />
           {{ $t('site.name') }}
         </NuxtLink>
 
+        <!-- 搜尋頁自己有一個大的輸入框，站頭這個再出現一次只是兩個一樣的東西。 -->
+        <SearchBox v-if="!isSearchPage" class="hidden max-w-xs flex-1 sm:block" />
+
         <nav class="flex items-center gap-3 text-sm">
+          <!-- 窄螢幕放不下輸入框，改成一個進搜尋頁的圖示 —— 搜尋頁的空白狀態
+               本來就是為了這條路徑設計的（歷史 + 熱門）。 -->
+          <NuxtLink
+            v-if="!isSearchPage"
+            :to="localePath('/search')"
+            class="text-muted hover:text-ink sm:hidden"
+            :aria-label="$t('search.placeholder')"
+          >
+            <AppIcon name="search" class="text-xl" />
+          </NuxtLink>
+
           <NuxtLink
             :to="localePath('/about')"
             class="hidden font-semibold text-muted hover:text-ink sm:block"

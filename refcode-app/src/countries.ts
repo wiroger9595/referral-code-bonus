@@ -30,3 +30,24 @@ export function countryOptions(): { code: string; label: string }[] {
 export function defaultCountry(): string {
   return DEFAULT_BY_LOCALE[currentLocale()] ?? ''
 }
+
+// 裝置本身的地區，用來當目錄地區篩選的初值 —— app 不像官網有 SSR 的包袱，
+// 匿名使用者第一次打開就該看到自己這邊用得到的服務商。
+//
+// **這個值只拿來篩畫面，永遠不寫進 users.country。** 語言不等於所在地
+// （見 db/migrations/00006_geo.sql），猜錯的人要能在畫面上自己改掉，
+// 而不是被悄悄記成他的所在地。
+//
+// navigator.language 在 WebView 裡拿得到裝置的語言標籤（zh-TW、en-US）。
+// 只有語言沒有地區的標籤（單純的 "en"）取不出 region，那就回空字串當「不篩」。
+export function deviceRegion(): string {
+  try {
+    for (const tag of navigator.languages ?? [navigator.language]) {
+      const region = new Intl.Locale(tag).region
+      if (region) return region.toUpperCase()
+    }
+  } catch {
+    // Intl.Locale 不存在的舊 WebView。拿不到就不篩，不要讓目錄整個掛掉。
+  }
+  return ''
+}

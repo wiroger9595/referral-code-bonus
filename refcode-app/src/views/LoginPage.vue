@@ -201,8 +201,9 @@ async function submitSocial(provider: OAuthProvider) {
           </IonButton>
         </template>
 
-        <!-- client id 沒設好時整區都不會出現。上架 App Store 前一定要讓 Apple 登入
-             真的能用：只要提供了任一第三方登入，Apple 就強制要求同時提供。 -->
+        <!-- client id 沒設好、或（目前的 Apple）整個被關掉時，這區才會不出現。
+             Apple 目前是刻意關掉的，見 src/api/social.ts 的 appleReady —— 上架
+             App Store 前要處理掉那邊寫的 4.8 風險，不是這裡的事。 -->
         <p v-else class="tiny muted hint">
           {{ $t('login.emailOnlyNotice') }}
         </p>

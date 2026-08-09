@@ -112,6 +112,13 @@ type RefreshToken struct {
 	CreatedAt time.Time  `json:"created_at"`
 }
 
+type SearchTerm struct {
+	Term           string    `json:"term"`
+	Lang           string    `json:"lang"`
+	Hits           int64     `json:"hits"`
+	LastSearchedAt time.Time `json:"last_searched_at"`
+}
+
 type Subscription struct {
 	UserID      uuid.UUID  `json:"user_id"`
 	Entitlement string     `json:"entitlement"`

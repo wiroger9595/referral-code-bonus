@@ -52,6 +52,25 @@ export interface MerchantSummary {
   countries: string[]
 }
 
+// 搜不到東西時後端給的「你是不是要找」。有結果時是空陣列。
+export interface SearchSuggestion {
+  slug: string
+  name: string
+}
+
+// /v1/merchants 的回傳。total 是套用 limit 之前的總筆數，
+// suggestions 只有帶了 q 而且一筆都沒搜到時才有東西。
+export interface MerchantListResponse {
+  merchants: MerchantSummary[]
+  total: number
+  suggestions?: SearchSuggestion[]
+}
+
+export interface PopularTerm {
+  term: string
+  hits: number
+}
+
 export interface CodeItem {
   id: string
   // 要註冊才能拿到推薦碼：沒登入時後端不會把碼本身送過來，code 是 null、masked 是 true。

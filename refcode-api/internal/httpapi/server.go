@@ -89,6 +89,7 @@ func (s *Server) Routes() http.Handler {
 			r.Get("/merchants", s.handleListMerchants)
 			r.Get("/merchants/sitemap", s.handleMerchantSitemap)
 			r.Get("/merchants/{slug}", s.handleGetMerchant)
+			r.Get("/search/popular", s.handleSearchPopular)
 			r.Post("/events", s.handleCreateEvent)
 			r.Post("/codes/{id}/reports", s.handleCreateReport)
 		})

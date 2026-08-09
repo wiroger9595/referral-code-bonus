@@ -16,9 +16,15 @@ export class SocialLoginCancelled extends Error {}
 const isNative = Capacitor.isNativePlatform()
 const platform = Capacitor.getPlatform()
 
-// iOS 的 Sign in with Apple 是系統原生的，不需要 Services ID；
-// web 與 Android 走的是 Apple 的網頁流程，兩個都要填才算設定完成。
-const appleReady = platform === 'ios' || (APPLE_SERVICES_ID !== '' && APPLE_REDIRECT_URL !== '')
+// Apple 登入目前整個關掉（含 iOS）。這是明知故犯：iOS 上同時提供 Google 時，
+// App Store 4.8 要求必須也提供 Apple 登入，單獨拿掉 Apple、留著 Google 會在
+// 送審時被退件。日後真要上架，這裡要嘛把 Apple 加回來，要嘛把 Google 也一起拿掉。
+//
+// Android／Web 走的是網頁版 OAuth（Services ID／redirect url），跟 iOS 原生流程
+// 是分開的兩條路，這裡一併關掉，沒有半殘留著的狀態。
+// 型別故意寫成 boolean 而不是給 TS 推成 false 字面量 —— 字面量 false 會讓下面
+// `...(appleReady && {...})` 的展開被當成一定是 false，TS 直接判它不是物件型別。
+const appleReady: boolean = false
 const googleReady = platform === 'ios' ? GOOGLE_IOS_CLIENT_ID !== '' : GOOGLE_WEB_CLIENT_ID !== ''
 
 export function availableProviders(): OAuthProvider[] {

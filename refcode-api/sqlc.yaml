@@ -24,6 +24,7 @@ sql:
           referral_code_bonus_oauth_identity: "OAuthIdentity"
           referral_code_bonus_referral_code: "ReferralCode"
           referral_code_bonus_refresh_token: "RefreshToken"
+          referral_code_bonus_search_term: "SearchTerm"
           referral_code_bonus_subscription: "Subscription"
           referral_code_bonus_subscription_event: "SubscriptionEvent"
           referral_code_bonus_user: "User"

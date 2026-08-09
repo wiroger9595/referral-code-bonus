@@ -9,11 +9,17 @@
     "loadFailed": "読み込みに失敗しました",
     "connectionFailed": "接続に失敗しました",
     "expiresToday": "本日期限切れ",
-    "expiresInDays": "あと{count}日で期限切れ"
+    "expiresInDays": "あと{count}日で期限切れ",
+    "cancel": "キャンセル"
   },
   "explore": {
     "title": "さがす",
     "searchPlaceholder": "サービスを検索",
+    "resultCount": "{count}件見つかりました",
+    "recentSearches": "最近の検索",
+    "clearHistory": "消去",
+    "popularSearches": "よく検索されている",
+    "didYouMean": "もしかして",
     "all": "すべて",
     "noMatchTitle": "該当するサービスが見つかりません",
     "noMatchDesc": "キーワードを変えるか、カテゴリを「すべて」に戻してみてください。",
@@ -30,7 +36,10 @@
     "sortExpiring": "期限が近い順",
     "sectionExpiring": "まもなく終了",
     "sectionHot": "人気",
-    "allMerchants": "すべてのサービス"
+    "allMerchants": "すべてのサービス",
+    "allRegions": "すべての地域",
+    "regionHeader": "表示する地域",
+    "showAllRegions": "すべての地域を表示"
   },
   "myCodes": {
     "title": "マイコード",
@@ -76,7 +85,8 @@
     "thanksInline": "ありがとうございます。今後の表示順に反映されます",
     "emptyTitle": "現在、有効な紹介コードはありません",
     "emptyDesc": "期限切れのコードは自動的に掲載終了します。しばらくしてから確認するか、ご自身のコードを登録してください。",
-    "addMine": "自分のコードを登録"
+    "addMine": "自分のコードを登録",
+    "rewardPending": "特典情報はまだありません"
   },
   "addCode": {
     "title": "紹介コードを登録",
