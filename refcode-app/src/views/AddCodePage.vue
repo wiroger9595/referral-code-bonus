@@ -36,10 +36,9 @@ const note = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 
-// 後端限制最長一年，預設先給三個月 —— 大部分活動不會撐更久。
+// 到期日沒有上限，預設先給三個月 —— 大部分活動不會撐更久，使用者要延長自己拉。
 const defaultExpiry = new Date(Date.now() + 90 * 86400000).toISOString()
 const expiresAt = ref(defaultExpiry)
-const maxExpiry = new Date(Date.now() + 364 * 86400000).toISOString()
 
 onMounted(async () => {
   try {
@@ -159,7 +158,6 @@ async function submit() {
               v-model="expiresAt"
               presentation="date"
               :min="new Date().toISOString()"
-              :max="maxExpiry"
             />
           </div>
         </section>

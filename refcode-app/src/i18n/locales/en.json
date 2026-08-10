@@ -98,7 +98,7 @@
     "note": "Note",
     "notePlaceholder": "e.g. new customers only, spend 3000 first",
     "sectionExpiry": "Valid until",
-    "expiryHint": "One year at most. It's removed automatically when it expires.",
+    "expiryHint": "It's removed automatically when it expires.",
     "reviewNotice": "Your code goes into a review queue and appears in the list once it's approved.",
     "submit": "Submit",
     "submitted": "Submitted — it goes live once approved",

@@ -226,7 +226,7 @@ function initial() {
             <IonItem v-if="countryError" :detail="false">
               <IonLabel color="danger" class="ion-text-wrap">{{ countryError }}</IonLabel>
             </IonItem>
-            <IonItem v-if="supportEmail" button :href="`mailto:${supportEmail}`" :detail="false">
+            <IonItem v-if="supportEmail" button :href="`mailto:${supportEmail}`" target="_blank" :detail="false">
               <IonIcon slot="start" :icon="mailOutline" color="primary" />
               <IonLabel>
                 <h3>{{ $t('account.contact') }}</h3>
@@ -242,6 +242,19 @@ function initial() {
               <IonIcon slot="start" :icon="shieldCheckmarkOutline" color="primary" />
               <IonLabel>{{ $t('account.privacy') }}</IonLabel>
               <IonIcon slot="end" :icon="chevronForward" class="chev" />
+            </IonItem>
+            <IonItem :detail="false">
+              <IonIcon slot="start" :icon="languageOutline" color="primary" />
+              <IonSelect
+                :label="$t('account.language')"
+                :value="locale"
+                interface="action-sheet"
+                @ion-change="changeLocale"
+              >
+                <IonSelectOption v-for="l in SUPPORTED" :key="l.code" :value="l.code">
+                  {{ l.name }}
+                </IonSelectOption>
+              </IonSelect>
             </IonItem>
           </IonList>
         </div>
@@ -307,25 +320,6 @@ function initial() {
       >
         <IonButton router-link="/login" class="wide">{{ $t('account.signIn') }}</IonButton>
       </EmptyState>
-
-      <!-- 語言放在登入與未登入都看得到的地方 —— 看不懂介面的人多半還沒登入。 -->
-      <div class="page-pad">
-        <IonList class="app-form" lines="full">
-          <IonItem :detail="false">
-            <IonIcon slot="start" :icon="languageOutline" color="primary" />
-            <IonSelect
-              :label="$t('account.language')"
-              :value="locale"
-              interface="action-sheet"
-              @ion-change="changeLocale"
-            >
-              <IonSelectOption v-for="l in SUPPORTED" :key="l.code" :value="l.code">
-                {{ l.name }}
-              </IonSelectOption>
-            </IonSelect>
-          </IonItem>
-        </IonList>
-      </div>
     </IonContent>
   </IonPage>
 </template>

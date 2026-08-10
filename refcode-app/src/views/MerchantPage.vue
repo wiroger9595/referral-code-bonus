@@ -35,9 +35,11 @@ import EmptyState from '../components/EmptyState.vue'
 import QualityDot from '../components/QualityDot.vue'
 import SkeletonList from '../components/SkeletonList.vue'
 import { apiErrorMessage, expiryLabel, rewardText } from '../i18n'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const { t, locale } = useI18n()
 const detail = ref<MerchantDetail | null>(null)
 const loading = ref(true)
@@ -63,6 +65,10 @@ onMounted(load)
 // 跟探索頁同一個道理：獎勵說明與分類名是後端依 ?lang= 回的，而 Ionic 會把
 // 這一頁留在導覽堆疊裡，換語言之後再走回來不會重跑 onMounted。
 watch(locale, load)
+
+// masked 是後端依登入狀態算的：從這頁跳去登入、登入完 redirect 回來時，
+// Ionic 一樣沒有重新 mount 這頁，不重抓的話碼會一直停在登入前的遮碼狀態。
+watch(() => auth.isLoggedIn, load)
 
 async function toast(message: string) {
   const t = await toastController.create({ message, duration: 1800, position: 'bottom' })

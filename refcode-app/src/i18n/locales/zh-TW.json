@@ -98,7 +98,7 @@
     "note": "備註",
     "notePlaceholder": "例如：限新戶、要刷滿 3000",
     "sectionExpiry": "有效期限",
-    "expiryHint": "最長一年。到期會自動下架，不用自己回來關掉。",
+    "expiryHint": "到期會自動下架，不用自己回來關掉。",
     "reviewNotice": "送出後會先進入審核佇列，通過人工審核才會出現在列表上。",
     "submit": "送出",
     "submitted": "已送出，通過審核後就會上架",

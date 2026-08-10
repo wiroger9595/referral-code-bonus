@@ -19,9 +19,6 @@ import (
 	"refcode-api/internal/store/dbgen"
 )
 
-// 有效期上限。太長的到期日等於沒有到期日，失效碼會一直留在列表上。
-const maxCodeLifetime = 365 * 24 * time.Hour
-
 func (s *Server) handleGetMe(w http.ResponseWriter, r *http.Request) {
 	user, ok := s.currentUser(w, r)
 	if !ok {
@@ -174,9 +171,6 @@ func (s *Server) handleCreateCode(w http.ResponseWriter, r *http.Request) {
 		return
 	case req.ExpiresAt.Before(time.Now()):
 		badRequest(w, codeExpiryInPast, "有效期限不能是過去的時間")
-		return
-	case req.ExpiresAt.After(time.Now().Add(maxCodeLifetime)):
-		badRequest(w, codeExpiryTooFar, "有效期限最長一年")
 		return
 	}
 

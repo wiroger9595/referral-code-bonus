@@ -6,6 +6,13 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<!-- 沒宣告這個的話 WKWebView 的 navigator.language 不會跟著系統語言走，
+	     src/i18n/index.ts 的 fromDevice() 抓到的值會卡住 —— 這裡要跟 SUPPORTED 對齊。 -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>zh-Hant</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>推薦碼交流站</string>
 	<key>CFBundleExecutable</key>

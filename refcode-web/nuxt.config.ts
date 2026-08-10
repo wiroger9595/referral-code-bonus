@@ -6,6 +6,10 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
+  // 圖片跨 web/app/admin 共用，統一放在 monorepo 根目錄的 public/，
+  // 不要各自留一份 —— 這裡指過去，否則 Nuxt 預設抓自己資料夾底下的 public/。
+  dir: { public: '../public' },
+
   modules: ['@nuxtjs/i18n'],
 
   css: ['~/assets/css/main.css'],
