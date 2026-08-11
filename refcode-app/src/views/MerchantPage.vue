@@ -36,10 +36,12 @@ import QualityDot from '../components/QualityDot.vue'
 import SkeletonList from '../components/SkeletonList.vue'
 import { apiErrorMessage, expiryLabel, rewardText } from '../i18n'
 import { useAuthStore } from '../stores/auth'
+import { useRecordStore } from '../stores/record'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const record = useRecordStore()
 const { t, locale } = useI18n()
 const detail = ref<MerchantDetail | null>(null)
 const loading = ref(true)
@@ -53,6 +55,11 @@ async function load() {
   loading.value = true
   try {
     detail.value = await api.getMerchant(String(route.params.slug))
+    // 進得來就算看過。紀錄頁靠這個列「看過的服務商」，寫失敗不該影響這一頁。
+    const m = detail.value.merchant
+    record
+      .addMerchant({ slug: m.slug, name: m.name, logo: m.logo_url })
+      .catch(() => {})
   } catch (e) {
     errorMessage.value = apiErrorMessage(e, 'common.loadFailed')
   } finally {
@@ -80,6 +87,22 @@ async function copyCode(code: CodeItem) {
   await Clipboard.write({ string: code.code })
   copiedId.value = code.id
   api.track(code.id, 'copy').catch(() => {})
+
+  // 複製完多半會離開 app 去服務商那邊註冊，回來時碼已經不在剪貼簿了。
+  // 存一份到紀錄頁，讓他找得回來。
+  if (detail.value) {
+    record
+      .addCode({
+        codeId: code.id,
+        code: code.code,
+        merchantSlug: detail.value.merchant.slug,
+        merchantName: detail.value.merchant.name,
+        merchantLogo: detail.value.merchant.logo_url,
+        expiresAt: code.expires_at,
+      })
+      .catch(() => {})
+  }
+
   toast(t('merchant.copiedToast'))
 }
 

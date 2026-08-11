@@ -1,6 +1,8 @@
 {
   "tabs": {
     "explore": "Explore",
+    "category": "Categories",
+    "record": "History",
     "myCodes": "My codes",
     "account": "Account"
   },
@@ -20,7 +22,6 @@
     "clearHistory": "Clear",
     "popularSearches": "Popular searches",
     "didYouMean": "Did you mean",
-    "all": "All",
     "noMatchTitle": "No matching services",
     "noMatchDesc": "Try a different keyword, or switch the category back to \"All\".",
     "summary": "{count} service・every code is manually reviewed | {count} services・every code is manually reviewed",
@@ -40,6 +41,37 @@
     "allRegions": "All regions",
     "regionHeader": "Show services from",
     "showAllRegions": "Show all regions"
+  },
+  "categoryTab": {
+    "heading": "Categories",
+    "lead": "Pick a category to see which services have referral codes.",
+    "emptyTitle": "No categories yet",
+    "emptyDesc": "Categories are set up in the admin panel. Check back later."
+  },
+  "record": {
+    "heading": "History",
+    "lead": "Codes you've copied and services you've viewed, kept on this device only.",
+    "sectionCodes": "Copied codes",
+    "sectionMerchants": "Recently viewed",
+    "copiedOn": "Copied {date}",
+    "viewedOn": "Viewed {date}",
+    "expired": "Expired",
+    "copiedToast": "Copied again",
+    "clear": "Clear",
+    "clearCodesTitle": "Clear copied codes",
+    "clearMerchantsTitle": "Clear viewing history",
+    "clearWarning": "This can't be undone. These records live on this device only — there's no backup.",
+    "clearConfirm": "Clear",
+    "emptyTitle": "Nothing here yet",
+    "emptyDesc": "Codes you copy and services you view show up here so you can find them again.",
+    "goExplore": "See what's available"
+  },
+  "category": {
+    "notFound": "Category not found",
+    "backToList": "Back to categories",
+    "summary": "{count} service | {count} services",
+    "emptyTitle": "No services in this category yet",
+    "emptyDesc": "Check another category, or come back later."
   },
   "myCodes": {
     "title": "My codes",

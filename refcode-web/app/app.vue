@@ -4,6 +4,10 @@ const { user, isLoggedIn, logout } = useAuth()
 const { t } = useI18n()
 const localePath = useLocalePath()
 
+// footer 的「聯絡我們」。信箱沒設定就不顯示那個連結 —— 一個點了沒反應的
+// mailto 比沒有更糟。
+const { public: cfg } = useRuntimeConfig()
+
 // htmlAttrs 的 lang、canonical、以及各語言的 hreflang alternate 都由這裡產生。
 // 手寫 canonical 會讓三種語言指向同一個網址，等於叫 Google 不要收日英版。
 const localeHead = useLocaleHead()
@@ -123,6 +127,12 @@ async function signOut() {
         <NuxtLink :to="localePath('/terms')" class="hover:text-ink">
           {{ $t('legal.termsSeoTitle') }}
         </NuxtLink>
+        <template v-if="cfg.supportEmail">
+          <span aria-hidden="true">·</span>
+          <a :href="`mailto:${cfg.supportEmail}`" class="hover:text-ink">
+            {{ $t('footer.contact') }}
+          </a>
+        </template>
       </p>
     </footer>
   </div>

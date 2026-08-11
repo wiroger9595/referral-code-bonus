@@ -14,29 +14,20 @@ import {
 } from '@ionic/vue'
 import type { RefresherCustomEvent } from '@ionic/vue'
 import {
-  airplaneOutline,
   alertCircleOutline,
-  appsOutline,
-  bagHandleOutline,
-  cardOutline,
-  cellularOutline,
   chevronForward,
-  cloudOutline,
   earthOutline,
-  fastFoodOutline,
   flameOutline,
-  gameControllerOutline,
-  playCircleOutline,
   searchOutline,
   shieldCheckmarkOutline,
   timeOutline,
-  trendingUpOutline,
 } from 'ionicons/icons'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { api } from '../api/client'
 import type { Category, MerchantSummary, PopularTerm, SearchSuggestion } from '../api/types'
+import { categoryIcon } from '../categories'
 import EmptyState from '../components/EmptyState.vue'
 import SkeletonList from '../components/SkeletonList.vue'
 import { countryName, countryOptions } from '../countries'
@@ -47,7 +38,6 @@ import { useSearchHistoryStore } from '../stores/searchHistory'
 
 const merchants = ref<MerchantSummary[]>([])
 const categories = ref<Category[]>([])
-const activeCategory = ref<string | null>(null)
 const search = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
@@ -73,25 +63,6 @@ const EXPIRING_DAYS = 7
 // 倒數標紅的門檻。這幾天內不去用就真的沒了，值得用主色喊一下。
 const URGENT_DAYS = 3
 
-// 分類磁磚的圖示。分類在後端只有 id 與 name（slug 已經拿掉了），沒有可以對應
-// 圖示的穩定欄位，所以只能拿名稱去比。比不到就給通用圖示，不會壞掉，
-// 但要新增分類時記得回來補一條 —— 正解是後端在分類上加一個 icon 欄位。
-const CATEGORY_ICONS: { match: RegExp; icon: string }[] = [
-  { match: /銀行|信用卡|カード|銀行|bank|card/i, icon: cardOutline },
-  { match: /券商|投資|証券|投資|invest|broker|stock/i, icon: trendingUpOutline },
-  { match: /外送|外食|デリバリー|食|delivery|food/i, icon: fastFoodOutline },
-  { match: /影音|串流|動画|音楽|stream|video|music/i, icon: playCircleOutline },
-  { match: /電信|通訊|通信|携帯|telecom|mobile/i, icon: cellularOutline },
-  { match: /旅遊|訂房|旅行|ホテル|travel|hotel|flight/i, icon: airplaneOutline },
-  { match: /購物|電商|通販|shop|retail|commerce/i, icon: bagHandleOutline },
-  { match: /遊戲|ゲーム|game/i, icon: gameControllerOutline },
-  { match: /軟體|訂閱|クラウド|saas|software|cloud/i, icon: cloudOutline },
-]
-
-function categoryIcon(name: string) {
-  return CATEGORY_ICONS.find((c) => c.match.test(name))?.icon ?? appsOutline
-}
-
 // commit 只在使用者「確定要搜這個」時給 true（按下搜尋鍵、點了熱門或歷史），
 // 後端才會把這個詞計進熱門榜。逐字輸入不能帶 —— 打一次「台新銀行」會在榜上
 // 留下「台」「台新」「台新銀」四筆垃圾。
@@ -100,7 +71,6 @@ async function load(commit = false) {
   errorMessage.value = ''
   try {
     const res = await api.listMerchants({
-      category: activeCategory.value ?? undefined,
       q: search.value || undefined,
       commit: commit && Boolean(search.value),
       region: region.value,
@@ -161,17 +131,9 @@ async function commitSearch() {
   await history.add(search.value.trim())
 }
 
-// 點熱門或歷史的 chip。分類要一起清掉 —— 從關鍵字進來的人不會預期還套著
-// 上一次選的分類，那會讓他看到莫名其妙的空結果。
 async function pickTerm(term: string) {
   search.value = term
-  activeCategory.value = null
   await commitSearch()
-}
-
-function pickCategory(id: string | null) {
-  activeCategory.value = activeCategory.value === id ? null : id
-  load()
 }
 
 async function refresh(event: RefresherCustomEvent) {
@@ -188,9 +150,9 @@ function isUrgent(iso: string) {
   return daysUntilExpiry(iso) <= URGENT_DAYS
 }
 
-// 使用者已經在搜尋或篩分類時就不分區塊 —— 他要的是篩出來的那一份清單，
+// 使用者已經在搜尋時就不分區塊 —— 他要的是篩出來的那一份清單，
 // 再拆成三堆只會讓剛篩到的東西不見。
-const showSections = computed(() => !search.value && activeCategory.value === null)
+const showSections = computed(() => !search.value)
 
 const expiring = computed(() => {
   if (!showSections.value) return []
@@ -285,7 +247,7 @@ const sorted = computed(() => {
            不做成聚焦才展開的浮層：那要處理 blur 比 click 早觸發的老問題，
            在 WebView 上不值得為了一排 chips 冒這個險。 -->
       <div
-        v-if="!search && activeCategory === null && (history.items.length || popular.length)"
+        v-if="!search && (history.items.length || popular.length)"
         class="terms"
       >
         <div v-if="history.items.length" class="term-block">
@@ -315,20 +277,15 @@ const sorted = computed(() => {
       </div>
 
       <!-- 分類做成磁磚而不是橫向 chips：一眼看得完的分類數（個位數）用磁磚
-           比較好按，也不用左右撥。選中的那格套主色外框，不整格變橘 ——
-           一格橘色磁磚在一片淡色磁磚裡會被當成廣告。 -->
+           比較好按，也不用左右撥。點下去換頁到該分類的專屬頁面，
+           跟 refcode-web 的 CategoryTiles 是同一個行為。 -->
       <section v-if="categories.length" class="cats page-pad">
         <div class="cat-grid">
-          <button class="cat" :class="{ on: activeCategory === null }" @click="pickCategory(null)">
-            <span class="cat-ico a0"><IonIcon :icon="appsOutline" /></span>
-            <span class="cat-name">{{ $t('explore.all') }}</span>
-          </button>
           <button
             v-for="(c, i) in categories"
             :key="c.id"
             class="cat"
-            :class="{ on: activeCategory === c.id }"
-            @click="pickCategory(c.id)"
+            @click="$router.push(`/category/${c.id}`)"
           >
             <span class="cat-ico" :class="`a${(i % 4) + 1}`">
               <IonIcon :icon="categoryIcon(c.name)" />
@@ -611,21 +568,11 @@ const sorted = computed(() => {
   height: 52px;
   border-radius: var(--app-radius-lg);
   font-size: 23px;
-  /* 選中時的外框畫在磁磚外面，不然 52px 的方塊會被框線吃掉一圈。 */
-  box-shadow: 0 0 0 0 transparent;
-  transition: box-shadow 120ms ease, transform 120ms ease;
+  transition: transform 120ms ease;
 }
 
 .cat:active .cat-ico {
   transform: scale(0.94);
-}
-
-.cat.on .cat-ico {
-  box-shadow: 0 0 0 2px var(--ion-background-color), 0 0 0 4px var(--ion-color-primary);
-}
-
-.cat.on .cat-name {
-  color: var(--ion-color-primary);
 }
 
 .cat-ico.a0 {

@@ -62,8 +62,8 @@ func run() error {
 	}
 	defer st.Close()
 
-	// redis 只有忘記密碼在用。連不上就讓那兩支路由回 503，其他功能照常 ——
-	// 為了一個附屬流程讓整個 API 起不來不划算。
+	// redis 只有忘記密碼在用。連不上就讓那幾支路由降級，其他功能照常 ——
+	// 為了附屬流程讓整個 API 起不來不划算。
 	rdb, err := kv.New(ctx, kv.Options{
 		Addr:     cfg.RedisAddr,
 		Password: cfg.RedisPassword,

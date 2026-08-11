@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 只給 debug build：開發時要連本機 API（http://192.168.1.194:7802），
+     targetSdk 28+ 預設擋明文流量。只放在 src/debug，release build 不會帶到這份設定。
+     domain 要跟著換——電腦區網 IP 變了記得同步改這裡。 -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.0.23</domain>
+    </domain-config>
+</network-security-config>

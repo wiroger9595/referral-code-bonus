@@ -3,7 +3,6 @@ import { computed, ref } from 'vue'
 
 import { api, clearTokens, hasSession, saveTokens } from '../api/client'
 import { fetchIdToken, signOutProviders } from '../api/social'
-import { identifyTawkUser } from '../api/tawk'
 import type { OAuthProvider, User } from '../api/types'
 import { useSubscriptionStore } from './subscription'
 
@@ -13,15 +12,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => user.value !== null)
 
-  // 每個「剛知道使用者是誰」的入口（restore／login／register／…）都要做兩件事：
-  // 把 RevenueCat 的身分綁到這個帳號（不綁的話購買會掛在匿名 ID 上，webhook 回來
-  // 後端認不得，訂閱就跟著裝置而不是跟著人），以及讓客服 widget 知道是誰在聊，
-  // 不用對方自己報信箱。
+  // 每個「剛知道使用者是誰」的入口（restore／login／register／…）都要把 RevenueCat
+  // 的身分綁到這個帳號 —— 不綁的話購買會掛在匿名 ID 上，webhook 回來後端認不得，
+  // 訂閱就跟著裝置而不是跟著人。
   async function onAuthed(u: User) {
     const subs = useSubscriptionStore()
     subs.setServerState(u.is_pro)
     await subs.linkUser(u.id)
-    identifyTawkUser(u.display_name, u.email)
   }
 
   // app 冷啟動時 token 已經從 Preferences 讀回來了，但還不知道它有沒有過期，

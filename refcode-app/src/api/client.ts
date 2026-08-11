@@ -14,6 +14,10 @@ import type {
   User,
 } from './types'
 
+// 預設走 localhost：模擬器與瀏覽器跟這台機器共用網路，換 WiFi、IP 變了都不影響。
+// 只有實機測試連不到 localhost，那時才要把 .env 的 VITE_API_BASE_URL 換成區網 IP
+// （`./dev.sh android-ip` 會自動偵測並寫進去）。不要在這裡寫死某個 IP 當預設 ——
+// 換個地方那個值就是死的，而且失效時的症狀是整個 app 連不上，很難一眼看出原因。
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:7802'
 
 const KEY_ACCESS = 'refcode_access_token'
@@ -220,6 +224,10 @@ export const api = {
 
   listCategories() {
     return request<{ categories: Category[] }>(`/v1/categories?lang=${apiLang}`)
+  },
+
+  getCategory(id: string) {
+    return request<Category>(`/v1/categories/${id}?lang=${apiLang}`)
   },
 
   // commit 代表這是使用者確定要搜的（按下搜尋、點了熱門或歷史），後端才會把它

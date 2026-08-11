@@ -33,6 +33,7 @@ const menuOptions = computed(() => {
       },
     )
   }
+
   return items
 })
 

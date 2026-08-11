@@ -1,6 +1,8 @@
 {
   "tabs": {
     "explore": "さがす",
+    "category": "カテゴリ",
+    "record": "履歴",
     "myCodes": "マイコード",
     "account": "アカウント"
   },
@@ -20,7 +22,6 @@
     "clearHistory": "消去",
     "popularSearches": "よく検索されている",
     "didYouMean": "もしかして",
-    "all": "すべて",
     "noMatchTitle": "該当するサービスが見つかりません",
     "noMatchDesc": "キーワードを変えるか、カテゴリを「すべて」に戻してみてください。",
     "summary": "{count}件のサービス・すべての紹介コードは審査済み",
@@ -40,6 +41,37 @@
     "allRegions": "すべての地域",
     "regionHeader": "表示する地域",
     "showAllRegions": "すべての地域を表示"
+  },
+  "categoryTab": {
+    "heading": "カテゴリ",
+    "lead": "カテゴリを選んで、紹介コードのあるサービスを見てみましょう。",
+    "emptyTitle": "カテゴリがまだありません",
+    "emptyDesc": "カテゴリは管理画面で作成されます。また後で確認してください。"
+  },
+  "record": {
+    "heading": "履歴",
+    "lead": "コピーした紹介コードと見たサービス。この端末にのみ保存されます。",
+    "sectionCodes": "コピーしたコード",
+    "sectionMerchants": "最近見たサービス",
+    "copiedOn": "{date} にコピー",
+    "viewedOn": "{date} に閲覧",
+    "expired": "期限切れ",
+    "copiedToast": "もう一度コピーしました",
+    "clear": "消去",
+    "clearCodesTitle": "コピー履歴を消去",
+    "clearMerchantsTitle": "閲覧履歴を消去",
+    "clearWarning": "消去すると元に戻せません。この履歴は端末内にのみ保存されており、バックアップはありません。",
+    "clearConfirm": "消去する",
+    "emptyTitle": "まだ履歴がありません",
+    "emptyDesc": "コピーした紹介コードと見たサービスがここに表示され、あとから探せます。",
+    "goExplore": "コードを見てみる"
+  },
+  "category": {
+    "notFound": "このカテゴリは見つかりません",
+    "backToList": "カテゴリ一覧に戻る",
+    "summary": "{count}件のサービス",
+    "emptyTitle": "このカテゴリにはまだサービスがありません",
+    "emptyDesc": "他のカテゴリを見るか、また後で確認してください。"
   },
   "myCodes": {
     "title": "マイコード",

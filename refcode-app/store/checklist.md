@@ -5,7 +5,6 @@
 ---
 
 ## A. 產品面的阻斷項
-0223810731 2125
 細節見 `README.md`。
 
 - [x] `DELETE /v1/me`（後端）＋ 帳號頁的刪除入口（app）＋ `/delete-account`（官網）三者都完成
@@ -113,4 +112,4 @@
 - [ ] build number / versionCode 遞增
 - [ ] What's New 寫具體改了什麼
 - [ ] 如果改動涉及蒐集的資料，回頭更新 `app-privacy.md`、`data-safety.md` 與隱私權政策
-http://localhost:5175/login?redirect=/register
+http://localhost:5175/login?redirect=/registerㄌ

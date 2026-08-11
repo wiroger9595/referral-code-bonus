@@ -11,6 +11,8 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', redirect: '/tabs/explore' },
       { path: 'explore', component: () => import('../views/ExploreTab.vue') },
+      { path: 'category', component: () => import('../views/CategoryTab.vue') },
+      { path: 'record', component: () => import('../views/RecordTab.vue') },
       {
         path: 'my-codes',
         component: () => import('../views/MyCodesTab.vue'),
@@ -20,6 +22,7 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   { path: '/merchant/:slug', component: () => import('../views/MerchantPage.vue') },
+  { path: '/category/:id', component: () => import('../views/CategoryPage.vue') },
   // 必須先登入才能到 paywall：沒登入時 RevenueCat 用的是匿名 app_user_id，
   // 購買的 webhook 回到後端會對不到帳號，訂閱等於跟著裝置而不是跟著人。
   {

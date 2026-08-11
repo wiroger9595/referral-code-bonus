@@ -4,7 +4,6 @@ import { createApp } from 'vue'
 
 import App from './App.vue'
 import { initTokens, setUnauthorizedHandler } from './api/client'
-import { initTawk } from './api/tawk'
 import { i18n, initLocale } from './i18n'
 import router from './router'
 import { useSubscriptionStore } from './stores/subscription'
@@ -38,8 +37,6 @@ setUnauthorizedHandler(() => {
 // 訂閱狀態可能在 app 外面變（商店設定裡取消、續訂扣款成功），
 // RevenueCat 會主動推更新，不是只有開 app 時抓一次。
 useSubscriptionStore(pinia).watch()
-
-initTawk()
 
 await router.isReady()
 app.mount('#app')

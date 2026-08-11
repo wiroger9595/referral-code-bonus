@@ -1,7 +1,9 @@
 {
   "tabs": {
     "explore": "探索",
-    "myCodes": "我的碼",
+    "myCodes": "我的推薦碼",
+    "category": "分類",
+    "record": "紀錄",
     "account": "帳號"
   },
   "common": {
@@ -20,7 +22,6 @@
     "clearHistory": "清除",
     "popularSearches": "大家在搜",
     "didYouMean": "你是不是要找",
-    "all": "全部",
     "noMatchTitle": "找不到符合的服務商",
     "noMatchDesc": "換個關鍵字，或把分類切回「全部」看看。",
     "summary": "{count} 家服務商・所有推薦碼都經過人工審核",
@@ -40,6 +41,37 @@
     "allRegions": "所有地區",
     "regionHeader": "顯示哪一區的服務商",
     "showAllRegions": "顯示所有地區"
+  },
+  "categoryTab": {
+    "heading": "分類",
+    "lead": "挑一個分類，看看裡面有哪些服務商在發推薦碼。",
+    "emptyTitle": "還沒有任何分類",
+    "emptyDesc": "分類是後台建立的，晚點再回來看看。"
+  },
+  "record": {
+    "heading": "紀錄",
+    "lead": "你複製過的推薦碼與看過的服務商，只留在這台裝置上。",
+    "sectionCodes": "複製過的碼",
+    "sectionMerchants": "看過的服務商",
+    "copiedOn": "{date} 複製",
+    "viewedOn": "{date} 看過",
+    "expired": "已到期",
+    "copiedToast": "已再複製一次",
+    "clear": "清除",
+    "clearCodesTitle": "清除複製紀錄",
+    "clearMerchantsTitle": "清除瀏覽紀錄",
+    "clearWarning": "清除後就找不回來了。這些紀錄只存在這台裝置上，沒有備份。",
+    "clearConfirm": "確定清除",
+    "emptyTitle": "還沒有任何紀錄",
+    "emptyDesc": "複製過的推薦碼與看過的服務商會出現在這裡，方便你回頭找。",
+    "goExplore": "去看看有什麼碼"
+  },
+  "category": {
+    "notFound": "找不到這個分類",
+    "backToList": "回分類列表",
+    "summary": "{count} 家服務商",
+    "emptyTitle": "這個分類還沒有服務商",
+    "emptyDesc": "看看別的分類，或晚點再回來。"
   },
   "myCodes": {
     "title": "我的碼",

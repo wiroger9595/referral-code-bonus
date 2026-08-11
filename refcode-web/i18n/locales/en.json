@@ -10,7 +10,8 @@
     "register": "Sign up"
   },
   "footer": {
-    "disclaimer": "Referral codes are submitted by users. Rewards are issued by each service, not by this site."
+    "disclaimer": "Referral codes are submitted by users. Rewards are issued by each service, not by this site.",
+    "contact": "Contact us"
   },
   "lang": {
     "label": "Language"

@@ -2,12 +2,20 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'tw.refcode.app',
-  appName: '推薦碼交流站',
+  appName: 'Referra',
   webDir: 'dist',
   server: {
     // 本機用瀏覽器開發時不需要這段；要在實機上連本機 API 時把
     // url 指到電腦的區網 IP（模擬器連 localhost 會連到裝置自己）。
     androidScheme: 'https',
+  },
+  // WebView 頁面走 https://localhost（見上面 androidScheme），開發時 API 還是
+  // 明文的 http://區網IP，屬於 mixed content，Chromium 預設直接擋掉 fetch，
+  // 跟 AndroidManifest 那份 network_security_config（管的是 OS 層級的明文流量）
+  // 是兩層獨立的擋法，兩個都要放行才連得到本機 API。正式環境 API 一律是 https，
+  // 不會真的觸發 mixed content，這個開關留著不影響上架。
+  android: {
+    allowMixedContent: true,
   },
   plugins: {
     // social-login 預設把四家 provider 的原生 SDK 全部打包進去。只開有在用的

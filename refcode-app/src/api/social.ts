@@ -71,7 +71,9 @@ export async function fetchIdToken(provider: OAuthProvider): Promise<string> {
 
   try {
     if (provider === 'google') {
-      const { result } = await SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'] } })
+      // email/profile/openid 是 plugin 內建的預設 scope，這裡不用再帶——帶了會被當成
+      // 自訂 scope，Android 端要求 MainActivity 額外實作介面才能用，沒改就直接被拒絕。
+      const { result } = await SocialLogin.login({ provider: 'google', options: {} })
       if (result.responseType !== 'online' || !result.idToken) {
         throw new Error('Google 沒有回傳 ID token')
       }

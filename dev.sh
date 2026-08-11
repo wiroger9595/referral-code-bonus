@@ -35,6 +35,9 @@ usage() {
   stop [模組...]      不給模組就四個全停
   logs <模組>         跟蹤某個模組的 log
   ios [裝置關鍵字]    在 iOS 模擬器上跑 app，改前端會自動更新（Ctrl-C 結束）
+  ios-log             跟蹤模擬器裡 app 的 console log，跟 ios 分開開一個 terminal 跑
+  android-ip          偵測目前區網 IP，同步寫進 app 的 .env 跟 network_security_config
+                       （換 WiFi、IP 變了就重跑這個，跑完記得重新 build + cap sync android）
 EOF
 }
 
@@ -115,7 +118,7 @@ start_bg() {
     # 背景啟動不自己停舊的：`./dev.sh all` 的用意是「把沒跑的補起來」，
     # 已經在跑的重啟一次反而會打斷正在用它的人。
     if port_pid_is_ours "$pid"; then
-      echo "$mod 已經在 port $port 跑著，跳過（要重啟：./dev.sh stop $mod && ./dev.sh $mod）"
+      echo "$mod 已經在 port $port 跑著，跳過（要重啟：./dev.sh stop $mod && ./dev.sh ${mod}）"
     else
       echo "$mod 沒起來：port $port 被別的程式佔著"
       echo "  pid $pid  $(ps -o command= -p "$pid" 2>/dev/null | head -1)"
@@ -160,7 +163,7 @@ cmd_ios() {
     mkdir -p "$LOGS"
     (cd "$dir" && nohup npm run dev >"$LOGS/app.log" 2>&1 &)
     started_vite=1
-    trap 'if [ "$started_vite" = 1 ]; then pid=$(port_pid "$port"); [ -n "$pid" ] && kill "$pid" 2>/dev/null && echo "已收掉這次啟動的 vite（pid $pid）"; fi' EXIT INT TERM
+    trap 'if [ "$started_vite" = 1 ]; then pid=$(port_pid "$port"); [ -n "$pid" ] && kill "$pid" 2>/dev/null && echo "已收掉這次啟動的 vite（pid ${pid}）"; fi' EXIT INT TERM
     echo "vite 啟動中（port ${port}，log: .logs/app.log）"
     waited=0
     while [ -z "$(port_pid "$port")" ] && [ "$waited" -lt 30 ]; do
@@ -202,6 +205,57 @@ cmd_ios() {
   else
     (cd "$dir" && npx cap run ios -l --host localhost --port "$port")
   fi
+}
+
+# cap run ios -l 那個 terminal 只印 Capacitor CLI 自己的建置/部署訊息，WebView
+# 裡的 console.log／console.error 不會出現在那邊。Capacitor 的 iOS bridge 會把
+# 那些訊息轉成 NSLog（前綴通常是 ⚡️），所以用系統的 log stream 抓，跟 ios 分開
+# 開一個 terminal 跑。認的是「目前開著的模擬器」，開兩台以上會不知道抓哪台。
+cmd_ios_log() {
+  xcrun simctl spawn booted log stream --level debug --predicate 'process == "App"'
+}
+
+# 抓目前這台機器連出去用的那張網卡的 IP —— 不直接寫死 en0，因為接了有線網路
+# 或用其他介面上網時 en0 可能是空的。用預設路由查真正在用的介面最準。
+detect_lan_ip() {
+  iface=$(route get 1.1.1.1 2>/dev/null | awk '/interface: /{print $2}')
+  [ -n "$iface" ] && ipconfig getifaddr "$iface" 2>/dev/null
+}
+
+# 實機測 app 連本機 API 靠的是這台電腦的區網 IP，換 WiFi 就會變。要同步改兩個
+# 地方：app 的 .env（VITE_API_BASE_URL，build time 就烤進 JS，改完要重 build）、
+# 還有 Android 的 network_security_config（白名單裡的 domain 沒對到現在的 IP，
+# 明文流量一樣會被擋）。iOS 不用管，cap run ios -l 每次都是用參數帶 host，
+# 不會寫死在檔案裡。
+cmd_android_ip() {
+  ip=$(detect_lan_ip)
+  if [ -z "$ip" ]; then
+    echo "偵測不到區網 IP，確認一下有沒有連 WiFi/網路"
+    exit 1
+  fi
+
+  env_file="$ROOT/refcode-app/.env"
+  xml_file="$ROOT/refcode-app/android/app/src/debug/res/xml/network_security_config.xml"
+
+  if [ ! -f "$env_file" ]; then
+    echo "找不到 $env_file，先跑一次 ./dev.sh app 讓它從 .env.example 建起來"
+    exit 1
+  fi
+  if [ ! -f "$xml_file" ]; then
+    echo "找不到 $xml_file"
+    exit 1
+  fi
+
+  sed -i '' -E "s#^VITE_API_BASE_URL=.*#VITE_API_BASE_URL=http://${ip}:7802#" "$env_file"
+  sed -i '' -E "s#(<domain includeSubdomains=\"false\">)[^<]*(</domain>)#\\1${ip}\\2#" "$xml_file"
+
+  echo "區網 IP：$ip"
+  echo "已更新："
+  echo "  refcode-app/.env（VITE_API_BASE_URL）"
+  echo "  refcode-app/android/app/src/debug/res/xml/network_security_config.xml"
+  echo
+  echo "vite dev server 開著的話要重啟才會讀到新的 .env；已經裝在手機上的 app"
+  echo "要重新 npm run build && npx cap sync android 再重裝，光改檔案不會生效。"
 }
 
 cmd_status() {
@@ -258,6 +312,8 @@ case "${1:-}" in
   stop)   shift; cmd_stop "$@" ;;
   logs)   tail -f "$LOGS/${2:-api}.log" ;;
   ios)    shift; cmd_ios "${1:-}" ;;
+  ios-log) cmd_ios_log ;;
+  android-ip) cmd_android_ip ;;
   api|admin|web|app) start_fg "$1" ;;
   *)      usage; exit 1 ;;
 esac
