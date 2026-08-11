@@ -14,12 +14,12 @@
 - [ ] Apple／Play 的資料申報已對齊大頭照 —— `app-privacy.md`（照片或影片）、
       `data-safety.md`（相片）、隱私權政策三份都已改好，填表時照著填
 - [ ] 隱私權政策與服務條款掛上正式網域，免登入可直接開
-- [ ] `.env` 的 `VITE_SUPPORT_EMAIL` 與 `VITE_SITE_URL` 已填
+- [x] `.env` 的 `VITE_SUPPORT_EMAIL` 與 `VITE_SITE_URL` 已填
       —— 帳號頁的「聯絡我們 / 檢舉」與條款連結沒填就不會顯示，那三列是 UGC 的送審要件
 - [ ] 有封鎖 / 檢舉上架者的機制
 - [ ] 忘記密碼流程可用
 - [ ] Apple 登入實際可用（不是只有按鈕）
-- [ ] 正式 API 是 HTTPS，`VITE_API_BASE_URL` 指向正式網域
+- [x] 正式 API 是 HTTPS，`VITE_API_BASE_URL` 指向正式網域
 
 ## A2. 訂閱（RevenueCat）
 
@@ -28,7 +28,7 @@
 - [ ] Play Console 的訂閱 `pro` 與兩個基本方案已建立並掛進 RevenueCat
 - [ ] offering 已設為 current，`getOfferings()` 拿得到方案
 - [ ] `refcode-app/.env` 的 `VITE_REVENUECAT_IOS_KEY` / `VITE_REVENUECAT_ANDROID_KEY` 已填
-- [ ] `refcode-app/.env` 的 `VITE_REVENUECAT_TEST_KEY` **已清空** ——
+- [x] `refcode-app/.env` 的 `VITE_REVENUECAT_TEST_KEY` **已清空** ——
       Test Store 的 key 會蓋掉平台 key，帶著它送審等於真實購買全部收不到
 - [ ] RevenueCat 的 Play service account credentials 已上傳且驗證通過
       （做法見 `refcode-app/README.md`，權限傳播最久 36 小時）
@@ -68,7 +68,7 @@
       ⚠️ **還沒異地備份 —— 這件事只有你能做**
 - [ ] Android：keystore 與密碼已備份到密碼管理器 / 另一台裝置
       （弄丟就永遠無法更新這個 package name，除非改用 Play App Signing 且已註冊）
-- [ ] Android：`targetSdkVersion` 符合 Play Console 當下公告的最低要求
+- [x] Android：`targetSdkVersion` 符合 Play Console 當下公告的最低要求（目前 36）
 - [ ] Android：合併後的 manifest 沒有多餘權限（尤其 `AD_ID`）——
       `./gradlew :app:processDebugMainManifest --rerun-tasks` 之後 grep 一次，
       這件事會被 social-login plugin 的 provider 設定影響，升級 plugin 後要重驗

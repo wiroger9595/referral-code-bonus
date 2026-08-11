@@ -6,6 +6,32 @@ Play Console → 主要商店資訊 的各欄位。**方框裡的就是要貼上
 
 ---
 
+## ⛔ 2026-08-11 退件紀錄：被判定為「只能由機構帳戶發布」
+
+第一次送審被退，引用的是**「Play 管理中心規定」政策**，不是內容或 UGC 問題：
+
+> 某些類型的應用程式只能由機構發布。由於您選取了相關應用程式類別，
+> 或是聲明應用程式提供特定功能，因此必須使用機構帳戶提交應用程式。
+
+2024-08-31 起，新開的**個人**開發者帳號不得發布金融、健康、VPN、政府這四類 app。
+我們被歸到金融那一類。
+
+**這個 app 並不提供金融服務** —— 它是推薦碼目錄，不辦帳戶、不放貸、不交易、
+不碰加密貨幣，也不經手任何金流。所以正確的處理是把宣告改成如實反映功能，
+不是去申請機構帳戶。退件通知自己也是這樣寫的（「請確認您的應用程式內容宣告
+如實反映應用程式的功能」）。
+
+送審前逐項確認，這四個地方任何一個沒對就會再被退：
+
+1. **應用程式內容 → 財務功能**：要選「我的應用程式未提供任何財務功能」。
+   這一頁最可能是元凶 —— 目錄裡有銀行的推薦碼，不等於這支 app 提供銀行服務。
+2. **主要商店資訊 → 類別**：購物。**不要選財經**。
+3. **標記**：不要有任何金融相關標記。
+4. **商店文案**：不要用銀行、券商當賣點開頭。下面的文案已經改成以影音串流、
+   購物、外送領頭，並加了一段明確聲明不提供金融服務 —— 照著貼，不要改回去。
+
+目錄內容本身也降低了金融比重（見 `../README.md` 的政策風險那一節）。
+
 ## 基本資訊
 
 | 欄位 | 內容 |
@@ -13,8 +39,8 @@ Play Console → 主要商店資訊 的各欄位。**方框裡的就是要貼上
 | 應用程式名稱 | 推薦碼交流站 |
 | 套件名稱 | `tw.refcode.app`（與 `capacitor.config.ts` 一致，**發布後永遠不能改**） |
 | 應用程式類型 | 應用程式 |
-| 類別 | 購物 |
-| 標記 | 折扣與優惠、社群 |
+| 類別 | 購物 ⚠️ **絕對不要選「財經」** —— 見下方「2026-08-11 退件紀錄」 |
+| 標記 | 折扣與優惠、社群（不要選任何金融相關標記） |
 | 價格 | 免費 |
 | 應用程式內購 | **有**：訂閱「推薦碼 Pro」（月 / 年） |
 | 包含廣告 | **否**（app 內沒有任何廣告 SDK） |
@@ -56,7 +82,7 @@ RevenueCat 的 entitlement `pro` 要把這兩個基本方案都掛進去，
 【找碼的人】
 
 ・不用註冊就能瀏覽和複製
-・依銀行、券商、電商、外送、串流等分類瀏覽，或直接搜尋
+・依影音串流、購物、外送、交通、工具等分類瀏覽，或直接搜尋
 ・每個推薦碼都標示可信度分數，以及最近有多少人回報能用
 ・一鍵複製，接著跳到該服務商的註冊頁
 
@@ -78,7 +104,7 @@ RevenueCat 的 entitlement `pro` 要把這兩個基本方案都掛進去，
 
 本應用程式不發放獎勵，也不經手任何金流。推薦獎勵由各服務商依其自身的活動規則，直接發給推薦人與被推薦人。活動內容與獎勵金額以該服務商公告為準。
 
-金融類服務（開戶、信用卡、投資）有其風險，本應用程式不構成任何投資建議或招攬。
+本應用程式僅為推薦碼目錄，不提供銀行、投資、貸款、加密貨幣或任何其他金融服務，也不代辦開戶或申請。點選推薦碼後一律導向該服務商自己的網站，所有交易與帳戶行為都發生在該服務商，與本應用程式無關。
 
 【隱私】
 
@@ -161,7 +187,7 @@ RefCode collects referral codes into one reviewed directory. Every code is check
 
 FOR PEOPLE LOOKING FOR A CODE
 • No account needed to browse the directory; sign in (free) to reveal and copy a code
-• Browse by category — banks, brokers, shopping, delivery, streaming — or just search
+• Browse by category — streaming, shopping, delivery, rides, productivity — or just search
 • Every code shows a quality score and how many people recently reported it working
 • Copy with one tap, then jump straight to the merchant's signup page
 
@@ -176,7 +202,9 @@ WHY CODES HERE GO STALE LESS OFTEN
 3. User reports — after signing in and copying, you can report whether the code worked; codes with a high failure rate are delisted automatically
 
 ABOUT REWARDS
-This app does not issue rewards and never handles money. Referral rewards are paid by each merchant directly, under that merchant's own program rules. Financial products carry risk; nothing here is investment advice.
+This app does not issue rewards and never handles money. Referral rewards are paid by each merchant directly, under that merchant's own program rules.
+
+This app is a referral code directory only. It does not provide banking, investment, lending, cryptocurrency or any other financial service, and it does not open or apply for accounts on your behalf. Tapping a code sends you to the merchant's own website; every transaction and account action happens there, not here.
 
 PRIVACY
 No ad SDKs, no third-party analytics, no cross-app tracking. Browsing the directory requires no account; revealing and copying a code does.

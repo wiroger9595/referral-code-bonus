@@ -1,7 +1,7 @@
 # Privacy Policy
 
-**Effective date: {{生效日期}}**
-**Last updated: {{生效日期}}**
+**Effective date: 2026-08-11**
+**Last updated: 2026-08-11**
 
 This policy explains how RefCode (the "Service") collects, uses and protects your personal data.
 The Service is provided by wiwilab ("we", "us") as an individual developer.
@@ -124,8 +124,10 @@ what they collect.
 
 ## 6. Where data is stored
 
-Data is stored on servers in {{資料存放地區，例如：Taiwan}}. If you are in the European Economic
-Area, your data may be transferred outside the EEA for processing; we apply appropriate safeguards.
+The database is hosted on servers in **Japan (AWS Asia Pacific Tokyo, ap-northeast-1)**.
+Profile photos you upload are stored on Cloudinary's global content delivery network, so the
+serving node may be outside Japan. If you are in the European Economic Area, your data is
+transferred outside the EEA for processing; we apply appropriate safeguards.
 
 ## 7. Retention
 
@@ -133,7 +135,7 @@ Area, your data may be transferred outside the EEA for processing; we apply appr
 |---|---|
 | Account data | Until you delete your account |
 | Referral codes you listed | Delisted and deleted when you delete your account |
-| Usage events (impression / click / copy) | {{保存月數}} months. On account deletion the user identifier is stripped immediately; only anonymised records remain |
+| Usage events (impression / click / copy) | Until you delete your account. On deletion the user identifier is stripped immediately; what remains is anonymised and cannot be linked back to you, and is kept for ranking and statistics |
 | Reports | For the lifetime of the corresponding code |
 | Subscription records | Retained for a period after the subscription ends, for accounting and refund disputes |
 | Device identifier | On your device only; gone when you uninstall |
