@@ -60,7 +60,7 @@ product id 兩邊必須完全一致（見 `../../src/api/purchases.ts` 的 `PRO_
 **Keywords**（上限 100 字元，逗號分隔，**不要加空格**）
 
 ```
-推薦碼,邀請碼,優惠碼,折扣碼,推薦人,好友推薦,開戶,信用卡,券商,回饋,現金回饋,分享碼,序號,揪團,推薦獎勵,開戶禮,首刷禮,註冊碼,省錢
+推薦碼,邀請碼,優惠碼,折扣碼,推薦人,好友推薦,回饋,現金回饋,分享碼,序號,揪團,推薦獎勵,註冊碼,省錢,外送,串流,購物
 ```
 
 （79 字元，還有空間。要再加的話從實際搜尋量高的詞補，不要湊字數。）
@@ -73,7 +73,7 @@ product id 兩邊必須完全一致（見 `../../src/api/purchases.ts` 的 `PRO_
 **Promotional Text**（上限 170 字，**不用送審就能改**，適合放時效性的話）
 
 ```
-新增多家銀行與券商的推薦碼目錄。所有推薦碼都經人工審核，複製後可以回報「能不能用」——失效的碼會被自動下架，不會浪費你的時間。
+新增多家影音串流、購物與外送服務的推薦碼目錄。所有推薦碼都經人工審核，複製後可以回報「能不能用」——失效的碼會被自動下架，不會浪費你的時間。
 ```
 
 ## 描述
@@ -88,7 +88,7 @@ product id 兩邊必須完全一致（見 `../../src/api/purchases.ts` 的 `PRO_
 ■ 找碼的人
 
 ・不用註冊就能瀏覽和複製，開啟就能用
-・依銀行、券商、電商、外送、串流等分類瀏覽，也可以直接搜尋
+・依影音串流、購物、外送、交通、工具等分類瀏覽，也可以直接搜尋
 ・每個推薦碼都標示可信度分數，以及最近有多少人回報「能用」
 ・一鍵複製，接著直接跳到該服務商的註冊頁
 
@@ -110,7 +110,7 @@ product id 兩邊必須完全一致（見 `../../src/api/purchases.ts` 的 `PRO_
 
 本 App 不發放獎勵，也不經手任何金流。推薦獎勵由各服務商依其自身的活動規則，直接發給推薦人與被推薦人。活動內容與獎勵金額以該服務商公告為準。
 
-金融類服務（開戶、信用卡、投資）有其風險，本 App 不構成任何投資建議。
+本 App 僅為推薦碼目錄，不提供銀行、投資、貸款、加密貨幣或任何其他金融服務，也不代辦開戶或申請。點選推薦碼後一律導向該服務商自己的網站，所有交易與帳戶行為都發生在該服務商，與本 App 無關。
 
 ■ 隱私
 
@@ -191,7 +191,7 @@ Find codes that actually work
 **Keywords**
 
 ```
-referral,invite code,promo code,discount,refer a friend,cashback,signup bonus,broker,credit card
+referral,invite code,promo code,discount,refer a friend,cashback,signup bonus,streaming,delivery,shopping
 ```
 
 **Description**
@@ -203,7 +203,7 @@ RefCode collects referral codes into one reviewed directory. Every code is check
 
 FOR PEOPLE LOOKING FOR A CODE
 • No account needed to browse the directory; sign in (free) to reveal and copy a code
-• Browse by category — banks, brokers, shopping, delivery, streaming — or just search
+• Browse by category — streaming, shopping, delivery, rides, productivity — or just search
 • Every code shows a quality score and how many people recently reported it working
 • Copy with one tap, then jump straight to the merchant's signup page
 
@@ -218,7 +218,9 @@ WHY CODES HERE GO STALE LESS OFTEN
 3. User reports — after signing in and copying, you can report whether the code worked; codes with a high failure rate are delisted automatically
 
 ABOUT REWARDS
-This app does not issue rewards and never handles money. Referral rewards are paid by each merchant directly, under that merchant's own program rules. Financial products carry risk; nothing here is investment advice.
+This app does not issue rewards and never handles money. Referral rewards are paid by each merchant directly, under that merchant's own program rules.
+
+This app is a referral code directory only. It does not provide banking, investment, lending, cryptocurrency or any other financial service, and it does not open or apply for accounts on your behalf. Tapping a code sends you to the merchant's own website; every transaction and account action happens there, not here.
 
 PRIVACY
 No ad SDKs, no third-party analytics, no cross-app tracking. Browsing the directory requires no account; revealing and copying a code does.

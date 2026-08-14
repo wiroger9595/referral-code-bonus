@@ -405,12 +405,18 @@ func (q *Queries) ListMyCodes(ctx context.Context, userID uuid.UUID) ([]ListMyCo
 
 const listPendingCodes = `-- name: ListPendingCodes :many
 SELECT c.id, c.user_id, c.merchant_id, c.code, c.note, c.status, c.expires_at, c.quality_score, c.impressions, c.created_at, c.activated_at, c.updated_at, m.slug AS merchant_slug, m.name AS merchant_name,
-       m.code_format_regex, u.email AS owner_email, u.display_name AS owner_name
+       m.code_format_regex, u.email AS owner_email, u.display_name AS owner_name,
+       EXISTS (
+           SELECT 1 FROM referral_code_bonus.subscriptions s
+           WHERE s.user_id = c.user_id
+             AND s.is_active
+             AND (s.expires_at IS NULL OR s.expires_at > now())
+       ) AS owner_is_pro
 FROM referral_code_bonus.referral_codes c
 JOIN referral_code_bonus.merchants m ON m.id = c.merchant_id
 JOIN referral_code_bonus.users u     ON u.id = c.user_id
 WHERE c.status = 'pending'
-ORDER BY c.created_at
+ORDER BY owner_is_pro DESC, c.created_at
 LIMIT $1 OFFSET $2
 `
 
@@ -437,8 +443,13 @@ type ListPendingCodesRow struct {
 	CodeFormatRegex *string    `json:"code_format_regex"`
 	OwnerEmail      string     `json:"owner_email"`
 	OwnerName       string     `json:"owner_name"`
+	OwnerIsPro      bool       `json:"owner_is_pro"`
 }
 
+// 待審佇列。Pro 的碼排在前面，兌現 paywall 的「優先審核」賣點——
+// 排序的新鮮度加成是從 activated_at 起算的，審核多等一天就等於黃金期晚一天開始，
+// 所以這裡不優先的話，Pro 買到的黃金期會被佇列的等待時間吃掉一部分。
+// 同一層級內仍照送審時間先後，免費的碼不會被無限期插隊。
 func (q *Queries) ListPendingCodes(ctx context.Context, arg ListPendingCodesParams) ([]ListPendingCodesRow, error) {
 	rows, err := q.db.Query(ctx, listPendingCodes, arg.Limit, arg.Offset)
 	if err != nil {
@@ -466,6 +477,7 @@ func (q *Queries) ListPendingCodes(ctx context.Context, arg ListPendingCodesPara
 			&i.CodeFormatRegex,
 			&i.OwnerEmail,
 			&i.OwnerName,
+			&i.OwnerIsPro,
 		); err != nil {
 			return nil, err
 		}

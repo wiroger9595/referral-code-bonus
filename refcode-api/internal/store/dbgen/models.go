@@ -100,6 +100,12 @@ type ReferralCode struct {
 	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
+type ReferralCodeBonusUserBlock struct {
+	BlockerID uuid.UUID `json:"blocker_id"`
+	BlockedID uuid.UUID `json:"blocked_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type RefreshToken struct {
 	ID        uuid.UUID  `json:"id"`
 	UserID    uuid.UUID  `json:"user_id"`

@@ -20,15 +20,18 @@ import {
   flashOutline,
   infiniteOutline,
   sparklesOutline,
+  timeOutline,
 } from 'ionicons/icons'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 import { PurchaseCancelled } from '../api/purchases'
-import { useSubscriptionStore } from '../stores/subscription'
+import { useAuthStore } from '../stores/auth'
+import { NotIdentifiedError, useSubscriptionStore } from '../stores/subscription'
 
 const subs = useSubscriptionStore()
+const auth = useAuthStore()
 const router = useRouter()
 const { t } = useI18n()
 
@@ -41,6 +44,7 @@ const errorMessage = ref('')
 
 const perks = [
   { icon: infiniteOutline, key: 'unlimited' },
+  { icon: timeOutline, key: 'ranking' },
   { icon: barChartOutline, key: 'stats' },
   { icon: flashOutline, key: 'priority' },
 ] as const
@@ -61,6 +65,41 @@ function priceOf(pkg: PurchasesPackage) {
   return pkg.product.priceString
 }
 
+// 免費試用。introPrice 同時代表「優惠價」與「免費試用」兩種促銷，
+// price === 0 才是真的免費試用 —— 折扣首期（例如首月半價）不能講成免費。
+//
+// 天數也用商店回傳的，不要寫死 7 天：試用長度是在 Play Console / App Store
+// Connect 設定的，寫死的話那邊改了這裡就會騙人。
+function trialOf(pkg: PurchasesPackage) {
+  const intro = pkg.product.introPrice
+  return intro && intro.price === 0 ? intro : null
+}
+
+function trialLabel(pkg: PurchasesPackage): string | null {
+  const intro = trialOf(pkg)
+  if (!intro) return null
+
+  const count = intro.periodNumberOfUnits
+  switch (intro.periodUnit) {
+    case 'DAY':
+      return t('pro.trialDay', { count })
+    case 'WEEK':
+      return t('pro.trialWeek', { count })
+    case 'MONTH':
+      return t('pro.trialMonth', { count })
+    default:
+      return null
+  }
+}
+
+// 有試用期就要多一句揭露（兩家商店都要求講清楚「什麼時候開始收錢」）。
+// 只看目前選中的那個方案 —— 月費有試用、年費沒有的情況下，
+// 不分方案一律顯示會變成對其中一個說謊。
+const selectedHasTrial = computed(() => {
+  const pkg = subs.packages.find((p) => p.identifier === selected.value)
+  return pkg ? trialOf(pkg) !== null : false
+})
+
 async function purchase() {
   const pkg = subs.packages.find((p) => p.identifier === selected.value)
   if (!pkg) return
@@ -68,13 +107,20 @@ async function purchase() {
   errorMessage.value = ''
   buying.value = true
   try {
-    await subs.purchase(pkg)
+    // 沒有 user id 就不該走到這頁（route 有 requiresAuth），防禦性再擋一次。
+    const userID = auth.user?.id
+    if (!userID) return
+
+    await subs.purchase(pkg, userID)
     const toast = await toastController.create({ message: t('pro.thanks'), duration: 2200 })
     await toast.present()
     router.back()
   } catch (e) {
     if (e instanceof PurchaseCancelled) return
-    errorMessage.value = t('pro.purchaseFailed')
+    // 綁定不上就不會走到扣款，訊息要講「稍後再試」而不是「購買失敗」——
+    // 後者會讓人以為錢已經扣了。
+    errorMessage.value =
+      e instanceof NotIdentifiedError ? t('pro.notLinked') : t('pro.purchaseFailed')
   } finally {
     buying.value = false
   }
@@ -155,6 +201,7 @@ async function restore() {
             >
               <div class="plan-body">
                 <h3>{{ pkg.product.title }}</h3>
+                <p v-if="trialLabel(pkg)" class="tiny trial">{{ trialLabel(pkg) }}</p>
                 <p class="tiny muted">{{ pkg.product.description }}</p>
               </div>
               <strong>{{ priceOf(pkg) }}</strong>
@@ -182,7 +229,9 @@ async function restore() {
             {{ $t('pro.restore') }}
           </IonButton>
 
-          <!-- 自動續訂的揭露是硬性要求：期間、價格、何時扣款、怎麼取消。 -->
+          <!-- 自動續訂的揭露是硬性要求：期間、價格、何時扣款、怎麼取消。
+               有試用期時還要額外講「試用結束才開始收費」，少了這句會被退件。 -->
+          <p v-if="selectedHasTrial" class="tiny muted terms">{{ $t('pro.trialDisclosure') }}</p>
           <p class="tiny muted terms">{{ $t('pro.disclosure') }}</p>
 
           <p v-if="siteUrl" class="tiny muted terms links">
@@ -324,6 +373,13 @@ async function restore() {
   margin: 0;
   text-align: center;
   line-height: 1.6;
+}
+
+/* 試用期是這頁最重要的一句話，要跟灰色的說明文字分開。 */
+.trial {
+  margin: 2px 0 0;
+  color: var(--ion-color-success, #2dd36f);
+  font-weight: 600;
 }
 
 .error {

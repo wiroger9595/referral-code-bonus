@@ -339,11 +339,18 @@ func (s *Server) handleGetMerchant(w http.ResponseWriter, r *http.Request) {
 	candidates := make([]ranking.Candidate, len(rows))
 	byID := make(map[uuid.UUID]dbgen.ListActiveCodesForMerchantRow, len(rows))
 	for i, row := range rows {
+		// 新鮮度從審核通過那一刻起算。activated_at 理論上 active 的碼都有值，
+		// 但這個欄位是後來才加的，舊資料可能還是 NULL，退回建立時間。
+		listedAt := row.CreatedAt
+		if row.ActivatedAt != nil {
+			listedAt = *row.ActivatedAt
+		}
+
 		candidates[i] = ranking.Candidate{
 			ID:           row.ID,
 			QualityScore: row.QualityScore,
 			Impressions:  row.Impressions,
-			CreatedAt:    row.CreatedAt,
+			ListedAt:     listedAt,
 			IsPro:        row.OwnerIsPro,
 		}
 		byID[row.ID] = row

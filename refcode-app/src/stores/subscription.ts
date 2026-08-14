@@ -2,11 +2,13 @@ import type { CustomerInfo, PurchasesPackage } from '@revenuecat/purchases-capac
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
+import { api } from '../api/client'
 import {
   buy,
   currentCustomerInfo,
   forgetUser,
   identify,
+  isIdentifiedAs,
   isProActive,
   onCustomerInfoChange,
   proExpiresAt,
@@ -14,6 +16,10 @@ import {
   purchasesAvailable,
   restore,
 } from '../api/purchases'
+
+// 購買前發現 SDK 還停在匿名身分。呼叫端要能分辨這個跟一般購買失敗 ——
+// 這種情況不能讓他繼續付錢。
+export class NotIdentifiedError extends Error {}
 
 export const useSubscriptionStore = defineStore('subscription', () => {
   const info = ref<CustomerInfo | null>(null)
@@ -70,13 +76,41 @@ export const useSubscriptionStore = defineStore('subscription', () => {
     }
   }
 
-  async function purchase(pkg: PurchasesPackage) {
+  // userID 由呼叫端傳進來（跟 linkUser 一樣），這個 store 才不用反過來依賴 auth store。
+  async function purchase(pkg: PurchasesPackage, userID: string) {
+    // 綁定當初可能失敗過（linkUser 是刻意不擋登入的），所以買之前再確認一次。
+    // 補綁得起來就繼續，補不起來就別讓他付錢 —— 錢扣了但後端認不得，
+    // 比買不了難處理得多。
+    if (!(await isIdentifiedAs(userID))) {
+      await linkUser(userID)
+      if (!(await isIdentifiedAs(userID))) throw new NotIdentifiedError()
+    }
+
     info.value = await buy(pkg)
+
+    // SDK 這邊已經是 Pro 了，但後端那份要等 webhook。買完馬上去上架第 4 個碼
+    // 會被後端用舊狀態擋下來，所以主動同步一次 —— webhook 還沒到就維持原狀，
+    // 下次進 app 的 restore 會再補上。
+    await syncServerState()
+  }
+
+  // 從後端重新取一次 is_pro。失敗不拋出去：這只是讓兩邊早點一致，
+  // 真正的授權判斷在後端每支 API 自己會做。
+  async function syncServerState() {
+    try {
+      const me = await api.me()
+      serverIsPro.value = me.is_pro
+    } catch (e) {
+      console.warn('[purchases] 同步後端訂閱狀態失敗', e)
+    }
   }
 
   async function restorePurchases() {
     info.value = await restore()
-    return isProActive(info.value)
+    const pro = isProActive(info.value)
+    // 恢復購買常見於換手機重裝，後端那份也可能是舊的，一起同步。
+    if (pro) await syncServerState()
+    return pro
   }
 
   // 在 app 外面發生的變化（設定裡取消、續訂扣款）SDK 會推過來。
@@ -99,6 +133,7 @@ export const useSubscriptionStore = defineStore('subscription', () => {
     refresh,
     loadPackages,
     purchase,
+    syncServerState,
     restorePurchases,
     watch,
   }

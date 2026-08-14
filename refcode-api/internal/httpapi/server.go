@@ -44,7 +44,7 @@ func NewServer(
 		reset:    reset,
 		mailer:   mail,
 		images:   images,
-		rankOpts: ranking.DefaultParams(),
+		rankOpts: cfg.Ranking,
 	}
 }
 

@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"refcode-api/internal/ranking"
 )
 
 type Config struct {
@@ -56,6 +58,10 @@ type Config struct {
 	// 回報統計的自動下架門檻，調參用，不寫死在邏輯裡。
 	AutoDisableMinReports int
 	AutoDisableFailRatio  float64
+
+	// 排序引擎的調參。預設值定義在 internal/ranking，這裡只是讓正式環境
+	// 不必重新 build 就能調——這幾個是商業參數，會反覆試。
+	Ranking ranking.Params
 
 	// 訂閱。真相在 RevenueCat，這裡只收 webhook 並保存一份副本供伺服器端判斷。
 	// WebhookAuth 是 RevenueCat 後台設定的 Authorization 標頭值，原樣比對；
@@ -108,6 +114,8 @@ func Load() (*Config, error) {
 		AutoDisableMinReports: envInt("AUTO_DISABLE_MIN_REPORTS", 3),
 		AutoDisableFailRatio:  envFloat("AUTO_DISABLE_FAIL_RATIO", 0.6),
 
+		Ranking: loadRanking(),
+
 		RevenueCatWebhookAuth: env("REVENUECAT_WEBHOOK_AUTH", ""),
 		ProEntitlement:        env("PRO_ENTITLEMENT", "pro"),
 		FreeActiveCodeLimit:   envInt("FREE_ACTIVE_CODE_LIMIT", 3),
@@ -127,6 +135,13 @@ func Load() (*Config, error) {
 	// 那比直接壞掉更糟，寧可啟動時就擋下來。
 	if cfg.IsProduction() && cfg.SMTPHost == "" && cfg.ResendAPIKey == "" {
 		return nil, fmt.Errorf("SMTP_HOST 或 RESEND_API_KEY 至少要設一個，正式環境不能不寄信")
+	}
+	// 這兩個填錯不會噴錯，只會讓權重靜靜地算出 Inf 或負數，整個列表順序爛掉還查不出原因。
+	if cfg.Ranking.ImpressionSoftCap <= 0 {
+		return nil, fmt.Errorf("RANK_IMPRESSION_SOFT_CAP 必須大於 0（目前 %v）", cfg.Ranking.ImpressionSoftCap)
+	}
+	if cfg.Ranking.FreshnessBoost < 0 {
+		return nil, fmt.Errorf("RANK_FRESHNESS_BOOST 不能是負數（目前 %v）", cfg.Ranking.FreshnessBoost)
 	}
 	return cfg, nil
 }
@@ -156,6 +171,22 @@ func loadDotEnv(path string) {
 		if _, exists := os.LookupEnv(k); !exists {
 			os.Setenv(k, v)
 		}
+	}
+}
+
+// loadRanking 以 internal/ranking 的預設值為底，逐項讓 env 覆蓋。
+// 預設值刻意只留一份在演算法旁邊——分兩處寫早晚會漂移，
+// 而排序參數漂掉的症狀（列表順序怪怪的）不會有人立刻發現。
+func loadRanking() ranking.Params {
+	p := ranking.DefaultParams()
+	return ranking.Params{
+		FreshnessBoost:    envFloat("RANK_FRESHNESS_BOOST", p.FreshnessBoost),
+		FreeGraceHours:    envFloat("RANK_FREE_GRACE_HOURS", p.FreeGraceHours),
+		FreeDecayHours:    envFloat("RANK_FREE_DECAY_HOURS", p.FreeDecayHours),
+		ProGraceHours:     envFloat("RANK_PRO_GRACE_HOURS", p.ProGraceHours),
+		ProDecayHours:     envFloat("RANK_PRO_DECAY_HOURS", p.ProDecayHours),
+		ImpressionSoftCap: envFloat("RANK_IMPRESSION_SOFT_CAP", p.ImpressionSoftCap),
+		ProBoost:          envFloat("RANK_PRO_BOOST", p.ProBoost),
 	}
 }
 

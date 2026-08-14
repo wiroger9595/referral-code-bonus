@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from '@ionic/vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
 import { useAuthStore } from '../stores/auth'
+import { useOnboardingStore } from '../stores/onboarding'
 
 const routes: RouteRecordRaw[] = [
   { path: '/', redirect: '/tabs/explore' },
@@ -30,6 +31,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/PaywallPage.vue'),
     meta: { requiresAuth: true },
   },
+  { path: '/onboarding', component: () => import('../views/OnboardingPage.vue') },
   { path: '/login', component: () => import('../views/LoginPage.vue') },
   { path: '/forgot-password', component: () => import('../views/ForgotPasswordPage.vue') },
   {
@@ -46,6 +48,15 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
+  const onboarding = useOnboardingStore()
+
+  // 第一次開這個 app 就先看引導頁。要等 Preferences 讀回來才判斷得了，
+  // 否則冷啟動的第一個導航會在「還不知道看過沒」的狀態下放行。
+  // 引導頁自己不能再被導一次，不然會無限循環。
+  await onboarding.load()
+  if (!onboarding.seen && to.path !== '/onboarding') {
+    return { path: '/onboarding' }
+  }
 
   // 冷啟動時第一個導航可能早於 restore 完成，等它一下再判斷。
   if (!auth.ready) await auth.restore()

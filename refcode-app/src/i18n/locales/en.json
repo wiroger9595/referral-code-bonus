@@ -1,4 +1,27 @@
 {
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next",
+    "start": "Get started",
+    "slides": {
+      "what": {
+        "title": "Stop digging through forums",
+        "desc": "Referral codes from all over, collected into one directory — every code is reviewed by a human before it shows up here."
+      },
+      "find": {
+        "title": "Browse or search, copy in one tap",
+        "desc": "Browse by category — streaming, shopping, delivery — or search for a service directly. Copying takes you straight to its signup page."
+      },
+      "fresh": {
+        "title": "Dead codes remove themselves",
+        "desc": "Every code has an expiry date, and you can report whether one worked after copying it. Codes that keep failing drop off the list automatically."
+      },
+      "share": {
+        "title": "Share your own codes too",
+        "desc": "Create a free account to list your own referral codes, and see how many times each one was shown, tapped and copied."
+      }
+    }
+  },
   "tabs": {
     "explore": "Explore",
     "category": "Categories",
@@ -244,11 +267,15 @@
   "pro": {
     "title": "Pro",
     "heroTitle": "Get your codes in front of more people",
-    "heroDesc": "Pro removes the listing limit and unlocks full performance data. Rewards themselves are unaffected — those always come directly from the merchant.",
+    "heroDesc": "Pro removes the listing limit, keeps your codes near the top of the listings for longer, and unlocks full performance data. Rewards themselves are unaffected — those always come directly from the merchant.",
     "perks": {
       "unlimited": {
         "title": "Unlimited listings",
         "desc": "Free accounts can have {limit} active codes at a time. Pro has no limit."
+      },
+      "ranking": {
+        "title": "Stay near the top longer",
+        "desc": "Every newly listed code gets a boost in the listings. On the free plan it fades within hours; with Pro it lasts for days."
       },
       "stats": {
         "title": "Full performance data",
@@ -276,6 +303,11 @@
     "restored": "Your subscription has been restored",
     "nothingToRestore": "No purchases to restore on this account",
     "thanks": "You're all set — thank you",
-    "disclosure": "Subscriptions renew automatically until cancelled in your store settings. Renewal is charged within 24 hours before the end of the current period. Manage or cancel any time in your App Store or Google Play account settings."
+    "disclosure": "Subscriptions renew automatically until cancelled in your store settings. Renewal is charged within 24 hours before the end of the current period. Manage or cancel any time in your App Store or Google Play account settings.",
+    "trialDay": "{count}-day free trial",
+    "trialWeek": "{count}-week free trial",
+    "trialMonth": "{count}-month free trial",
+    "trialDisclosure": "You won't be charged during the free trial. It converts to a paid subscription at the price above when the trial ends; cancel any time before then and you pay nothing.",
+    "notLinked": "We couldn't link your account to the store yet. Please try again shortly — you haven't been charged."
   }
 }

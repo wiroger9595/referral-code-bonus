@@ -45,6 +45,19 @@ export async function identify(userID: string) {
   await Purchases.logIn({ appUserID: userID })
 }
 
+// 目前 SDK 認的身分是不是我們這個帳號。
+//
+// 為什麼要有這個檢查：logIn 失敗時 SDK 會停在匿名 ID（$RCAnonymousID:...），
+// 這時購買照樣會成功、錢照樣扣，但 webhook 送回後端的 app_user_id 不是 UUID，
+// 後端 parse 不出來就直接忽略 —— 使用者付了錢卻拿不到 Pro，而且 app 端因為
+// 讀的是 SDK 狀態還會顯示他是 Pro，客訴進來時完全對不起來。
+export async function isIdentifiedAs(userID: string): Promise<boolean> {
+  if (!purchasesAvailable) return false
+  await ensureConfigured()
+  const { appUserID } = await Purchases.getAppUserID()
+  return appUserID === userID
+}
+
 export async function forgetUser() {
   if (!purchasesAvailable) return
   await ensureConfigured()
