@@ -108,9 +108,24 @@ func (s *Server) handleRevenueCatWebhook(w http.ResponseWriter, r *http.Request)
 
 	// app_user_id 是我們在 Purchases.logIn() 時給的使用者 UUID。
 	// 匿名購買（$RCAnonymousID:...）或測試事件會對不到帳號，照樣記錄但不改狀態。
+	//
+	// 格式是 UUID 不代表帳號還在：使用者刪帳號之後 RevenueCat 還是會繼續送
+	// EXPIRATION / REFUND 過來，RevenueCat 自己的測試事件也帶一個不存在的 UUID。
+	// 少了這道確認就會撞 subscription_events 的 FK 而回 500，
+	// 而 RevenueCat 收到非 2xx 會一直重送同一筆。
 	var userID *uuid.UUID
 	if parsed, err := uuid.Parse(ev.AppUserID); err == nil {
-		userID = &parsed
+		_, err := s.store.GetUserByID(ctx, parsed)
+		switch {
+		case err == nil:
+			userID = &parsed
+		case store.IsNotFound(err):
+			// 帳號不在了，事件照記，user_id 留空。
+		default:
+			// 查不動資料庫是我們自己的問題，這種才該讓 RevenueCat 重送。
+			internalError(w, r, err)
+			return
+		}
 	}
 
 	// 先寫事件。rc_event_id 有 unique 限制，重送的事件會在這裡被擋掉，
