@@ -17,7 +17,7 @@
 ```
 您好，
 
-我們的應用程式「Referra」（套件名稱：tw.refcode.app）被判定屬於必須使用機構帳戶
+我們的應用程式「Referra」（套件名稱：com.referra.app）被判定屬於必須使用機構帳戶
 發布的類型。我們認為這是分類上的誤會，說明如下。
 
 本應用程式是一個「推薦碼目錄」。使用者可以瀏覽由其他使用者提供、並經過人工審核的
@@ -57,7 +57,7 @@
 ```
 Hello,
 
-Our app "Referra" (package name: tw.refcode.app) has been flagged as belonging to a
+Our app "Referra" (package name: com.referra.app) has been flagged as belonging to a
 category that requires an organisation account. We believe this is a
 misclassification, and would like to explain.
 

@@ -1,4 +1,4 @@
-package tw.refcode.app;
+package com.referra.app;
 
 import com.getcapacitor.BridgeActivity;
 

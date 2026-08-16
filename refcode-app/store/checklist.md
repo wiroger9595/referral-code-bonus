@@ -45,7 +45,7 @@
 
 - [ ] Apple Developer Program 年費已繳（個人帳號 US$99/年）
 - [ ] Play Console 開發者帳號已建立、身分驗證通過（US$25 一次性）
-- [ ] Apple：App ID `tw.refcode.app` 已建立，開了 Sign in with Apple capability
+- [ ] Apple：App ID `com.referra.app` 已建立，開了 Sign in with Apple capability
 - [ ] Apple：Services ID 已建立（web / Android 的 Apple 登入要用）
 - [ ] Google Cloud：OAuth client 已建立（iOS 一組、Web 一組）
 - [ ] client id 已填進 `refcode-app/.env` **與** `refcode-api` 的 `GOOGLE_CLIENT_IDS` / `APPLE_CLIENT_IDS`

@@ -36,6 +36,39 @@ var revokingEventTypes = []string{"EXPIRATION", "REFUND", "SUBSCRIPTION_PAUSED"}
 // 這幾種代表不會再自動續訂了，但不影響現在是否有效。
 var nonRenewingEventTypes = []string{"CANCELLATION", "EXPIRATION", "BILLING_ISSUE", "REFUND", "SUBSCRIPTION_PAUSED"}
 
+// subscriptionDecision 是一筆事件該怎麼套用到訂閱狀態的結論。
+type subscriptionDecision struct {
+	// 不屬於我們認得的 entitlement，記錄事件但不要動訂閱狀態。
+	Skip      bool
+	IsActive  bool
+	WillRenew bool
+	ExpiresAt *time.Time
+}
+
+// decideSubscription 把「這個事件代表使用者現在有沒有 Pro」的判斷從 handler 抽出來。
+// 不碰 DB、不碰 request，now 由呼叫端傳進來，才測得到遲到事件那條路徑。
+func decideSubscription(ev revenueCatEvent, proEntitlement string, now time.Time) subscriptionDecision {
+	if len(ev.EntitlementIDs) > 0 && !slices.Contains(ev.EntitlementIDs, proEntitlement) {
+		return subscriptionDecision{Skip: true}
+	}
+
+	var expiresAt *time.Time
+	if ev.ExpirationAtMs > 0 {
+		t := time.UnixMilli(ev.ExpirationAtMs).UTC()
+		expiresAt = &t
+	}
+
+	revoked := slices.Contains(revokingEventTypes, ev.Type)
+	// 到期日已經過了就不算有效，不管事件類型是什麼 —— 事件可能遲到。
+	expired := expiresAt != nil && expiresAt.Before(now)
+
+	return subscriptionDecision{
+		IsActive:  !revoked && !expired,
+		WillRenew: !slices.Contains(nonRenewingEventTypes, ev.Type),
+		ExpiresAt: expiresAt,
+	}
+}
+
 // handleRevenueCatWebhook 接 RevenueCat 的訂閱事件。
 //
 // 回應碼的意義跟一般 API 不一樣：RevenueCat 只要收到非 2xx 就會重試，
@@ -106,31 +139,22 @@ func (s *Server) handleRevenueCatWebhook(w http.ResponseWriter, r *http.Request)
 
 	// 只處理我們認得的 entitlement。RevenueCat 上之後多開別的方案時，
 	// 沒對應到的事件不該把 pro 狀態蓋掉。
-	if len(ev.EntitlementIDs) > 0 && !slices.Contains(ev.EntitlementIDs, s.cfg.ProEntitlement) {
+	d := decideSubscription(ev, s.cfg.ProEntitlement, time.Now())
+	if d.Skip {
 		slog.Info("RevenueCat 事件不屬於這個 entitlement，略過",
 			"event_id", ev.ID, "entitlements", ev.EntitlementIDs)
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ignored"})
 		return
 	}
 
-	var expiresAt *time.Time
-	if ev.ExpirationAtMs > 0 {
-		t := time.UnixMilli(ev.ExpirationAtMs).UTC()
-		expiresAt = &t
-	}
-
-	revoked := slices.Contains(revokingEventTypes, ev.Type)
-	// 到期日已經過了就不算有效，不管事件類型是什麼 —— 事件可能遲到。
-	expired := expiresAt != nil && expiresAt.Before(time.Now())
-
 	if _, err := s.store.UpsertSubscription(ctx, dbgen.UpsertSubscriptionParams{
 		UserID:      *userID,
 		Entitlement: s.cfg.ProEntitlement,
 		ProductID:   ev.ProductID,
 		Store:       ev.Store,
-		IsActive:    !revoked && !expired,
-		WillRenew:   !slices.Contains(nonRenewingEventTypes, ev.Type),
-		ExpiresAt:   expiresAt,
+		IsActive:    d.IsActive,
+		WillRenew:   d.WillRenew,
+		ExpiresAt:   d.ExpiresAt,
 		RcAppUserID: ev.AppUserID,
 	}); err != nil {
 		internalError(w, r, err)

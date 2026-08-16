@@ -11,10 +11,10 @@ if (hasReleaseKeystore) {
 }
 
 android {
-    namespace = "tw.refcode.app"
+    namespace = "com.referra.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "tw.refcode.app"
+        applicationId "com.referra.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 3

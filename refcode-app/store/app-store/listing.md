@@ -11,7 +11,7 @@ App Store Connect 各欄位要填的內容。**方框裡的就是要貼上去的
 
 | 欄位 | 內容 |
 |---|---|
-| Bundle ID | `tw.refcode.app`（與 `capacitor.config.ts` 的 `appId` 一致，**建立後不能改**） |
+| Bundle ID | `com.referra.app`（與 `capacitor.config.ts` 的 `appId` 一致，**建立後不能改**） |
 | SKU | `refcode-app-001` |
 | 主要語系 | 繁體中文 |
 | 主要類別 | 購物（Shopping） |
@@ -31,7 +31,7 @@ App Store Connect 建 auto-renewable subscription 時，除了價格還有幾個
 | 欄位 | 內容 |
 |---|---|
 | Subscription Group | `refcode_pro`（月繳與年繳放同一組，使用者才能在方案間升降級） |
-| Product ID | `tw.refcode.app.pro.monthly` / `tw.refcode.app.pro.yearly` |
+| Product ID | `com.referra.app.pro.monthly` / `com.referra.app.pro.yearly` |
 | 訂閱顯示名稱 | 推薦碼 Pro |
 | 訂閱說明 | 無限上架推薦碼、完整成效數據、優先審核 |
 | 審核用截圖 | **要上傳 paywall 的截圖**，每個 product 各一張 |

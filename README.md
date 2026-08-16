@@ -157,7 +157,7 @@ port 寫在 `vite.config.ts`，改了一樣要同步後端的 `CORS_ORIGINS`。
 
 不用登入就能瀏覽和複製推薦碼，只有「我的碼」和上架需要帳號——直接在 app 裡註冊即可。
 
-**原生平台都加好了**（appId `tw.refcode.app`），Android 已經驗過能出 debug APK。
+**原生平台都加好了**（appId `com.referra.app`），Android 已經驗過能出 debug APK。
 
 ```bash
 npm run build && npx cap sync     # 每次改完前端都要 sync 一次

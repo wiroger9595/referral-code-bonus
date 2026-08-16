@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'tw.refcode.app',
+  appId: 'com.referra.app',
   appName: 'Referra',
   webDir: 'dist',
   server: {
