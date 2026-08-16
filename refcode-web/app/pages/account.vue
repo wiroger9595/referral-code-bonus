@@ -80,6 +80,13 @@ async function onPicked(event: Event) {
 
       <p class="text-sm text-muted">{{ $t('account.avatarHint') }}</p>
 
+      <!-- 站頭的那個連結在窄螢幕是收起來的，這裡是手機上唯一的入口。 -->
+      <section class="border-t border-line pt-6">
+        <NuxtLink :to="localePath('/my-codes')" class="btn btn-outline">
+          {{ $t('myCodes.title') }}
+        </NuxtLink>
+      </section>
+
       <section class="space-y-2 border-t border-line pt-6">
         <h2 class="font-medium">{{ $t('account.otherTitle') }}</h2>
         <p class="text-sm text-muted">{{ $t('account.otherBody') }}</p>

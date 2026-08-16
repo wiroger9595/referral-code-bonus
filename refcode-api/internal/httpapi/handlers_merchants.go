@@ -48,8 +48,9 @@ type codeItem struct {
 	Quality     int32     `json:"quality_score"`
 	WorkedCount int64     `json:"worked_count"`
 	FailedCount int64     `json:"failed_count"`
-	ExpiresAt   time.Time `json:"expires_at"`
-	CreatedAt   time.Time `json:"created_at"`
+	// nil 代表永久有效，前端不顯示倒數（見 00013_codes_nullable_expiry.sql）。
+	ExpiresAt   *time.Time `json:"expires_at"`
+	CreatedAt   time.Time  `json:"created_at"`
 }
 
 func revealCode(code string, loggedIn bool) *string {

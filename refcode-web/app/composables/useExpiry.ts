@@ -10,13 +10,15 @@ export function useExpiry() {
     return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
   }
 
-  function expiryLabel(iso: string) {
+  // iso 是 null 代表這個碼沒有到期日，永遠有效，也就永遠不緊急。
+  function expiryLabel(iso: string | null) {
+    if (iso === null) return t('common.noExpiry')
     const days = daysLeft(iso)
     return days <= 0 ? t('common.expiresToday') : t('common.expiresInDays', { count: days }, days)
   }
 
-  function isUrgent(iso: string) {
-    return daysLeft(iso) <= URGENT_DAYS
+  function isUrgent(iso: string | null) {
+    return iso !== null && daysLeft(iso) <= URGENT_DAYS
   }
 
   return { daysLeft, expiryLabel, isUrgent }

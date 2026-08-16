@@ -13,7 +13,7 @@ CREATE TABLE referral_code_bonus.user_blocks (
     created_at timestamptz NOT NULL DEFAULT now(),
 
     PRIMARY KEY (blocker_id, blocked_id),
-    -- 自己封鎖自己沒有意義，而且會讓「我的碼」憑空消失。
+    -- 自己封鎖自己沒有意義，而且會讓「我的推薦碼」憑空消失。
     CONSTRAINT user_blocks_not_self CHECK (blocker_id <> blocked_id)
 );
 

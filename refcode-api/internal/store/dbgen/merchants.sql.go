@@ -357,7 +357,11 @@ JOIN referral_code_bonus.merchant_categories c ON c.id = m.category_id
 LEFT JOIN LATERAL (
     SELECT count(*) AS active_code_count, min(rc.expires_at) AS soonest_expires_at
     FROM referral_code_bonus.referral_codes rc
-    WHERE rc.merchant_id = m.id AND rc.status = 'active' AND rc.expires_at > now()
+    -- expires_at IS NULL 是永久有效的碼，要算進 active_code_count。
+    -- min() 會忽略 NULL，所以 soonest_expires_at 仍是「最快到期的那個碼」，
+    -- 全部都是永久碼時回 NULL，前端就不顯示倒數。
+    WHERE rc.merchant_id = m.id AND rc.status = 'active'
+      AND (rc.expires_at IS NULL OR rc.expires_at > now())
 ) stat ON true
 WHERE m.is_active
   AND ($3::uuid IS NULL OR m.category_id = $3::uuid)
@@ -518,7 +522,8 @@ SELECT
     m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, m.reward_desc_en, m.reward_desc_ja,
     c.name AS category_name,
     (SELECT count(*) FROM referral_code_bonus.referral_codes rc
-      WHERE rc.merchant_id = m.id AND rc.status = 'active' AND rc.expires_at > now()) AS active_code_count
+      WHERE rc.merchant_id = m.id AND rc.status = 'active'
+        AND (rc.expires_at IS NULL OR rc.expires_at > now())) AS active_code_count
 FROM referral_code_bonus.merchants m
 JOIN referral_code_bonus.merchant_categories c ON c.id = m.category_id
 ORDER BY m.name

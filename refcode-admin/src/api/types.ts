@@ -74,7 +74,8 @@ export interface PendingCode {
   code: string
   note: string
   status: CodeStatus
-  expires_at: string
+  // null 代表永久有效，沒有到期日。
+  expires_at: string | null
   quality_score: number
   impressions: number
   created_at: string
@@ -94,7 +95,8 @@ export interface ReferralCode {
   code: string
   note: string
   status: CodeStatus
-  expires_at: string
+  // null 代表永久有效，沒有到期日。
+  expires_at: string | null
   quality_score: number
   impressions: number
   created_at: string

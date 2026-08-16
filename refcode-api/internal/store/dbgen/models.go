@@ -92,7 +92,7 @@ type ReferralCode struct {
 	Code         string     `json:"code"`
 	Note         string     `json:"note"`
 	Status       string     `json:"status"`
-	ExpiresAt    time.Time  `json:"expires_at"`
+	ExpiresAt    *time.Time `json:"expires_at"`
 	QualityScore int32      `json:"quality_score"`
 	Impressions  int64      `json:"impressions"`
 	CreatedAt    time.Time  `json:"created_at"`

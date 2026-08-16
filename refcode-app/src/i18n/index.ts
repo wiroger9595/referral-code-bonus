@@ -63,8 +63,10 @@ export function daysUntilExpiry(iso: string): number {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
 }
 
-export function expiryLabel(iso: string): string {
+// iso 是 null 代表這個碼沒有到期日，永遠有效。
+export function expiryLabel(iso: string | null): string {
   const { t } = i18n.global
+  if (iso === null) return t('common.noExpiry')
   const days = daysUntilExpiry(iso)
   return days <= 0 ? t('common.expiresToday') : t('common.expiresInDays', { count: days }, days)
 }

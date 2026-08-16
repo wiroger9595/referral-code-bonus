@@ -144,8 +144,8 @@ const isEmpty = computed(() => !loading.value && codes.value.length === 0)
 
               <NText depth="3" style="font-size: 13px">
                 {{ code.owner_name }}（{{ code.owner_email }}）
-                ・到期 {{ new Date(code.expires_at).toLocaleDateString('zh-TW') }}
-                <NTag v-if="daysUntil(code.expires_at) < 7" type="warning" size="small">
+                ・{{ code.expires_at === null ? '無期限' : `到期 ${new Date(code.expires_at).toLocaleDateString('zh-TW')}` }}
+                <NTag v-if="code.expires_at !== null && daysUntil(code.expires_at) < 7" type="warning" size="small">
                   只剩 {{ daysUntil(code.expires_at) }} 天
                 </NTag>
               </NText>

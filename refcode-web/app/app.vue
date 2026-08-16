@@ -75,6 +75,14 @@ async function signOut() {
           </NuxtLink>
 
           <template v-if="isLoggedIn">
+            <!-- 只有登入者才有自己的碼可看，沒登入時擺出來只會導到登入頁。 -->
+            <NuxtLink
+              :to="localePath('/my-codes')"
+              class="hidden font-semibold text-muted hover:text-ink sm:block"
+            >
+              {{ $t('nav.myCodes') }}
+            </NuxtLink>
+
             <NuxtLink
               :to="localePath('/account')"
               class="flex min-w-0 items-center gap-2 font-semibold text-muted hover:text-ink"

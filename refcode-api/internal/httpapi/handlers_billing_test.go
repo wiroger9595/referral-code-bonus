@@ -76,6 +76,30 @@ func TestDecideSubscription(t *testing.T) {
 			name: "沒帶 entitlement 照樣處理", eventType: "RENEWAL", expirationMs: future,
 			entitlements: nil, wantActive: true, wantWillRenew: true,
 		},
+		{
+			// Paywall events 不帶 entitlement_ids 也不帶到期日。走白名單之前
+			// 這會寫成 is_active + expires_at NULL，開一下 paywall 就變永久 Pro。
+			name: "paywall 曝光不動訂閱", eventType: "PAYWALL_IMPRESSION", expirationMs: 0,
+			wantSkip: true,
+		},
+		{
+			name: "關閉 paywall 不動訂閱", eventType: "PAYWALL_CLOSE", expirationMs: 0,
+			wantSkip: true,
+		},
+		{
+			name: "離開挽留優惠不動訂閱", eventType: "PAYWALL_EXIT_OFFER", expirationMs: 0,
+			wantSkip: true,
+		},
+		{
+			// RevenueCat 之後新增的事件型別一律當成不相干，不要猜。
+			name: "認不得的事件型別不動訂閱", eventType: "SOMETHING_NEW", expirationMs: future,
+			entitlements: []string{"pro"}, wantSkip: true,
+		},
+		{
+			// 轉移不帶到期日，要當成不相干而不是「有效且永不過期」。
+			name: "訂閱轉移不動訂閱", eventType: "TRANSFER", expirationMs: 0,
+			wantSkip: true,
+		},
 	}
 
 	for _, tt := range tests {

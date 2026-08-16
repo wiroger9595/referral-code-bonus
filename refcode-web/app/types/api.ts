@@ -81,7 +81,8 @@ export interface CodeItem {
   quality_score: number
   worked_count: number
   failed_count: number
-  expires_at: string
+  // null 代表永久有效，沒有到期日。
+  expires_at: string | null
   created_at: string
 }
 
@@ -92,3 +93,24 @@ export interface MerchantDetail {
 }
 
 export type ReportResult = 'worked' | 'failed' | 'invalid_code' | 'merchant_closed'
+
+// 對應 referral_codes.status 的 CHECK 約束（refcode-api 的 00003_referral_codes.sql）。
+export type CodeStatus = 'pending' | 'active' | 'rejected' | 'expired' | 'disabled'
+
+// /v1/me/codes 的一列。跟公開列表的 CodeItem 形狀不一樣 ——
+// 這裡碼一定看得到（是自己的），而且帶了服務商資訊與只有自己看得到的狀態。
+export interface MyCode {
+  id: string
+  merchant_id: string
+  code: string
+  note: string
+  status: CodeStatus
+  // null 代表永久有效，沒有到期日。
+  expires_at: string | null
+  quality_score: number
+  impressions: number
+  created_at: string
+  merchant_slug: string
+  merchant_name: string
+  merchant_logo_url: string | null
+}

@@ -28,6 +28,23 @@ type revenueCatEvent struct {
 	ExpirationAtMs int64    `json:"expiration_at_ms"`
 }
 
+// 只有這幾種事件會改動訂閱狀態，其餘一律只記錄。這裡一定要是白名單：
+// 用黑名單的話，認不得的事件會掉進下面「沒被撤銷就是有效」的預設分支，
+// 而 Paywall events（PAYWALL_IMPRESSION 等）不帶 entitlement_ids 也不帶
+// expiration_at_ms，等於 expires_at 寫成 NULL —— 查詢那邊 NULL 代表永不過期，
+// 使用者只要開一下 paywall 就換到永久 Pro。RevenueCat 之後再加新的 event type
+// 也是同樣的風險，預設不處理才安全。
+//
+// TRANSFER（訂閱在帳號之間轉移）刻意不列入：它同樣不帶到期日，
+// 要正確處理得先看 transferred_from / transferred_to 把舊帳號的授權收掉，
+// 不是這裡一行判斷能做完的事。
+var subscriptionEventTypes = []string{
+	"INITIAL_PURCHASE", "RENEWAL", "UNCANCELLATION", "NON_RENEWING_PURCHASE",
+	"PRODUCT_CHANGE", "SUBSCRIPTION_EXTENDED", "REFUND_REVERSED",
+	"CANCELLATION", "BILLING_ISSUE",
+	"EXPIRATION", "REFUND", "SUBSCRIPTION_PAUSED",
+}
+
 // 這幾種事件代表授權已經沒了。其餘（購買、續訂、取消、帳單問題、產品變更…）
 // 都還在有效期內 —— 尤其 CANCELLATION 只是關掉自動續訂，使用者付到的那段還是要能用，
 // 提早收回會變成盜刷等級的客訴。
@@ -38,7 +55,8 @@ var nonRenewingEventTypes = []string{"CANCELLATION", "EXPIRATION", "BILLING_ISSU
 
 // subscriptionDecision 是一筆事件該怎麼套用到訂閱狀態的結論。
 type subscriptionDecision struct {
-	// 不屬於我們認得的 entitlement，記錄事件但不要動訂閱狀態。
+	// 不是會影響授權的事件、或不屬於我們認得的 entitlement，
+	// 記錄事件但不要動訂閱狀態。
 	Skip      bool
 	IsActive  bool
 	WillRenew bool
@@ -48,6 +66,9 @@ type subscriptionDecision struct {
 // decideSubscription 把「這個事件代表使用者現在有沒有 Pro」的判斷從 handler 抽出來。
 // 不碰 DB、不碰 request，now 由呼叫端傳進來，才測得到遲到事件那條路徑。
 func decideSubscription(ev revenueCatEvent, proEntitlement string, now time.Time) subscriptionDecision {
+	if !slices.Contains(subscriptionEventTypes, ev.Type) {
+		return subscriptionDecision{Skip: true}
+	}
 	if len(ev.EntitlementIDs) > 0 && !slices.Contains(ev.EntitlementIDs, proEntitlement) {
 		return subscriptionDecision{Skip: true}
 	}
@@ -152,12 +173,12 @@ func (s *Server) handleRevenueCatWebhook(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// 只處理我們認得的 entitlement。RevenueCat 上之後多開別的方案時，
-	// 沒對應到的事件不該把 pro 狀態蓋掉。
+	// 只處理會影響授權的事件、而且是我們認得的 entitlement。RevenueCat 上之後
+	// 多開別的方案、或多送別種事件時，都不該把 pro 狀態蓋掉。
 	d := decideSubscription(ev, s.cfg.ProEntitlement, time.Now())
 	if d.Skip {
-		slog.Info("RevenueCat 事件不屬於這個 entitlement，略過",
-			"event_id", ev.ID, "entitlements", ev.EntitlementIDs)
+		slog.Info("RevenueCat 事件不改動訂閱狀態，只記錄",
+			"event_id", ev.ID, "type", ev.Type, "entitlements", ev.EntitlementIDs)
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ignored"})
 		return
 	}

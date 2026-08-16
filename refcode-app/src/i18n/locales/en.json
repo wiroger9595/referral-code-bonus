@@ -35,6 +35,7 @@
     "connectionFailed": "Connection failed",
     "expiresToday": "expires today",
     "expiresInDays": "expires in {count} day | expires in {count} days",
+    "noExpiry": "no expiry",
     "cancel": "Cancel"
   },
   "explore": {
@@ -111,6 +112,10 @@
     "disableConfirm": "Remove it",
     "disableDone": "Code removed",
     "disableFailed": "Couldn't remove the code. Please try again later.",
+    "filterAll": "All",
+    "filterEmptyTitle": "No codes marked \"{status}\"",
+    "filterEmptyDesc": "Try another status, or go back to all of them.",
+    "filterShowAll": "Show all",
     "status": {
       "pending": "In review",
       "active": "Live",
@@ -153,7 +158,9 @@
     "note": "Note",
     "notePlaceholder": "e.g. new customers only, spend 3000 first",
     "sectionExpiry": "Valid until",
+    "hasExpiry": "Set an expiry date",
     "expiryHint": "It's removed automatically when it expires.",
+    "noExpiryHint": "This code stays live indefinitely. Turn this on only if the offer has an end date.",
     "reviewNotice": "Your code goes into a review queue and appears in the list once it's approved.",
     "submit": "Submit",
     "submitted": "Submitted — it goes live once approved",
@@ -249,7 +256,7 @@
     "code_required": "Referral code can't be empty",
     "code_format_mismatch": "That code doesn't match this service's format",
     "expiry_required": "Please set an expiry date",
-    "expiry_in_past": "The expiry date can't be in the past",
+    "expiry_in_past": "The expiry date must be tomorrow or later",
     "expiry_too_far": "The expiry date can be one year out at most",
     "code_already_listed": "You already have a live code for this service",
     "code_not_found": "Referral code not found",

@@ -15,7 +15,8 @@ export interface CopiedCode {
   merchantSlug: string
   merchantName: string
   merchantLogo: string | null
-  expiresAt: string
+  // null 代表這個碼沒有到期日。舊的紀錄是複製當下存的，不會回頭補。
+  expiresAt: string | null
   copiedAt: string
 }
 

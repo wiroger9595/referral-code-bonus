@@ -44,6 +44,7 @@ goose 和 sqlc **不是 `go mod` 的相依**（是獨立的 CLI），所以 `go 
 cd refcode-api && psql "$(grep -E '^DATABASE_URL=' .env | cut -d= -f2-)" -c '\dt referral_code_bonus.*'
 ```
 
+###### app 啟動一律 會自動重啟
 ## 啟動一律用 ./dev.sh
 
 ```bash
@@ -155,7 +156,7 @@ npm run preview       # 用 build 產物起一台本機 server
 
 port 寫在 `vite.config.ts`，改了一樣要同步後端的 `CORS_ORIGINS`。
 
-不用登入就能瀏覽和複製推薦碼，只有「我的碼」和上架需要帳號——直接在 app 裡註冊即可。
+不用登入就能瀏覽和複製推薦碼，只有「我的推薦碼」和上架需要帳號——直接在 app 裡註冊即可。
 
 **原生平台都加好了**（appId `com.referra.app`），Android 已經驗過能出 debug APK。
 

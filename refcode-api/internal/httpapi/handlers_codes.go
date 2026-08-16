@@ -125,7 +125,8 @@ func (s *Server) handleCreateCode(w http.ResponseWriter, r *http.Request) {
 		MerchantID uuid.UUID `json:"merchant_id"`
 		Code       string    `json:"code"`
 		Note       string    `json:"note"`
-		ExpiresAt  time.Time `json:"expires_at"`
+		// null 或缺欄位代表永久有效，不是漏填。
+		ExpiresAt *time.Time `json:"expires_at"`
 	}
 	if err := decodeJSON(w, r, &req); err != nil {
 		badRequest(w, codeInvalidRequest, "請求格式錯誤")
@@ -165,13 +166,16 @@ func (s *Server) handleCreateCode(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	switch {
-	case req.ExpiresAt.IsZero():
-		badRequest(w, codeExpiryRequired, "請填寫有效期限")
-		return
-	case req.ExpiresAt.Before(time.Now()):
-		badRequest(w, codeExpiryInPast, "有效期限不能是過去的時間")
-		return
+	// 有填到期日的話最早只能是明天 —— 今天到期的碼上架當下就已經沒用了，
+	// 而且還要排隊審核。下界取「UTC 當日結束」而不是 time.Now()：app 送的是
+	// 使用者當地時區的當日 23:59:59，直接跟 now 比會讓東半球的「今天」矇混過關。
+	if req.ExpiresAt != nil {
+	
+		endOfTodayUTC := time.Now().UTC().Truncate(24 * time.Hour).Add(24 * time.Hour)
+		if !req.ExpiresAt.After(endOfTodayUTC) {
+			badRequest(w, codeExpiryInPast, "有效期限最早只能是明天")
+			return
+		}
 	}
 
 	userID, _ := auth.UserID(ctx)

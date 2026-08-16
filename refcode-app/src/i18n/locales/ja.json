@@ -35,6 +35,7 @@
     "connectionFailed": "接続に失敗しました",
     "expiresToday": "本日期限切れ",
     "expiresInDays": "あと{count}日で期限切れ",
+    "noExpiry": "期限なし",
     "cancel": "キャンセル"
   },
   "explore": {
@@ -111,6 +112,10 @@
     "disableConfirm": "掲載を終了する",
     "disableDone": "掲載を終了しました",
     "disableFailed": "掲載を終了できませんでした。時間をおいて再度お試しください。",
+    "filterAll": "すべて",
+    "filterEmptyTitle": "「{status}」のコードはありません",
+    "filterEmptyDesc": "別の状態を選ぶか、すべてに戻してください。",
+    "filterShowAll": "すべて表示",
     "status": {
       "pending": "審査中",
       "active": "掲載中",
@@ -153,7 +158,9 @@
     "note": "メモ",
     "notePlaceholder": "例：新規のみ、3000円以上の利用が必要",
     "sectionExpiry": "有効期限",
+    "hasExpiry": "有効期限を設定する",
     "expiryHint": "期限が来ると自動的に掲載終了します。",
+    "noExpiryHint": "このコードはずっと有効で、自動的に掲載終了しません。期間限定の場合だけ設定してください。",
     "reviewNotice": "送信後は審査待ちとなり、審査を通過すると一覧に表示されます。",
     "submit": "送信",
     "submitted": "送信しました。審査を通過すると掲載されます",
@@ -249,7 +256,7 @@
     "code_required": "紹介コードを入力してください",
     "code_format_mismatch": "このサービスの紹介コードの形式に合っていません",
     "expiry_required": "有効期限を入力してください",
-    "expiry_in_past": "有効期限に過去の日付は指定できません",
+    "expiry_in_past": "有効期限は明日以降を指定してください",
     "expiry_too_far": "有効期限は最長1年です",
     "code_already_listed": "このサービスには既に掲載中の紹介コードがあります",
     "code_not_found": "この紹介コードは見つかりません",

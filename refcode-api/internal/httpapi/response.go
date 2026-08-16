@@ -62,7 +62,6 @@ const (
 	codeMerchantClosed      = "merchant_closed"
 	codeCodeRequired        = "code_required"
 	codeCodeFormatMismatch  = "code_format_mismatch"
-	codeExpiryRequired      = "expiry_required"
 	codeExpiryInPast        = "expiry_in_past"
 	codeExpiryTooFar        = "expiry_too_far"
 	codeCodeAlreadyListed   = "code_already_listed"

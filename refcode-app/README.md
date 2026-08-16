@@ -87,7 +87,7 @@ ID token，驗證在後端（`refcode-api` 的 `internal/auth/oidc.go` 比對 `i
 | Web application | 瀏覽器開發，以及 Android 拿 ID token 用的 server client | `VITE_GOOGLE_WEB_CLIENT_ID` |
 | iOS（要填 bundle id `com.referra.app`） | iOS 原生流程 | `VITE_GOOGLE_IOS_CLIENT_ID` |
 | Android（要填 package name 與簽章的 SHA-1） | Android 原生流程 | 不用填進 `.env`，但 console 上必須存在 |
-
+./dev.sh
 Web client 的 Authorized JavaScript origins 要加 `http://localhost:5174`（app）
 和 `http://localhost:3000`（官網，那邊也用同一個 web client）。
 

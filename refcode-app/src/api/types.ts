@@ -82,7 +82,8 @@ export interface CodeItem {
   quality_score: number
   worked_count: number
   failed_count: number
-  expires_at: string
+  // null 代表永久有效，沒有到期日。
+  expires_at: string | null
   created_at: string
 }
 
@@ -92,14 +93,15 @@ export interface MerchantDetail {
   total: number
 }
 
-// 我的碼列表帶了服務商資訊，跟公開列表的形狀不一樣。
+// 我的推薦碼列表帶了服務商資訊，跟公開列表的形狀不一樣。
 export interface MyCode {
   id: string
   merchant_id: string
   code: string
   note: string
   status: CodeStatus
-  expires_at: string
+  // null 代表永久有效，沒有到期日。
+  expires_at: string | null
   quality_score: number
   impressions: number
   created_at: string

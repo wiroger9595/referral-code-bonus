@@ -14,8 +14,8 @@ import {
   toastController,
 } from '@ionic/vue'
 import type { RefresherCustomEvent } from '@ionic/vue'
-import { addOutline, alertCircleOutline, arrowDownCircleOutline, pricetagsOutline } from 'ionicons/icons'
-import { onActivated, onMounted, ref } from 'vue'
+import { addOutline, alertCircleOutline, arrowDownCircleOutline, funnelOutline, pricetagsOutline } from 'ionicons/icons'
+import { computed, onActivated, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { api } from '../api/client'
@@ -41,6 +41,32 @@ const statusTone: Record<CodeStatus, string> = {
   rejected: 'danger',
   expired: 'neutral',
   disabled: 'danger',
+}
+
+// 'all' 之後照使用者實際會找的順序排：還在架上的擺前面，
+// 已經沒救的（拒絕、到期）擺最後。
+const FILTERS = ['all', 'active', 'pending', 'disabled', 'expired', 'rejected'] as const
+type Filter = (typeof FILTERS)[number]
+
+const filter = ref<Filter>('all')
+
+// 清單一頁就抓完（免費 3 個、Pro 也不會多到哪去），篩選純在前端做 ——
+// 切籤不用重打 API，換來的體感差很多。
+const visible = computed(() =>
+  filter.value === 'all' ? codes.value : codes.value.filter((c) => c.status === filter.value),
+)
+
+// 籤上直接標數量，才不用逐一點進去才知道哪個籤是空的。
+const counts = computed(() => {
+  const map = { all: codes.value.length } as Record<Filter, number>
+  for (const f of FILTERS) {
+    if (f !== 'all') map[f] = codes.value.filter((c) => c.status === f).length
+  }
+  return map
+})
+
+function filterLabel(f: Filter) {
+  return f === 'all' ? t('myCodes.filterAll') : statusLabel(f)
 }
 
 async function load() {
@@ -89,6 +115,8 @@ async function disable(c: MyCode) {
     const updated = await api.disableCode(c.id)
     // 只改狀態不重抓整份列表：使用者要的是碼從公開列表消失，
     // 它自己這張卡留在原位標成「已下架」比較不會以為資料不見了。
+    // 停在「上架中」籤時它會從畫面上消失，那正是那個籤的意思，
+    // 而籤上的數量同時會變，看得出來它是換籤了而不是被刪掉。
     c.status = updated.status
     const toast = await toastController.create({ message: t('myCodes.disableDone'), duration: 2400 })
     await toast.present()
@@ -107,7 +135,9 @@ async function disable(c: MyCode) {
 }
 
 // 日期格式跟著介面語言走，不然日文介面會看到中文的月／日排法。
-function formatDate(iso: string) {
+// null 是永久有效的碼，這格位置只夠一個符號，用 ∞ 代替日期。
+function formatDate(iso: string | null) {
+  if (iso === null) return '∞'
   return new Date(iso).toLocaleDateString(locale.value, { month: 'numeric', day: 'numeric' })
 }
 </script>
@@ -149,57 +179,122 @@ function formatDate(iso: string) {
         <IonButton router-link="/add-code" class="wide">{{ $t('myCodes.addOne') }}</IonButton>
       </EmptyState>
 
-      <div v-else class="stack page-pad list">
-        <div v-for="c in codes" :key="c.id" class="app-card card">
-          <div class="head">
-            <div class="who">
-              <div class="logo">
-                <img v-if="c.merchant_logo_url" :src="c.merchant_logo_url" :alt="c.merchant_name" />
-                <span v-else>{{ c.merchant_name.trim().charAt(0) }}</span>
+      <template v-else>
+        <!-- 六個籤放不進一行，所以橫向捲 —— 跟 ExploreTab 的排序列同一套視覺與行為。
+             放在內容區而不是 toolbar 裡：塞進 header 的話這排會把整個版面撐寬。 -->
+        <div class="filters">
+          <button
+            v-for="f in FILTERS"
+            :key="f"
+            class="filter"
+            :class="{ on: filter === f }"
+            @click="filter = f"
+          >
+            {{ filterLabel(f) }} {{ counts[f] }}
+          </button>
+        </div>
+
+        <!-- 有碼但這個籤是空的：不要跟「一組碼都沒有」共用同一句話，
+             那會讓人以為資料不見了。 -->
+        <EmptyState
+          v-if="visible.length === 0"
+          :icon="funnelOutline"
+          :title="$t('myCodes.filterEmptyTitle', { status: filterLabel(filter) })"
+          :description="$t('myCodes.filterEmptyDesc')"
+        >
+          <IonButton fill="clear" @click="filter = 'all'">
+            {{ $t('myCodes.filterShowAll') }}
+          </IonButton>
+        </EmptyState>
+
+        <div v-else class="stack page-pad list">
+          <div v-for="c in visible" :key="c.id" class="app-card card">
+            <div class="head">
+              <div class="who">
+                <div class="logo">
+                  <img v-if="c.merchant_logo_url" :src="c.merchant_logo_url" :alt="c.merchant_name" />
+                  <span v-else>{{ c.merchant_name.trim().charAt(0) }}</span>
+                </div>
+                <div>
+                  <h2>{{ c.merchant_name }}</h2>
+                  <p class="mono tiny muted">{{ c.code }}</p>
+                </div>
+              </div>
+              <span class="pill" :class="statusTone[c.status]">{{ statusLabel(c.status) }}</span>
+            </div>
+
+            <!-- 上架者唯一在意的是「有沒有人看到」，所以數字要比碼本身大。 -->
+            <div class="stats">
+              <div>
+                <strong>{{ c.impressions }}</strong>
+                <span class="tiny muted">{{ $t('myCodes.impressions') }}</span>
               </div>
               <div>
-                <h2>{{ c.merchant_name }}</h2>
-                <p class="mono tiny muted">{{ c.code }}</p>
+                <strong>{{ c.quality_score }}</strong>
+                <span class="tiny muted">{{ $t('myCodes.qualityScore') }}</span>
+              </div>
+              <div>
+                <strong>{{ formatDate(c.expires_at) }}</strong>
+                <span class="tiny muted">{{ $t('myCodes.expiresAt') }}</span>
               </div>
             </div>
-            <span class="pill" :class="statusTone[c.status]">{{ statusLabel(c.status) }}</span>
-          </div>
 
-          <!-- 上架者唯一在意的是「有沒有人看到」，所以數字要比碼本身大。 -->
-          <div class="stats">
-            <div>
-              <strong>{{ c.impressions }}</strong>
-              <span class="tiny muted">{{ $t('myCodes.impressions') }}</span>
-            </div>
-            <div>
-              <strong>{{ c.quality_score }}</strong>
-              <span class="tiny muted">{{ $t('myCodes.qualityScore') }}</span>
-            </div>
-            <div>
-              <strong>{{ formatDate(c.expires_at) }}</strong>
-              <span class="tiny muted">{{ $t('myCodes.expiresAt') }}</span>
-            </div>
+            <IonButton
+              v-if="canDisable(c.status)"
+              fill="clear"
+              size="small"
+              color="danger"
+              class="disable"
+              :disabled="disablingID === c.id"
+              @click="disable(c)"
+            >
+              <IonIcon slot="start" :icon="arrowDownCircleOutline" />
+              {{ $t('myCodes.disable') }}
+            </IonButton>
           </div>
-
-          <IonButton
-            v-if="canDisable(c.status)"
-            fill="clear"
-            size="small"
-            color="danger"
-            class="disable"
-            :disabled="disablingID === c.id"
-            @click="disable(c)"
-          >
-            <IonIcon slot="start" :icon="arrowDownCircleOutline" />
-            {{ $t('myCodes.disable') }}
-          </IonButton>
         </div>
-      </div>
+      </template>
     </IonContent>
   </IonPage>
 </template>
 
 <style scoped>
+/* 篩選籤。跟 ExploreTab 的排序列同一套視覺（膠囊、白底、深一階的框線，
+   選中換主色），使用者不用學第二種可點的小東西長什麼樣。
+   左右 padding 對齊 .page-pad，第一顆才不會比下面的卡片凸出來。 */
+.filters {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filters::-webkit-scrollbar {
+  display: none;
+}
+
+/* flex: none 是這排不撐寬版面的關鍵：少了它，六顆籤會把整個頁面推到螢幕外。 */
+.filter {
+  flex: none;
+  padding: 6px 13px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: var(--app-radius-full);
+  background: var(--app-surface);
+  color: var(--app-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.filter.on {
+  border-color: transparent;
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+}
+
 .list {
   padding-top: 8px;
   padding-bottom: 24px;
@@ -252,6 +347,9 @@ function formatDate(iso: string) {
 .head p {
   margin: 2px 0 0;
   letter-spacing: 0.03em;
+  /* 推薦碼是一長串沒有空白的字元，預設不會斷行 —— 遇到特別長的碼會把整張卡
+     連同版面一起撐出螢幕外。 */
+  overflow-wrap: anywhere;
 }
 
 .stats {

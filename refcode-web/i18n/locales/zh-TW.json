@@ -5,6 +5,7 @@
   },
   "nav": {
     "about": "這是什麼",
+    "myCodes": "我的推薦碼",
     "login": "登入",
     "logout": "登出",
     "register": "註冊"
@@ -18,7 +19,8 @@
   },
   "common": {
     "expiresToday": "今天到期",
-    "expiresInDays": "{count} 天後到期"
+    "expiresInDays": "{count} 天後到期",
+    "noExpiry": "無期限"
   },
   "home": {
     "seoTitle": "找推薦碼、分享推薦碼",
@@ -149,6 +151,28 @@
     "forgotResent": "已重新寄出，舊的驗證碼失效了",
     "backToLogin": "回登入頁"
   },
+  "myCodes": {
+    "title": "我的推薦碼",
+    "signInFirst": "要先登入才能看自己上架的推薦碼。",
+    "loading": "載入中…",
+    "total": "共 {count} 組",
+    "emptyTitle": "還沒有上架任何推薦碼",
+    "emptyDesc": "在手機 app 裡上架之後，這裡就會看到它的曝光與狀態。",
+    "impressions": "曝光",
+    "qualityScore": "品質分數",
+    "expiresAt": "到期",
+    "manageInApp": "上架與下架請到手機 app 操作。",
+    "filterAll": "全部",
+    "filterEmptyTitle": "沒有「{status}」的推薦碼",
+    "filterShowAll": "看全部",
+    "status": {
+      "pending": "審核中",
+      "active": "上架中",
+      "rejected": "已拒絕",
+      "expired": "已到期",
+      "disabled": "已下架"
+    }
+  },
   "account": {
     "title": "我的帳號",
     "signInFirst": "要先登入才能管理自己的帳號。",
@@ -187,7 +211,7 @@
     "code_required": "推薦碼不能空白",
     "code_format_mismatch": "推薦碼格式不符合這家服務商的規則",
     "expiry_required": "請填寫有效期限",
-    "expiry_in_past": "有效期限不能是過去的時間",
+    "expiry_in_past": "有效期限最早只能是明天",
     "expiry_too_far": "有效期限最長一年",
     "code_already_listed": "你在這家服務商已經有一個上架中的推薦碼了",
     "code_not_found": "找不到這個推薦碼",

@@ -218,6 +218,9 @@ export function useAuth() {
     user,
     isLoggedIn,
     restore,
+    // 給只有登入者看得到的頁面自己打 API 用（例如我的推薦碼）。
+    // 401 會自動換發一次 token 再重試，呼叫端不用管。
+    authedFetch,
     login,
     register,
     forgotPassword,

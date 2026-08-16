@@ -5,6 +5,7 @@
   },
   "nav": {
     "about": "About",
+    "myCodes": "My codes",
     "login": "Sign in",
     "logout": "Sign out",
     "register": "Sign up"
@@ -18,7 +19,8 @@
   },
   "common": {
     "expiresToday": "expires today",
-    "expiresInDays": "expires in {count} day | expires in {count} days"
+    "expiresInDays": "expires in {count} day | expires in {count} days",
+    "noExpiry": "no expiry"
   },
   "home": {
     "seoTitle": "Find and share referral codes",
@@ -149,6 +151,28 @@
     "forgotResent": "Sent again. The previous code no longer works.",
     "backToLogin": "Back to sign in"
   },
+  "myCodes": {
+    "title": "My codes",
+    "signInFirst": "Sign in to see the codes you have shared.",
+    "loading": "Loading…",
+    "total": "{count} code | {count} codes",
+    "emptyTitle": "You haven't shared any codes yet",
+    "emptyDesc": "Share one in the mobile app and you will see its views and status here.",
+    "impressions": "Views",
+    "qualityScore": "Quality",
+    "expiresAt": "Expires",
+    "manageInApp": "Sharing and removing codes is done in the mobile app.",
+    "filterAll": "All",
+    "filterEmptyTitle": "No codes marked \"{status}\"",
+    "filterShowAll": "Show all",
+    "status": {
+      "pending": "In review",
+      "active": "Live",
+      "rejected": "Rejected",
+      "expired": "Expired",
+      "disabled": "Removed"
+    }
+  },
   "account": {
     "title": "My account",
     "signInFirst": "Sign in to manage your account.",
@@ -187,7 +211,7 @@
     "code_required": "Referral code can't be empty",
     "code_format_mismatch": "That code doesn't match this service's format",
     "expiry_required": "Please set an expiry date",
-    "expiry_in_past": "The expiry date can't be in the past",
+    "expiry_in_past": "The expiry date must be tomorrow or later",
     "expiry_too_far": "The expiry date can be one year out at most",
     "code_already_listed": "You already have a live code for this service",
     "code_not_found": "Referral code not found",

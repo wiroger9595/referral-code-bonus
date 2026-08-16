@@ -238,3 +238,29 @@ ion-tab-button ion-label {
   justify-content: center;
   padding: 48px 16px;
 }
+
+/* ── 大螢幕 ─────────────────────────────────────────── */
+
+/* 這套版面的尺寸全是照手機寬度刻的（磁磚固定 150px、分類固定四欄），
+   iPad 上讓它拉滿版，每張卡片都會變成一條橫跨整個螢幕的細長條。
+   內容統一限寬置中，左右自動留白。
+
+   刻意不包 @media —— Split View 把 app 壓到 680px 以下時 max-width
+   自己就不生效，回到原本的滿版排版，不用再維護一組中間尺寸的規則。
+
+   footer 一起處理，否則釘在底部的 CTA 會自己跑去滿版，跟上面的內容對不齊；
+   限寬的是裡面那層，footer 本身的底色與陰影要維持滿版。
+
+   帶 slot 的（refresher）是 ion-content 自己定位的，限寬會讓它偏掉。 */
+ion-content > *:not([slot]),
+ion-footer > *:not([slot]) {
+  max-width: var(--app-content-max);
+  margin-inline: auto;
+}
+
+/* 分頁列的底色與上框線要維持滿版（那是螢幕底部的一條），所以不動它的寬度，
+   改用左右 padding 把按鈕擠回中間跟內容對齊 —— 五個按鈕攤在 1180px 上，
+   離內容太遠也不好按。 */
+ion-tab-bar {
+  padding-inline: max(0px, calc((100% - var(--app-content-max)) / 2));
+}

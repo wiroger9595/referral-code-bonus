@@ -27,8 +27,9 @@ onMounted(() => record.load())
 
 const isEmpty = computed(() => record.codes.length === 0 && record.merchants.length === 0)
 
-function isExpired(iso: string) {
-  return daysUntilExpiry(iso) <= 0
+// 沒有到期日的碼永遠不算過期。
+function isExpired(iso: string | null) {
+  return iso !== null && daysUntilExpiry(iso) <= 0
 }
 
 // 日期格式跟著介面語言走，不然日文介面會看到中文的月／日排法。

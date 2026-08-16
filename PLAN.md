@@ -218,7 +218,7 @@ oauth_identities
 - Go API：服務商目錄、上架、審核、搜尋、排序（只做自然區加權隨機）
 - admin：服務商 CRUD、推薦碼審核佇列
 - web（Nuxt）：首頁、分類頁、服務商頁（SSR + structured data + sitemap）
-- app：瀏覽、搜尋、複製碼、上架、我的碼
+- app：瀏覽、搜尋、複製碼、上架、我的推薦碼
 - 認證三種方式、事件追蹤（曝光/點擊/複製先只記錄不計費）
 
 ### Phase 2 — 信任機制（2~3 週）

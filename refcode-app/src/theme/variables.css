@@ -95,6 +95,9 @@
   --app-accent-4: #e6ddfb;
   --app-accent-4-ink: #6b3fa0;
 
+  /* 內容欄的最大寬度。手機上不會生效，只在 iPad 這種寬螢幕上撐住版面。 */
+  --app-content-max: 680px;
+
   --app-radius-sm: 8px;
   --app-radius: 12px;
   --app-radius-lg: 16px;

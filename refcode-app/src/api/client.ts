@@ -256,7 +256,8 @@ export const api = {
     return request<{ codes: MyCode[] }>('/v1/me/codes')
   },
 
-  createCode(input: { merchant_id: string; code: string; note: string; expires_at: string }) {
+  // expires_at 傳 null 是「永久有效」，後端會存成 NULL。
+  createCode(input: { merchant_id: string; code: string; note: string; expires_at: string | null }) {
     return request<MyCode>('/v1/codes', { method: 'POST', body: JSON.stringify(input) })
   },
 

@@ -36,7 +36,8 @@ FROM referral_code_bonus.referral_codes c
 JOIN referral_code_bonus.users u ON u.id = c.user_id
 WHERE c.merchant_id = $1
   AND c.status = 'active'
-  AND c.expires_at > now()
+  -- expires_at IS NULL 是永久有效的碼，永遠留在候選池裡。
+  AND (c.expires_at IS NULL OR c.expires_at > now())
 ORDER BY c.quality_score DESC, c.created_at DESC
 LIMIT 200;
 
@@ -77,6 +78,8 @@ SET quality_score = $2, updated_at = now()
 WHERE id = $1;
 
 -- 到期下架排程用。回傳受影響的碼以便通知上架者。
+-- 永久碼（expires_at IS NULL）不用另外排除：NULL <= now() 的結果是 NULL 不是 true，
+-- 本來就篩不到。
 -- name: ExpireOverdueCodes :many
 UPDATE referral_code_bonus.referral_codes
 SET status = 'expired', updated_at = now()

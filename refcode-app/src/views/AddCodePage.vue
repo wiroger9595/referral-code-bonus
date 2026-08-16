@@ -14,6 +14,7 @@ import {
   IonSelect,
   IonSelectOption,
   IonTitle,
+  IonToggle,
   IonToolbar,
   toastController,
 } from '@ionic/vue'
@@ -36,9 +37,22 @@ const note = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 
-// 到期日沒有上限，預設先給三個月 —— 大部分活動不會撐更久，使用者要延長自己拉。
-const defaultExpiry = new Date(Date.now() + 90 * 86400000).toISOString()
-const expiresAt = ref(defaultExpiry)
+// IonDatetime 在 presentation="date" 下只比對日期那一段，這裡不能用 toISOString()
+// —— 那是 UTC，台灣凌晨那幾個小時會算成前一天，今天就又選得到了。
+function localDate(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+// 最早只能選明天：今天到期的碼上架當下就已經沒用了，撿到的人也兌不到。
+const minExpiry = localDate(new Date(Date.now() + 86400000))
+
+// 預設不設期限。多數服務商的推薦計畫是常駐的，逼使用者填一個猜出來的日期
+// 只會讓碼在還能用的時候被排程下架。有活動檔期的自己打開開關去選。
+const hasExpiry = ref(false)
+
+// 開關打開時才用得到，預設先擺三個月 —— 大部分活動不會撐更久。
+const expiresAt = ref(localDate(new Date(Date.now() + 90 * 86400000)))
 
 onMounted(async () => {
   try {
@@ -56,6 +70,14 @@ function shortName(name: string) {
   return name.split(/\s*[-|｜]\s*/)[0]
 }
 
+// 使用者選的是「有效到這一天」，所以送當地時區那天的最後一刻。
+// 不能直接 new Date('2026-08-18')：那會被當成 UTC 午夜，台灣的使用者
+// 選了 8/18，碼會在 8/18 早上八點就過期。
+function endOfLocalDay(value: string) {
+  const [y, m, d] = value.slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d, 23, 59, 59, 999).toISOString()
+}
+
 async function submit() {
   errorMessage.value = ''
   if (!merchantId.value) {
@@ -69,7 +91,7 @@ async function submit() {
       merchant_id: merchantId.value,
       code: code.value.trim(),
       note: note.value.trim(),
-      expires_at: new Date(expiresAt.value).toISOString(),
+      expires_at: hasExpiry.value ? endOfLocalDay(expiresAt.value) : null,
     })
     const toast = await toastController.create({
       message: t('addCode.submitted'),
@@ -152,12 +174,19 @@ async function submit() {
 
         <section>
           <h2 class="label">{{ $t('addCode.sectionExpiry') }}</h2>
-          <p class="tiny muted sub">{{ $t('addCode.expiryHint') }}</p>
-          <div class="app-card picker">
+          <IonList class="app-form" lines="none">
+            <IonItem>
+              <IonToggle v-model="hasExpiry">{{ $t('addCode.hasExpiry') }}</IonToggle>
+            </IonItem>
+          </IonList>
+          <p class="tiny muted toggle-hint">
+            {{ hasExpiry ? $t('addCode.expiryHint') : $t('addCode.noExpiryHint') }}
+          </p>
+          <div v-if="hasExpiry" class="app-card picker">
             <IonDatetime
               v-model="expiresAt"
               presentation="date"
-              :min="new Date().toISOString()"
+              :min="minExpiry"
             />
           </div>
         </section>
@@ -197,6 +226,11 @@ async function submit() {
 
 .sub {
   margin: -6px 0 10px;
+}
+
+/* .sub 的負 margin 是給緊接在 .label 後面用的，接在 IonList 後面會被卡片蓋掉。 */
+.toggle-hint {
+  margin: 10px 2px 12px;
 }
 
 .picker {

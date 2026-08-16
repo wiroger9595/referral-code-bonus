@@ -35,6 +35,7 @@
     "connectionFailed": "連線失敗",
     "expiresToday": "今天到期",
     "expiresInDays": "{count} 天後到期",
+    "noExpiry": "無期限",
     "cancel": "取消"
   },
   "explore": {
@@ -97,7 +98,7 @@
     "emptyDesc": "看看別的分類，或晚點再回來。"
   },
   "myCodes": {
-    "title": "我的碼",
+    "title": "我的推薦碼",
     "emptyTitle": "還沒有上架任何推薦碼",
     "emptyDesc": "上架之後可以看到它被曝光、點擊、複製了幾次。",
     "addOne": "上架一組",
@@ -111,6 +112,10 @@
     "disableConfirm": "確定下架",
     "disableDone": "已下架",
     "disableFailed": "下架失敗，請稍後再試。",
+    "filterAll": "全部",
+    "filterEmptyTitle": "沒有「{status}」的推薦碼",
+    "filterEmptyDesc": "換一個狀態看看，或是回到全部。",
+    "filterShowAll": "看全部",
     "status": {
       "pending": "審核中",
       "active": "上架中",
@@ -140,7 +145,7 @@
     "thanksInline": "謝謝，這會影響它之後的排序",
     "emptyTitle": "目前沒有有效的推薦碼",
     "emptyDesc": "到期的碼會自動下架。晚點再回來看看，或自己上架一組。",
-    "addMine": "上架我的碼",
+    "addMine": "上架我的推薦碼",
     "rewardPending": "這家還沒有獎勵資訊"
   },
   "addCode": {
@@ -153,7 +158,9 @@
     "note": "備註",
     "notePlaceholder": "例如：限新戶、要刷滿 3000",
     "sectionExpiry": "有效期限",
+    "hasExpiry": "設定有效期限",
     "expiryHint": "到期會自動下架，不用自己回來關掉。",
+    "noExpiryHint": "這個碼會一直有效，不會自動下架。活動有檔期再打開設定。",
     "reviewNotice": "送出後會先進入審核佇列，通過人工審核才會出現在列表上。",
     "submit": "送出",
     "submitted": "已送出，通過審核後就會上架",
@@ -249,7 +256,7 @@
     "code_required": "推薦碼不能空白",
     "code_format_mismatch": "推薦碼格式不符合這家服務商的規則",
     "expiry_required": "請填寫有效期限",
-    "expiry_in_past": "有效期限不能是過去的時間",
+    "expiry_in_past": "有效期限最早只能是明天",
     "expiry_too_far": "有效期限最長一年",
     "code_already_listed": "你在這家服務商已經有一個上架中的推薦碼了",
     "code_not_found": "找不到這個推薦碼",

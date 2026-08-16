@@ -46,11 +46,11 @@ RETURNING id, user_id, merchant_id, code, note, status, expires_at, quality_scor
 `
 
 type CreateCodeParams struct {
-	UserID     uuid.UUID `json:"user_id"`
-	MerchantID uuid.UUID `json:"merchant_id"`
-	Code       string    `json:"code"`
-	Note       string    `json:"note"`
-	ExpiresAt  time.Time `json:"expires_at"`
+	UserID     uuid.UUID  `json:"user_id"`
+	MerchantID uuid.UUID  `json:"merchant_id"`
+	Code       string     `json:"code"`
+	Note       string     `json:"note"`
+	ExpiresAt  *time.Time `json:"expires_at"`
 }
 
 func (q *Queries) CreateCode(ctx context.Context, arg CreateCodeParams) (ReferralCode, error) {
@@ -158,6 +158,8 @@ type ExpireOverdueCodesRow struct {
 }
 
 // 到期下架排程用。回傳受影響的碼以便通知上架者。
+// 永久碼（expires_at IS NULL）不用另外排除：NULL <= now() 的結果是 NULL 不是 true，
+// 本來就篩不到。
 func (q *Queries) ExpireOverdueCodes(ctx context.Context) ([]ExpireOverdueCodesRow, error) {
 	rows, err := q.db.Query(ctx, expireOverdueCodes)
 	if err != nil {
@@ -250,7 +252,8 @@ FROM referral_code_bonus.referral_codes c
 JOIN referral_code_bonus.users u ON u.id = c.user_id
 WHERE c.merchant_id = $1
   AND c.status = 'active'
-  AND c.expires_at > now()
+  -- expires_at IS NULL 是永久有效的碼，永遠留在候選池裡。
+  AND (c.expires_at IS NULL OR c.expires_at > now())
 ORDER BY c.quality_score DESC, c.created_at DESC
 LIMIT 200
 `
@@ -262,7 +265,7 @@ type ListActiveCodesForMerchantRow struct {
 	Note           string     `json:"note"`
 	QualityScore   int32      `json:"quality_score"`
 	Impressions    int64      `json:"impressions"`
-	ExpiresAt      time.Time  `json:"expires_at"`
+	ExpiresAt      *time.Time `json:"expires_at"`
 	CreatedAt      time.Time  `json:"created_at"`
 	ActivatedAt    *time.Time `json:"activated_at"`
 	OwnerName      string     `json:"owner_name"`
@@ -356,7 +359,7 @@ type ListMyCodesRow struct {
 	Code            string     `json:"code"`
 	Note            string     `json:"note"`
 	Status          string     `json:"status"`
-	ExpiresAt       time.Time  `json:"expires_at"`
+	ExpiresAt       *time.Time `json:"expires_at"`
 	QualityScore    int32      `json:"quality_score"`
 	Impressions     int64      `json:"impressions"`
 	CreatedAt       time.Time  `json:"created_at"`
@@ -432,7 +435,7 @@ type ListPendingCodesRow struct {
 	Code            string     `json:"code"`
 	Note            string     `json:"note"`
 	Status          string     `json:"status"`
-	ExpiresAt       time.Time  `json:"expires_at"`
+	ExpiresAt       *time.Time `json:"expires_at"`
 	QualityScore    int32      `json:"quality_score"`
 	Impressions     int64      `json:"impressions"`
 	CreatedAt       time.Time  `json:"created_at"`

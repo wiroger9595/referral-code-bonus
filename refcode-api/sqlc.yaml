@@ -8,7 +8,7 @@ sql:
         package: dbgen
         out: internal/store/dbgen
         sql_package: pgx/v5
-        # 有些 endpoint 直接回 row（我的碼、審核佇列），沒有 tag 會吐出 Go 的欄位名。
+        # 有些 endpoint 直接回 row（我的推薦碼、審核佇列），沒有 tag 會吐出 Go 的欄位名。
         emit_json_tags: true
         json_tags_case_style: snake
         emit_empty_slices: true

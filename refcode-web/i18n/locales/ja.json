@@ -5,6 +5,7 @@
   },
   "nav": {
     "about": "このサイトについて",
+    "myCodes": "マイコード",
     "login": "ログイン",
     "logout": "ログアウト",
     "register": "新規登録"
@@ -18,7 +19,8 @@
   },
   "common": {
     "expiresToday": "本日期限切れ",
-    "expiresInDays": "あと{count}日で期限切れ"
+    "expiresInDays": "あと{count}日で期限切れ",
+    "noExpiry": "期限なし"
   },
   "home": {
     "seoTitle": "紹介コードを探す・共有する",
@@ -146,6 +148,28 @@
     "forgotResent": "再送しました。以前のコードは無効になりました",
     "backToLogin": "ログインに戻る"
   },
+  "myCodes": {
+    "title": "マイコード",
+    "signInFirst": "ログインすると、登録した紹介コードを確認できます。",
+    "loading": "読み込み中…",
+    "total": "{count}件",
+    "emptyTitle": "まだ紹介コードを登録していません",
+    "emptyDesc": "アプリで登録すると、表示回数と状態がここに表示されます。",
+    "impressions": "表示",
+    "qualityScore": "品質スコア",
+    "expiresAt": "期限",
+    "manageInApp": "登録と掲載終了はアプリから操作してください。",
+    "filterAll": "すべて",
+    "filterEmptyTitle": "「{status}」のコードはありません",
+    "filterShowAll": "すべて表示",
+    "status": {
+      "pending": "審査中",
+      "active": "掲載中",
+      "rejected": "却下",
+      "expired": "期限切れ",
+      "disabled": "掲載終了"
+    }
+  },
   "account": {
     "title": "アカウント",
     "signInFirst": "アカウントを管理するにはログインしてください。",
@@ -184,7 +208,7 @@
     "code_required": "紹介コードを入力してください",
     "code_format_mismatch": "このサービスの紹介コードの形式に合っていません",
     "expiry_required": "有効期限を入力してください",
-    "expiry_in_past": "有効期限に過去の日付は指定できません",
+    "expiry_in_past": "有効期限は明日以降を指定してください",
     "expiry_too_far": "有効期限は最長1年です",
     "code_already_listed": "このサービスには既に掲載中の紹介コードがあります",
     "code_not_found": "この紹介コードは見つかりません",
