@@ -457,4 +457,9 @@ function initial() {
   padding-top: 20px;
   padding-bottom: 24px;
 }
+/* 單欄的頁不跟著平板的內容欄一起放寬 —— 表單拉到 940 只會變成很長的一行，
+   眼睛從欄位標題找到輸入框要橫跨整個螢幕。手機寬度小於這個值，不受影響。 */
+ion-content {
+  --app-content-max: 600px;
+}
 </style>

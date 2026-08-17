@@ -8,14 +8,16 @@ import {
   IonPage,
   IonRefresher,
   IonRefresherContent,
+  IonSpinner,
   IonTitle,
   IonToolbar,
   alertController,
+  onIonViewWillEnter,
   toastController,
 } from '@ionic/vue'
 import type { RefresherCustomEvent } from '@ionic/vue'
-import { addOutline, alertCircleOutline, arrowDownCircleOutline, funnelOutline, pricetagsOutline } from 'ionicons/icons'
-import { computed, onActivated, onMounted, ref } from 'vue'
+import { addOutline, alertCircleOutline, arrowDownCircleOutline, funnelOutline, pricetagsOutline, refreshOutline } from 'ionicons/icons'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { api } from '../api/client'
@@ -81,13 +83,25 @@ async function load() {
   }
 }
 
-onMounted(load)
-// 從新增頁返回時 Ionic 會沿用快取的頁面，要重新抓才看得到剛上架的碼。
-onActivated(load)
+// 每次切回這一頁都重抓：碼的狀態是後台審完才改的，app 這邊不會收到通知，
+// 只能靠回到頁面時再問一次。不能用 onMounted —— Ionic 把離開的頁面留在 DOM 裡，
+// 它只會跑第一次；也不能用 Vue 的 onActivated —— 那要有 <KeepAlive> 才觸發，
+// 而 Ionic 的 router outlet 自己管頁面堆疊，沒有用 KeepAlive，掛上去等於沒掛。
+onIonViewWillEnter(load)
 
 async function refresh(event: RefresherCustomEvent) {
   await load()
   event.target.complete()
+}
+
+// 狀態沒變的時候畫面不會有任何動靜，按了像沒反應，所以成功一定要給回饋 ——
+// 下拉刷新有收合動畫可以看，按鈕沒有。失敗的訊息 load() 已經寫進 errorMessage
+// 並顯示在內容區，這裡不再跳一次。
+async function manualRefresh() {
+  await load()
+  if (errorMessage.value) return
+  const toast = await toastController.create({ message: t('myCodes.refreshed'), duration: 1600 })
+  await toast.present()
 }
 
 // 已經在架上或還在審的才撤得掉，其餘狀態後端會擋。
@@ -148,6 +162,12 @@ function formatDate(iso: string | null) {
       <IonToolbar>
         <IonTitle>{{ $t('myCodes.title') }}</IonTitle>
         <IonButtons slot="end">
+          <!-- 審核結果是後台改的，app 不會收到通知。下拉刷新找得到的人有限，
+               所以這裡再給一個看得見的入口。 -->
+          <IonButton :disabled="loading" :aria-label="$t('myCodes.refresh')" @click="manualRefresh">
+            <IonSpinner v-if="loading" slot="icon-only" name="crescent" />
+            <IonIcon v-else slot="icon-only" :icon="refreshOutline" />
+          </IonButton>
           <IonButton router-link="/add-code">
             <IonIcon slot="icon-only" :icon="addOutline" />
           </IonButton>
@@ -379,5 +399,15 @@ function formatDate(iso: string | null) {
   margin: 10px -8px -6px auto;
   --padding-start: 8px;
   --padding-end: 8px;
+}
+
+/* ── 平板 ───────────────────────────────────────────── */
+
+@media (min-width: 768px) {
+  .list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
 }
 </style>

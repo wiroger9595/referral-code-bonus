@@ -102,6 +102,8 @@
     "emptyTitle": "まだ紹介コードを登録していません",
     "emptyDesc": "登録すると、表示・タップ・コピーされた回数を確認できます。",
     "addOne": "登録する",
+    "refresh": "更新",
+    "refreshed": "最新の状態です",
     "impressions": "表示",
     "qualityScore": "品質スコア",
     "expiresAt": "期限",

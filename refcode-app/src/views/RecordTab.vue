@@ -278,4 +278,16 @@ async function confirmClear(which: 'codes' | 'merchants') {
 .list {
   padding-bottom: 8px;
 }
+
+/* ── 平板 ───────────────────────────────────────────── */
+
+/* 兩個區塊（複製過的碼、看過的服務商）用的都是全域的 .stack，
+   在這裡只覆寫它在平板下的排列方向，其他頁不受影響。 */
+@media (min-width: 768px) {
+  .stack {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
 </style>

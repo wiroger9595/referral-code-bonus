@@ -264,3 +264,20 @@ ion-footer > *:not([slot]) {
 ion-tab-bar {
   padding-inline: max(0px, calc((100% - var(--app-content-max)) / 2));
 }
+
+/* 平板。768px 以上才進來 —— iPad 的 Split View 壓到一半只有 507px，
+   那個寬度跟手機沒兩樣，套雙欄只會讓每一欄都太窄。
+
+   這裡只把內容欄放寬，雙欄與多欄的排版在各頁自己的 style 裡（同一個斷點）。
+   單欄的頁（表單、引導頁）會在自己的 ion-page 上把這個值改回窄的 ——
+   表單跟著放寬只會變成很長的一行，更難讀。 */
+@media (min-width: 768px) {
+  :root {
+    --app-content-max: 940px;
+  }
+
+  /* 內容欄寬了一圈，主標題跟著大一階，否則整頁看起來像被放大的手機版。 */
+  .page-heading h1 {
+    font-size: 34px;
+  }
+}

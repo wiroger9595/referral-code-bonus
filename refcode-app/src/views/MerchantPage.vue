@@ -481,4 +481,12 @@ async function shareMerchant() {
     box-shadow: none;
   }
 }
+
+/* 詳情頁只講一家服務商，不跟著平板的內容欄放到 940 —— 一家通常也就
+   一到三組碼，排成雙欄反而讓人以為是兩家。底部的 CTA 一起收窄，
+   不然會變成一顆橫跨整個螢幕的按鈕（footer 不在 content 裡，要各自設）。 */
+ion-content,
+.cta {
+  --app-content-max: 680px;
+}
 </style>

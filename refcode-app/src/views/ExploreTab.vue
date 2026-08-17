@@ -924,4 +924,26 @@ const sorted = computed(() => {
   font-size: 16px;
   opacity: 0.6;
 }
+
+/* ── 平板 ───────────────────────────────────────────── */
+
+@media (min-width: 768px) {
+  /* 磁磚維持原本的大小，多的寬度拿去加欄數 —— 把格子拉寬只是讓 icon
+     之間空更多，不會比較好按。六欄剛好讓十個分類排成兩排。 */
+  .cat-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  /* 卡片本來就是「logo + 文字 + 右側箭頭」的橫向排版，寬度一拉開右邊會空一大片，
+     改雙欄。align-items 要 start，否則同一列的兩張會被拉成一樣高。 */
+  .list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .tile {
+    width: 176px;
+  }
+}
 </style>

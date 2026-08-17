@@ -102,6 +102,8 @@
     "emptyTitle": "You haven't shared any codes yet",
     "emptyDesc": "Once shared, you can see how often it's shown, tapped and copied.",
     "addOne": "Share a code",
+    "refresh": "Refresh",
+    "refreshed": "Up to date",
     "impressions": "Views",
     "qualityScore": "Quality",
     "expiresAt": "Expires",

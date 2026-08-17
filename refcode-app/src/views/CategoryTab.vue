@@ -161,4 +161,14 @@ async function refresh(event: RefresherCustomEvent) {
   font-size: 16px;
   opacity: 0.6;
 }
+
+/* ── 平板 ───────────────────────────────────────────── */
+
+@media (min-width: 768px) {
+  .list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
 </style>
