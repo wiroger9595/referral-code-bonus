@@ -15,6 +15,11 @@ const menuOptions = computed(() => {
       label: () => h(RouterLink, { to: { name: 'review' } }, () => '審核佇列'),
       key: 'review',
     },
+    // 已上架的碼與使用者回報，reviewer 也要能處理，不放進 owner 那一段。
+    {
+      label: () => h(RouterLink, { to: { name: 'codes' } }, () => '上架的碼'),
+      key: 'codes',
+    },
   ]
   // 服務商目錄只有 owner 能維護，reviewer 看不到入口。
   if (auth.isOwner) {

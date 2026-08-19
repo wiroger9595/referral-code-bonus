@@ -1,6 +1,9 @@
 // 對應 refcode-api 的回傳。後端補上 OpenAPI spec 之後應該改成從 spec 產生。
 
 export type CodeStatus = 'pending' | 'active' | 'rejected' | 'expired' | 'disabled'
+// 上架的碼有兩種來源：自己的推薦碼（雙方各拿獎勵），或手上的折扣碼（只有使用的人拿到折扣）。
+// 兩種的欄位一模一樣，折扣碼的優惠內容寫在 note 裡。
+export type CodeType = 'referral' | 'discount'
 export type ReportResult = 'worked' | 'failed' | 'invalid_code' | 'merchant_closed'
 export type OAuthProvider = 'google' | 'apple'
 
@@ -50,6 +53,8 @@ export interface MerchantSummary {
   soonest_expires_at: string | null
   // 這家在哪些國家能用。空陣列代表不分地區。
   countries: string[]
+  // 這家收哪幾種碼。沒有推薦計畫的服務商只會有 discount，上架表單靠它決定選項。
+  allowed_code_types: CodeType[]
 }
 
 // 搜不到東西時後端給的「你是不是要找」。有結果時是空陣列。
@@ -77,6 +82,7 @@ export interface CodeItem {
   code: string | null
   masked: boolean
   note: string
+  code_type: CodeType
   owner_name: string
   owner_avatar_url: string | null
   quality_score: number
@@ -100,6 +106,7 @@ export interface MyCode {
   code: string
   note: string
   status: CodeStatus
+  code_type: CodeType
   // null 代表永久有效，沒有到期日。
   expires_at: string | null
   quality_score: number
@@ -108,6 +115,9 @@ export interface MyCode {
   merchant_slug: string
   merchant_name: string
   merchant_logo_url: string | null
+  // 最近一次被拒的理由，沒被拒過是空字串。被拒之後又被恢復的碼也會留著上一次的
+  // 理由，所以要連 status 一起看才知道現在該不該顯示。
+  reject_reason: string
 }
 
 export interface CodeStats {

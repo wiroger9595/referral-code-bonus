@@ -24,7 +24,7 @@
   },
   "tabs": {
     "explore": "探索",
-    "myCodes": "我的推薦碼",
+    "myCodes": "我的碼",
     "category": "分類",
     "record": "紀錄",
     "account": "帳號"
@@ -98,24 +98,25 @@
     "emptyDesc": "看看別的分類，或晚點再回來。"
   },
   "myCodes": {
-    "title": "我的推薦碼",
-    "emptyTitle": "還沒有上架任何推薦碼",
+    "title": "我的碼",
+    "emptyTitle": "還沒有上架任何碼",
     "emptyDesc": "上架之後可以看到它被曝光、點擊、複製了幾次。",
     "addOne": "上架一組",
     "refresh": "重新整理",
     "refreshed": "已更新",
+    "rejectReason": "審核未通過的原因",
     "impressions": "曝光",
     "qualityScore": "品質分數",
     "expiresAt": "到期",
     "disable": "下架",
-    "disableTitle": "下架這個推薦碼",
-    "disableWarning": "下架後它就不會再出現在 {merchant} 的推薦碼列表裡。已經累積的曝光與回報會保留，但無法再重新上架同一組碼。",
+    "disableTitle": "下架這個碼",
+    "disableWarning": "下架後它就不會再出現在 {merchant} 的列表裡。已經累積的曝光與回報會保留，但無法再重新上架同一組碼。",
     "disableCancel": "取消",
     "disableConfirm": "確定下架",
     "disableDone": "已下架",
     "disableFailed": "下架失敗，請稍後再試。",
     "filterAll": "全部",
-    "filterEmptyTitle": "沒有「{status}」的推薦碼",
+    "filterEmptyTitle": "沒有「{status}」的碼",
     "filterEmptyDesc": "換一個狀態看看，或是回到全部。",
     "filterShowAll": "看全部",
     "status": {
@@ -130,7 +131,7 @@
     "titleSuffix": "{name}推薦碼",
     "copiedToast": "已複製，用完回來告訴我們能不能用",
     "thanksToast": "謝謝回報",
-    "activeCodes": "{count} 組有效推薦碼",
+    "activeCodes": "{count} 組有效的碼",
     "reviewed": "這裡的每一組碼都經過人工審核",
     "ctaBest": "已為你挑出品質最高的一組",
     "workedReports": "{count} 人回報可用",
@@ -145,14 +146,14 @@
     "worked": "可以用",
     "failed": "不能用",
     "thanksInline": "謝謝，這會影響它之後的排序",
-    "emptyTitle": "目前沒有有效的推薦碼",
+    "emptyTitle": "目前沒有有效的碼",
     "emptyDesc": "到期的碼會自動下架。晚點再回來看看，或自己上架一組。",
-    "addMine": "上架我的推薦碼",
+    "addMine": "上架",
     "rewardPending": "這家還沒有獎勵資訊"
   },
   "addCode": {
-    "title": "上架推薦碼",
-    "sectionCode": "推薦碼",
+    "title": "上架",
+    "sectionCode": "要上架的碼",
     "merchant": "服務商",
     "merchantPlaceholder": "選一家",
     "code": "推薦碼",
@@ -168,7 +169,11 @@
     "submitted": "已送出，通過審核後就會上架",
     "chooseMerchant": "請選擇服務商",
     "loadMerchantsFailed": "載入服務商失敗",
-    "submitFailed": "送出失敗"
+    "submitFailed": "送出失敗",
+    "codeTypeLabel": "要上架哪一種",
+    "noteDiscountPlaceholder": "例如：新戶首購折 100、全站 85 折、免費試用一個月",
+    "discountNoteRequired": "請說明這組折扣碼是什麼優惠",
+    "noteDiscount": "這是什麼優惠"
   },
   "login": {
     "titleLogin": "登入",
@@ -207,7 +212,7 @@
     "avatarUploading": "上傳中…",
     "avatarDone": "大頭照已更新",
     "avatarFailed": "上傳失敗，請換一張圖再試。",
-    "addCode": "上架推薦碼",
+    "addCode": "上架",
     "contact": "聯絡我們 / 檢舉內容",
     "contactDesc": "看到不當內容或無效的碼都可以來信",
     "terms": "服務條款",
@@ -255,14 +260,14 @@
     "display_name_required": "顯示名稱不能空白",
     "merchant_not_found": "找不到這個服務商",
     "merchant_closed": "這個服務商目前沒有開放上架",
-    "code_required": "推薦碼不能空白",
-    "code_format_mismatch": "推薦碼格式不符合這家服務商的規則",
+    "code_required": "碼不能空白",
+    "code_format_mismatch": "格式不符合這家服務商的規則",
     "expiry_required": "請填寫有效期限",
     "expiry_in_past": "有效期限最早只能是明天",
     "expiry_too_far": "有效期限最長一年",
-    "code_already_listed": "你在這家服務商已經有一個上架中的推薦碼了",
-    "code_not_found": "找不到這個推薦碼",
-    "code_not_active": "這個推薦碼目前不在架上。",
+    "code_already_listed": "你在這家服務商已經有一個上架中的同類型碼了",
+    "code_not_found": "找不到這個碼",
+    "code_not_active": "這個碼目前不在架上。",
     "image_invalid": "圖片格式不對或檔案太大（上限 2MB）。",
     "event_type_invalid": "事件類型不正確",
     "report_result_invalid": "回報的結果不正確",
@@ -271,7 +276,10 @@
     "reset_code_invalid": "驗證碼不正確",
     "reset_too_many_attempts": "錯誤次數過多，請重新索取驗證碼",
     "reset_too_many_requests": "索取驗證碼太頻繁，請過一陣子再試",
-    "reset_unavailable": "忘記密碼功能暫時無法使用，請稍後再試"
+    "reset_unavailable": "忘記密碼功能暫時無法使用，請稍後再試",
+    "code_type_invalid": "碼的類型不正確",
+    "code_type_not_allowed": "這個服務商沒有開放上架這種碼",
+    "discount_note_required": "折扣碼請在備註說明這是什麼優惠"
   },
   "pro": {
     "title": "Pro",
@@ -318,5 +326,11 @@
     "trialMonth": "{count} 個月免費試用",
     "trialDisclosure": "免費試用期間不會扣款。試用結束後會自動以上述價格開始訂閱，在試用結束前隨時取消都不會被收費。",
     "notLinked": "帳號還沒和訂閱服務連上，請稍後再試一次。這時候不會產生任何費用。"
+  },
+  "codeType": {
+    "referral": "推薦碼",
+    "discount": "折扣碼",
+    "referralHint": "你自己的推薦碼，別人用了雙方都拿得到獎勵。",
+    "discountHint": "你手上的折扣碼，用的人可以拿到折扣，你不會有獎勵。"
   }
 }

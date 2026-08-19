@@ -16,6 +16,7 @@ import {
   toastController,
 } from '@ionic/vue'
 import {
+  addOutline,
   alertCircleOutline,
   checkmarkOutline,
   copyOutline,
@@ -131,6 +132,12 @@ async function sendReport(code: CodeItem, result: ReportResult) {
 // 捲到第三張卡以後上面的按鈕就看不到了，這條列是那時候唯一的出口。
 const topCode = computed(() => detail.value?.codes[0] ?? null)
 
+// 上架頁靠這個 query 把服務商預先選好。detail 還沒載完就先不給連結，
+// 免得帶出一個沒有 merchant 的網址讓使用者到了那邊還要自己選。
+const addCodeLink = computed(() =>
+  detail.value ? `/add-code?merchant=${detail.value.merchant.id}` : '',
+)
+
 async function shareMerchant() {
   if (!detail.value) return
   await Share.share({
@@ -150,6 +157,11 @@ async function shareMerchant() {
         </IonButtons>
         <IonTitle>{{ detail?.merchant.name ?? '' }}</IonTitle>
         <IonButtons slot="end">
+          <!-- 上架入口要常駐在這裡：底下那顆大按鈕只在「這家一組碼都沒有」時出現，
+               已經有碼的服務商反而找不到地方上架自己的。 -->
+          <IonButton :disabled="!detail" :router-link="addCodeLink">
+            <IonIcon slot="icon-only" :icon="addOutline" />
+          </IonButton>
           <IonButton :disabled="!detail" @click="shareMerchant">
             <IonIcon slot="icon-only" :icon="shareOutline" />
           </IonButton>
@@ -205,6 +217,9 @@ async function shareMerchant() {
           <div v-for="code in detail.codes" :key="code.id" class="app-card card">
             <div class="head">
               <QualityDot :score="code.quality_score" />
+              <!-- 兩種碼混在同一份清單，第一眼要分得出這是誰的推薦碼還是一組折扣碼。
+                   折扣碼的優惠內容在下面的備註那行，上架時強制要填。 -->
+              <span class="pill neutral">{{ $t(`codeType.${code.code_type}`) }}</span>
               <span v-if="code.worked_count > 0" class="pill success">
                 {{ $t('merchant.workedReports', { count: code.worked_count }, code.worked_count) }}
               </span>
@@ -270,7 +285,7 @@ async function shareMerchant() {
           :title="$t('merchant.emptyTitle')"
           :description="$t('merchant.emptyDesc')"
         >
-          <IonButton router-link="/add-code" class="wide">{{ $t('merchant.addMine') }}</IonButton>
+          <IonButton :router-link="addCodeLink" class="wide">{{ $t('merchant.addMine') }}</IonButton>
         </EmptyState>
       </template>
     </IonContent>

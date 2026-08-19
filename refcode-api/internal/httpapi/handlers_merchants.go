@@ -33,6 +33,9 @@ type merchantSummary struct {
 	SoonestExpires  *time.Time `json:"soonest_expires_at"`
 	// 這家在哪些國家能用。空的代表不分地區（串流、雲端這種跨國服務）。
 	Countries []string `json:"countries"`
+	// 這家收哪幾種碼（referral／discount）。上架表單靠它決定要顯示哪些選項——
+	// 沒有推薦計畫的服務商只會有 discount。
+	AllowedCodeTypes []string `json:"allowed_code_types"`
 }
 
 type codeItem struct {
@@ -40,17 +43,19 @@ type codeItem struct {
 	// 沒登入看不到碼本身——要註冊才能拿到推薦碼。Code 是 nil、Masked 是 true 的時候，
 	// 前端要顯示「登入查看」而不是複製按鈕；其餘欄位（家數、評價、備註）照常公開，
 	// 服務商頁本身仍然值得被搜尋引擎收錄。
-	Code        *string   `json:"code"`
-	Masked      bool      `json:"masked"`
-	Note        string    `json:"note"`
-	OwnerName   string    `json:"owner_name"`
-	OwnerAvatar *string   `json:"owner_avatar_url"`
-	Quality     int32     `json:"quality_score"`
-	WorkedCount int64     `json:"worked_count"`
-	FailedCount int64     `json:"failed_count"`
+	Code   *string `json:"code"`
+	Masked bool    `json:"masked"`
+	Note   string  `json:"note"`
+	// referral 或 discount。清單是兩種混在一起的，卡片靠這個標 badge。
+	CodeType    string  `json:"code_type"`
+	OwnerName   string  `json:"owner_name"`
+	OwnerAvatar *string `json:"owner_avatar_url"`
+	Quality     int32   `json:"quality_score"`
+	WorkedCount int64   `json:"worked_count"`
+	FailedCount int64   `json:"failed_count"`
 	// nil 代表永久有效，前端不顯示倒數（見 00013_codes_nullable_expiry.sql）。
-	ExpiresAt   *time.Time `json:"expires_at"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ExpiresAt *time.Time `json:"expires_at"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 func revealCode(code string, loggedIn bool) *string {
@@ -242,12 +247,13 @@ func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 			ID: m.ID, Slug: m.Slug, Name: m.Name,
 			LogoURL: m.LogoUrl, SignupURL: m.SignupUrl,
 			// 服務商名不翻（品牌名），獎勵說明與分類名跟著語言走。
-			RewardDesc:      localized(m.RewardDesc, m.RewardDescEn, m.RewardDescJa, lang),
-			CategoryID:      m.CategoryID,
-			CategoryName:    localized(m.CategoryName, m.CategoryNameEn, m.CategoryNameJa, lang),
-			ActiveCodeCount: m.ActiveCodeCount,
-			SoonestExpires:  soonestExpiry(m.SoonestExpiresAt),
-			Countries:       m.Countries,
+			RewardDesc:       localized(m.RewardDesc, m.RewardDescEn, m.RewardDescJa, lang),
+			CategoryID:       m.CategoryID,
+			CategoryName:     localized(m.CategoryName, m.CategoryNameEn, m.CategoryNameJa, lang),
+			ActiveCodeCount:  m.ActiveCodeCount,
+			SoonestExpires:   soonestExpiry(m.SoonestExpiresAt),
+			Countries:        m.Countries,
+			AllowedCodeTypes: m.AllowedCodeTypes,
 		}
 	}
 
@@ -375,6 +381,7 @@ func (s *Server) handleGetMerchant(w http.ResponseWriter, r *http.Request) {
 		row := byID[c.ID]
 		items[i] = codeItem{
 			ID: row.ID, Code: revealCode(row.Code, loggedIn), Masked: !loggedIn, Note: row.Note,
+			CodeType:  row.CodeType,
 			OwnerName: row.OwnerName, OwnerAvatar: row.OwnerAvatarUrl,
 			Quality: row.QualityScore, WorkedCount: row.WorkedCount, FailedCount: row.FailedCount,
 			ExpiresAt: row.ExpiresAt, CreatedAt: row.CreatedAt,
@@ -388,11 +395,12 @@ func (s *Server) handleGetMerchant(w http.ResponseWriter, r *http.Request) {
 		"merchant": merchantSummary{
 			ID: merchant.ID, Slug: merchant.Slug, Name: merchant.Name,
 			LogoURL: merchant.LogoUrl, SignupURL: merchant.SignupUrl,
-			RewardDesc:      localized(merchant.RewardDesc, merchant.RewardDescEn, merchant.RewardDescJa, lang),
-			CategoryID:      merchant.CategoryID,
-			CategoryName:    localized(merchant.CategoryName, merchant.CategoryNameEn, merchant.CategoryNameJa, lang),
-			ActiveCodeCount: int64(len(rows)),
-			Countries:       merchant.Countries,
+			RewardDesc:       localized(merchant.RewardDesc, merchant.RewardDescEn, merchant.RewardDescJa, lang),
+			CategoryID:       merchant.CategoryID,
+			CategoryName:     localized(merchant.CategoryName, merchant.CategoryNameEn, merchant.CategoryNameJa, lang),
+			ActiveCodeCount:  int64(len(rows)),
+			Countries:        merchant.Countries,
+			AllowedCodeTypes: merchant.AllowedCodeTypes,
 		},
 		"codes": items,
 		"total": len(rows),

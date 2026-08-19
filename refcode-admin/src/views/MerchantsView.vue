@@ -2,6 +2,8 @@
 import {
   NAlert,
   NButton,
+  NCheckbox,
+  NCheckboxGroup,
   NDataTable,
   NForm,
   NFormItem,
@@ -17,7 +19,8 @@ import type { DataTableColumns } from 'naive-ui'
 import { h, onMounted, ref } from 'vue'
 
 import { ApiError, api } from '../api/client'
-import type { AdminMerchant, Category, MerchantInput } from '../api/types'
+import type { AdminMerchant, Category, CodeType, MerchantInput } from '../api/types'
+import { CODE_TYPE_LABELS } from '../codeType'
 
 const message = useMessage()
 
@@ -43,10 +46,18 @@ function emptyForm(): MerchantInput {
     reward_desc_en: null,
     reward_desc_ja: null,
     code_format_regex: null,
+    discount_code_format_regex: null,
+    // 兩種都收，跟資料庫的欄位預設一致。沒有推薦計畫的服務商再自己取消勾選。
+    allowed_code_types: ['referral', 'discount'],
     is_active: true,
     countries: [],
   }
 }
+
+const CODE_TYPE_OPTIONS: { label: string; value: CodeType }[] = [
+  { label: '推薦碼（雙方各拿獎勵）', value: 'referral' },
+  { label: '折扣碼（只有使用的人拿到折扣）', value: 'discount' },
+]
 
 const form = ref<MerchantInput>(emptyForm())
 
@@ -93,6 +104,8 @@ function openEdit(m: AdminMerchant) {
     reward_desc_en: m.reward_desc_en,
     reward_desc_ja: m.reward_desc_ja,
     code_format_regex: m.code_format_regex,
+    discount_code_format_regex: m.discount_code_format_regex,
+    allowed_code_types: m.allowed_code_types,
     is_active: m.is_active,
     countries: m.countries,
   }
@@ -125,6 +138,7 @@ async function submit() {
     ...form.value,
     logo_url: form.value.logo_url?.trim() || null,
     code_format_regex: form.value.code_format_regex?.trim() || null,
+    discount_code_format_regex: form.value.discount_code_format_regex?.trim() || null,
   }
 
   submitting.value = true
@@ -171,12 +185,38 @@ const columns: DataTableColumns<AdminMerchant> = [
         : h('span', { style: 'opacity: 0.4' }, '不分地區'),
   },
   {
+    title: '收哪幾種',
+    key: 'allowed_code_types',
+    width: 130,
+    render: (row) =>
+      h(
+        NSpace,
+        { size: 4 },
+        () =>
+          row.allowed_code_types.map((t) =>
+            h(NTag, { size: 'small', bordered: false }, () => CODE_TYPE_LABELS[t]),
+          ),
+      ),
+  },
+  {
     title: '格式規則',
     key: 'code_format_regex',
     render: (row) =>
-      row.code_format_regex
-        ? h('code', { style: 'font-size: 12px' }, row.code_format_regex)
-        : h('span', { style: 'opacity: 0.4' }, '不驗'),
+      // 兩條規則各自可以留空，分行列出來比擠成一格好認。
+      h('div', { style: 'font-size: 12px' }, [
+        h('div', [
+          '推薦：',
+          row.code_format_regex
+            ? h('code', row.code_format_regex)
+            : h('span', { style: 'opacity: 0.4' }, '不驗'),
+        ]),
+        h('div', [
+          '折扣：',
+          row.discount_code_format_regex
+            ? h('code', row.discount_code_format_regex)
+            : h('span', { style: 'opacity: 0.4' }, '不驗'),
+        ]),
+      ]),
   },
   {
     title: '狀態',
@@ -285,10 +325,28 @@ const categoryOptions = () =>
             placeholder="留空代表不分地區"
           />
         </NFormItem>
-        <NFormItem label="碼格式規則">
+        <NFormItem label="收哪幾種碼">
+          <!-- 有沒有推薦計畫是這家服務商的事實，不是上架者能選的。只發折扣碼的
+               服務商只勾折扣碼，app 的上架表單就不會出現推薦碼那個選項。
+               一種都不勾等於沒開放上架，後端會退回只收推薦碼。 -->
+          <NCheckboxGroup v-model:value="form.allowed_code_types">
+            <NSpace vertical :size="6">
+              <NCheckbox v-for="o in CODE_TYPE_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
+            </NSpace>
+          </NCheckboxGroup>
+        </NFormItem>
+        <NFormItem label="推薦碼格式規則">
           <NInput
             v-model:value="form.code_format_regex as string"
             placeholder="^[A-Z0-9]{6,10}$（留空代表不驗）"
+          />
+        </NFormItem>
+        <NFormItem label="折扣碼格式規則">
+          <!-- 跟推薦碼分開：推薦碼多半是系統發的固定格式，折扣碼是行銷活動字串
+               （SUMMER2026），共用一條會把其中一種全部誤擋。 -->
+          <NInput
+            v-model:value="form.discount_code_format_regex as string"
+            placeholder="留空代表不驗"
           />
         </NFormItem>
         <NFormItem v-if="editing" label="上架中">

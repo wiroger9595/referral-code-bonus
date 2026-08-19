@@ -16,6 +16,7 @@ import { computed, onMounted, ref } from 'vue'
 
 import { ApiError, api } from '../api/client'
 import type { PendingCode } from '../api/types'
+import { CODE_TYPE_LABELS } from '../codeType'
 
 const message = useMessage()
 
@@ -44,12 +45,18 @@ async function load() {
 
 onMounted(load)
 
+// 兩種碼各有各的格式規則，要對到這個碼實際適用的那一條。
+function formatRegexFor(code: PendingCode) {
+  return code.code_type === 'discount' ? code.discount_code_format_regex : code.code_format_regex
+}
+
 // 後端上架時就擋過格式了，這裡再顯示一次是給審核者當判斷依據
 // ——規則可能在碼上架之後才被改過。
 function matchesFormat(code: PendingCode) {
-  if (!code.code_format_regex) return null
+  const regex = formatRegexFor(code)
+  if (!regex) return null
   try {
-    return new RegExp(code.code_format_regex).test(code.code)
+    return new RegExp(regex).test(code.code)
   } catch {
     return null
   }
@@ -119,7 +126,7 @@ const isEmpty = computed(() => !loading.value && codes.value.length === 0)
     <NAlert v-if="loadError" type="error" style="margin-bottom: 16px">{{ loadError }}</NAlert>
 
     <NSpin :show="loading">
-      <NEmpty v-if="isEmpty" description="沒有待審的推薦碼" style="padding: 60px 0" />
+      <NEmpty v-if="isEmpty" description="沒有待審的碼" style="padding: 60px 0" />
 
       <NSpace v-else vertical :size="12">
         <NCard v-for="code in codes" :key="code.id" size="small">
@@ -132,13 +139,18 @@ const isEmpty = computed(() => !loading.value && codes.value.length === 0)
 
               <div style="margin: 8px 0">
                 <code class="code">{{ code.code }}</code>
+                <!-- 審核折扣碼跟審核推薦碼看的東西不一樣（折扣碼要核對優惠內容
+                     對不對得上服務商正在跑的活動），類型要擺在碼旁邊。 -->
+                <NTag size="small" :bordered="false" style="margin-left: 8px">
+                  {{ CODE_TYPE_LABELS[code.code_type] }}
+                </NTag>
                 <NTag
                   v-if="matchesFormat(code) === false"
                   type="warning"
                   size="small"
                   style="margin-left: 8px"
                 >
-                  不符格式規則 {{ code.code_format_regex }}
+                  不符格式規則 {{ formatRegexFor(code) }}
                 </NTag>
               </div>
 
@@ -174,7 +186,7 @@ const isEmpty = computed(() => !loading.value && codes.value.length === 0)
     <NModal
       :show="rejecting !== null"
       preset="dialog"
-      title="拒絕這個推薦碼"
+      title="拒絕這個碼"
       positive-text="確認拒絕"
       negative-text="取消"
       @update:show="closeReject"

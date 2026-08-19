@@ -51,20 +51,22 @@ type CodeReview struct {
 }
 
 type Merchant struct {
-	ID              uuid.UUID `json:"id"`
-	Slug            string    `json:"slug"`
-	Name            string    `json:"name"`
-	CategoryID      uuid.UUID `json:"category_id"`
-	LogoUrl         *string   `json:"logo_url"`
-	SignupUrl       string    `json:"signup_url"`
-	RewardDesc      string    `json:"reward_desc"`
-	CodeFormatRegex *string   `json:"code_format_regex"`
-	IsActive        bool      `json:"is_active"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
-	Countries       []string  `json:"countries"`
-	RewardDescEn    *string   `json:"reward_desc_en"`
-	RewardDescJa    *string   `json:"reward_desc_ja"`
+	ID                      uuid.UUID `json:"id"`
+	Slug                    string    `json:"slug"`
+	Name                    string    `json:"name"`
+	CategoryID              uuid.UUID `json:"category_id"`
+	LogoUrl                 *string   `json:"logo_url"`
+	SignupUrl               string    `json:"signup_url"`
+	RewardDesc              string    `json:"reward_desc"`
+	CodeFormatRegex         *string   `json:"code_format_regex"`
+	IsActive                bool      `json:"is_active"`
+	CreatedAt               time.Time `json:"created_at"`
+	UpdatedAt               time.Time `json:"updated_at"`
+	Countries               []string  `json:"countries"`
+	RewardDescEn            *string   `json:"reward_desc_en"`
+	RewardDescJa            *string   `json:"reward_desc_ja"`
+	AllowedCodeTypes        []string  `json:"allowed_code_types"`
+	DiscountCodeFormatRegex *string   `json:"discount_code_format_regex"`
 }
 
 type MerchantCategory struct {
@@ -98,6 +100,7 @@ type ReferralCode struct {
 	CreatedAt    time.Time  `json:"created_at"`
 	ActivatedAt  *time.Time `json:"activated_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
+	CodeType     string     `json:"code_type"`
 }
 
 type ReferralCodeBonusUserBlock struct {

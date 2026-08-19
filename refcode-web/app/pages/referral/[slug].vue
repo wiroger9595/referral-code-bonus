@@ -167,6 +167,11 @@ useHead({
         <li v-for="code in codes" :key="code.id" class="app-card p-4 sm:p-5">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="min-w-0">
+              <!-- 兩種碼混在同一份清單，第一眼要分得出這是誰的推薦碼還是一組折扣碼。
+                   折扣碼的優惠內容在下面的備註那行，上架時強制要填。 -->
+              <p class="mb-2">
+                <span class="pill">{{ $t(`codeType.${code.code_type}`) }}</span>
+              </p>
               <p
                 v-if="code.masked"
                 class="flex items-center gap-1.5 font-mono text-lg font-bold text-muted italic"

@@ -37,6 +37,77 @@ func (s *Server) handleListPendingCodes(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]any{"codes": rows, "total": total})
 }
 
+// 後台碼列表能篩的狀態。pending 不在裡面 —— 那批屬於審核佇列，
+// 在這裡再列一次會讓同一件工作在兩個頁面各做一半。
+var adminCodeStatuses = map[string]bool{
+	"active":   true,
+	"disabled": true,
+	"expired":  true,
+	"rejected": true,
+}
+
+// handleAdminListCodes 是已上架推薦碼的列表，帶使用者回報統計。
+// 排序把有負面回報的放最前面（見 SQL），所以不分頁翻到底也看得到該處理的碼。
+func (s *Server) handleAdminListCodes(w http.ResponseWriter, r *http.Request) {
+	limit, offset := paginate(r, 50, 200)
+
+	var status *string
+	if v := r.URL.Query().Get("status"); v != "" {
+		if !adminCodeStatuses[v] {
+			badRequest(w, codeCodeStatusInvalid, "status 只能是 active / disabled / expired / rejected")
+			return
+		}
+		status = &v
+	}
+
+	var search *string
+	// 搜尋字串會進 ILIKE，這裡跟公開的搜尋一樣要先把萬用字元跳脫掉。
+	if v := strings.TrimSpace(r.URL.Query().Get("q")); v != "" {
+		escaped := escapeLike(v)
+		search = &escaped
+	}
+
+	rows, err := s.store.ListCodesForAdmin(r.Context(), dbgen.ListCodesForAdminParams{
+		Limit:  limit,
+		Offset: offset,
+		Status: status,
+		Search: search,
+	})
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+
+	// total_count 是 window function 的結果，每一列都一樣；沒有列就是 0 筆。
+	var total int64
+	if len(rows) > 0 {
+		total = rows[0].TotalCount
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"codes": rows, "total": total})
+}
+
+// handleListAutoDisabledCodes 是被系統自動下架、還沒有人複核的碼。
+// 這份清單要跟一般列表分開：自動下架有誤判的可能（少數幾筆惡意回報就湊得出門檻），
+// 混在幾百筆已上架的碼裡沒有人會主動去找。
+func (s *Server) handleListAutoDisabledCodes(w http.ResponseWriter, r *http.Request) {
+	limit, offset := paginate(r, 50, 200)
+
+	rows, err := s.store.ListAutoDisabledCodes(r.Context(), dbgen.ListAutoDisabledCodesParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+
+	var total int64
+	if len(rows) > 0 {
+		total = rows[0].TotalCount
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"codes": rows, "total": total})
+}
+
 // 審核動作與碼的狀態是一對一的，集中在這裡對應，呼叫端不各自判斷。
 var reviewActionStatus = map[string]string{
 	"approve": "active",
@@ -75,7 +146,7 @@ func (s *Server) handleReviewCode(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if _, err := s.store.GetCodeByID(ctx, codeID); err != nil {
 		if store.IsNotFound(err) {
-			notFound(w, codeCodeNotFound, "找不到這個推薦碼")
+			notFound(w, codeCodeNotFound, "找不到這個碼")
 			return
 		}
 		internalError(w, r, err)
@@ -216,7 +287,12 @@ type merchantInput struct {
 	SignupURL       string  `json:"signup_url"`
 	RewardDesc      string  `json:"reward_desc"`
 	CodeFormatRegex *string `json:"code_format_regex"`
-	IsActive        *bool   `json:"is_active"`
+	// 折扣碼另一條規則。兩種碼的格式差很多（推薦碼是系統發的固定格式，
+	// 折扣碼是行銷活動字串），共用一條會把其中一種全部誤擋。
+	DiscountCodeFormatRegex *string `json:"discount_code_format_regex"`
+	// 這家收哪幾種碼。留空當成只收推薦碼，維持這個欄位存在之前的行為。
+	AllowedCodeTypes []string `json:"allowed_code_types"`
+	IsActive         *bool    `json:"is_active"`
 	// 獎勵說明的譯文。留空代表還沒翻，公開 API 會退回中文那份。
 	// 服務商名（Name）刻意沒有譯文欄位 —— 那是品牌名。
 	RewardDescEn *string `json:"reward_desc_en"`
@@ -225,37 +301,73 @@ type merchantInput struct {
 	Countries []string `json:"countries"`
 }
 
-// validate 回傳正規化後的 category id 與適用國家。
-func (in merchantInput) validate(requireSlug bool) (uuid.UUID, []string, error) {
+// validate 回傳正規化後的 category id、適用國家與開放的碼類型。
+func (in merchantInput) validate(requireSlug bool) (uuid.UUID, []string, []string, error) {
 	var categoryID uuid.UUID
 
 	if requireSlug && !slugPattern.MatchString(in.Slug) {
-		return categoryID, nil, errValidation("slug 只能是小寫英數字與連字號")
+		return categoryID, nil, nil, errValidation("slug 只能是小寫英數字與連字號")
 	}
 	if strings.TrimSpace(in.Name) == "" {
-		return categoryID, nil, errValidation("名稱不能空白")
+		return categoryID, nil, nil, errValidation("名稱不能空白")
 	}
 	if !strings.HasPrefix(in.SignupURL, "https://") {
-		return categoryID, nil, errValidation("註冊連結必須是 https")
+		return categoryID, nil, nil, errValidation("註冊連結必須是 https")
 	}
 
 	categoryID, err := uuid.Parse(in.CategoryID)
 	if err != nil {
-		return categoryID, nil, errValidation("category_id 格式錯誤")
+		return categoryID, nil, nil, errValidation("category_id 格式錯誤")
 	}
 
 	countries, err := geo.NormalizeList(in.Countries)
 	if err != nil {
-		return categoryID, nil, errValidation(err.Error())
+		return categoryID, nil, nil, errValidation(err.Error())
 	}
 
-	// 格式規則存進去之前先確認編得起來，否則上架流程會整個壞掉。
-	if in.CodeFormatRegex != nil && *in.CodeFormatRegex != "" {
-		if _, err := regexp.Compile(*in.CodeFormatRegex); err != nil {
-			return categoryID, nil, errValidation("code_format_regex 不是合法的正規表達式")
+	codeTypes, err := normalizeCodeTypes(in.AllowedCodeTypes)
+	if err != nil {
+		return categoryID, nil, nil, err
+	}
+
+	// 格式規則存進去之前先確認編得起來，否則上架流程會整個壞掉。兩條都要驗。
+	for label, re := range map[string]*string{
+		"code_format_regex":          in.CodeFormatRegex,
+		"discount_code_format_regex": in.DiscountCodeFormatRegex,
+	} {
+		if re != nil && *re != "" {
+			if _, err := regexp.Compile(*re); err != nil {
+				return categoryID, nil, nil, errValidation(label + " 不是合法的正規表達式")
+			}
 		}
 	}
-	return categoryID, countries, nil
+	return categoryID, countries, codeTypes, nil
+}
+
+// normalizeCodeTypes 去重並固定順序（referral 在前），空的當成只收推薦碼。
+// 順序固定是為了讓後台表單每次讀回來的勾選狀態一致，不受送出時的順序影響。
+func normalizeCodeTypes(in []string) ([]string, error) {
+	seen := map[string]bool{}
+	for _, v := range in {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
+		if !isCodeType(v) {
+			return nil, errValidation("allowed_code_types 只能是 referral 或 discount")
+		}
+		seen[v] = true
+	}
+	if len(seen) == 0 {
+		return []string{codeTypeReferral}, nil
+	}
+	out := make([]string, 0, 2)
+	for _, v := range []string{codeTypeReferral, codeTypeDiscount} {
+		if seen[v] {
+			out = append(out, v)
+		}
+	}
+	return out, nil
 }
 
 type validationError string
@@ -282,23 +394,25 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, codeInvalidRequest, "請求格式錯誤")
 		return
 	}
-	categoryID, countries, err := in.validate(true)
+	categoryID, countries, codeTypes, err := in.validate(true)
 	if err != nil {
 		badRequest(w, codeInvalidRequest, err.Error())
 		return
 	}
 
 	m, err := s.store.CreateMerchant(r.Context(), dbgen.CreateMerchantParams{
-		Slug:            in.Slug,
-		Name:            strings.TrimSpace(in.Name),
-		CategoryID:      categoryID,
-		LogoUrl:         in.LogoURL,
-		SignupUrl:       in.SignupURL,
-		RewardDesc:      in.RewardDesc,
-		RewardDescEn:    trimmedOrNil(in.RewardDescEn),
-		RewardDescJa:    trimmedOrNil(in.RewardDescJa),
-		CodeFormatRegex: in.CodeFormatRegex,
-		Countries:       countries,
+		Slug:                    in.Slug,
+		Name:                    strings.TrimSpace(in.Name),
+		CategoryID:              categoryID,
+		LogoUrl:                 in.LogoURL,
+		SignupUrl:               in.SignupURL,
+		RewardDesc:              in.RewardDesc,
+		RewardDescEn:            trimmedOrNil(in.RewardDescEn),
+		RewardDescJa:            trimmedOrNil(in.RewardDescJa),
+		CodeFormatRegex:         in.CodeFormatRegex,
+		DiscountCodeFormatRegex: in.DiscountCodeFormatRegex,
+		AllowedCodeTypes:        codeTypes,
+		Countries:               countries,
 	})
 	if err != nil {
 		if store.IsUniqueViolation(err) {
@@ -329,7 +443,7 @@ func (s *Server) handleUpdateMerchant(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, codeInvalidRequest, "請求格式錯誤")
 		return
 	}
-	categoryID, countries, err := in.validate(true)
+	categoryID, countries, codeTypes, err := in.validate(true)
 	if err != nil {
 		badRequest(w, codeInvalidRequest, err.Error())
 		return
@@ -341,18 +455,20 @@ func (s *Server) handleUpdateMerchant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	m, err := s.store.UpdateMerchant(r.Context(), dbgen.UpdateMerchantParams{
-		ID:              id,
-		Slug:            in.Slug,
-		Name:            strings.TrimSpace(in.Name),
-		CategoryID:      categoryID,
-		LogoUrl:         in.LogoURL,
-		SignupUrl:       in.SignupURL,
-		RewardDesc:      in.RewardDesc,
-		RewardDescEn:    trimmedOrNil(in.RewardDescEn),
-		RewardDescJa:    trimmedOrNil(in.RewardDescJa),
-		CodeFormatRegex: in.CodeFormatRegex,
-		IsActive:        isActive,
-		Countries:       countries,
+		ID:                      id,
+		Slug:                    in.Slug,
+		Name:                    strings.TrimSpace(in.Name),
+		CategoryID:              categoryID,
+		LogoUrl:                 in.LogoURL,
+		SignupUrl:               in.SignupURL,
+		RewardDesc:              in.RewardDesc,
+		RewardDescEn:            trimmedOrNil(in.RewardDescEn),
+		RewardDescJa:            trimmedOrNil(in.RewardDescJa),
+		CodeFormatRegex:         in.CodeFormatRegex,
+		DiscountCodeFormatRegex: in.DiscountCodeFormatRegex,
+		AllowedCodeTypes:        codeTypes,
+		IsActive:                isActive,
+		Countries:               countries,
 	})
 	if err != nil {
 		if store.IsNotFound(err) {

@@ -7,7 +7,7 @@ const IOS_KEY = import.meta.env.VITE_REVENUECAT_IOS_KEY ?? ''
 const ANDROID_KEY = import.meta.env.VITE_REVENUECAT_ANDROID_KEY ?? ''
 
 // 後端的 PRO_ENTITLEMENT 要跟這個一致，兩邊對的是 RevenueCat 上同一個 entitlement。
-export const PRO_ENTITLEMENT = import.meta.env.VITE_REVENUECAT_ENTITLEMENT ?? 'pro'
+export const PRO_ENTITLEMENT = import.meta.env.VITE_REVENUECAT_ENTITLEMENT ?? 'refcode_pro'
 
 // Test Store 的 key（test_ 開頭，也是 public）。不分平台，購買不經過 App Store /
 // Play，所以商店那邊還沒建好商品也能測完整流程。

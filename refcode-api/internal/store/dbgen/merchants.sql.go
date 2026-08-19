@@ -77,7 +77,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 const createImportedMerchant = `-- name: CreateImportedMerchant :one
 INSERT INTO referral_code_bonus.merchants (slug, name, category_id, logo_url, signup_url, countries, is_active)
 VALUES ($1, $2, $3, $4, $5, $6, false)
-RETURNING id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries, reward_desc_en, reward_desc_ja
+RETURNING id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries, reward_desc_en, reward_desc_ja, allowed_code_types, discount_code_format_regex
 `
 
 type CreateImportedMerchantParams struct {
@@ -117,27 +117,31 @@ func (q *Queries) CreateImportedMerchant(ctx context.Context, arg CreateImported
 		&i.Countries,
 		&i.RewardDescEn,
 		&i.RewardDescJa,
+		&i.AllowedCodeTypes,
+		&i.DiscountCodeFormatRegex,
 	)
 	return i, err
 }
 
 const createMerchant = `-- name: CreateMerchant :one
-INSERT INTO referral_code_bonus.merchants (slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, countries, reward_desc_en, reward_desc_ja)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries, reward_desc_en, reward_desc_ja
+INSERT INTO referral_code_bonus.merchants (slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, countries, reward_desc_en, reward_desc_ja, allowed_code_types, discount_code_format_regex)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries, reward_desc_en, reward_desc_ja, allowed_code_types, discount_code_format_regex
 `
 
 type CreateMerchantParams struct {
-	Slug            string    `json:"slug"`
-	Name            string    `json:"name"`
-	CategoryID      uuid.UUID `json:"category_id"`
-	LogoUrl         *string   `json:"logo_url"`
-	SignupUrl       string    `json:"signup_url"`
-	RewardDesc      string    `json:"reward_desc"`
-	CodeFormatRegex *string   `json:"code_format_regex"`
-	Countries       []string  `json:"countries"`
-	RewardDescEn    *string   `json:"reward_desc_en"`
-	RewardDescJa    *string   `json:"reward_desc_ja"`
+	Slug                    string    `json:"slug"`
+	Name                    string    `json:"name"`
+	CategoryID              uuid.UUID `json:"category_id"`
+	LogoUrl                 *string   `json:"logo_url"`
+	SignupUrl               string    `json:"signup_url"`
+	RewardDesc              string    `json:"reward_desc"`
+	CodeFormatRegex         *string   `json:"code_format_regex"`
+	Countries               []string  `json:"countries"`
+	RewardDescEn            *string   `json:"reward_desc_en"`
+	RewardDescJa            *string   `json:"reward_desc_ja"`
+	AllowedCodeTypes        []string  `json:"allowed_code_types"`
+	DiscountCodeFormatRegex *string   `json:"discount_code_format_regex"`
 }
 
 func (q *Queries) CreateMerchant(ctx context.Context, arg CreateMerchantParams) (Merchant, error) {
@@ -152,6 +156,8 @@ func (q *Queries) CreateMerchant(ctx context.Context, arg CreateMerchantParams) 
 		arg.Countries,
 		arg.RewardDescEn,
 		arg.RewardDescJa,
+		arg.AllowedCodeTypes,
+		arg.DiscountCodeFormatRegex,
 	)
 	var i Merchant
 	err := row.Scan(
@@ -169,6 +175,8 @@ func (q *Queries) CreateMerchant(ctx context.Context, arg CreateMerchantParams) 
 		&i.Countries,
 		&i.RewardDescEn,
 		&i.RewardDescJa,
+		&i.AllowedCodeTypes,
+		&i.DiscountCodeFormatRegex,
 	)
 	return i, err
 }
@@ -204,7 +212,7 @@ func (q *Queries) GetCategoryByID(ctx context.Context, id uuid.UUID) (MerchantCa
 }
 
 const getMerchantByID = `-- name: GetMerchantByID :one
-SELECT id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries, reward_desc_en, reward_desc_ja FROM referral_code_bonus.merchants WHERE id = $1
+SELECT id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries, reward_desc_en, reward_desc_ja, allowed_code_types, discount_code_format_regex FROM referral_code_bonus.merchants WHERE id = $1
 `
 
 func (q *Queries) GetMerchantByID(ctx context.Context, id uuid.UUID) (Merchant, error) {
@@ -225,35 +233,39 @@ func (q *Queries) GetMerchantByID(ctx context.Context, id uuid.UUID) (Merchant, 
 		&i.Countries,
 		&i.RewardDescEn,
 		&i.RewardDescJa,
+		&i.AllowedCodeTypes,
+		&i.DiscountCodeFormatRegex,
 	)
 	return i, err
 }
 
 const getMerchantBySlug = `-- name: GetMerchantBySlug :one
-SELECT m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, m.reward_desc_en, m.reward_desc_ja, c.name AS category_name, c.name_en AS category_name_en, c.name_ja AS category_name_ja
+SELECT m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, m.reward_desc_en, m.reward_desc_ja, m.allowed_code_types, m.discount_code_format_regex, c.name AS category_name, c.name_en AS category_name_en, c.name_ja AS category_name_ja
 FROM referral_code_bonus.merchants m
 JOIN referral_code_bonus.merchant_categories c ON c.id = m.category_id
 WHERE m.slug = $1 AND m.is_active
 `
 
 type GetMerchantBySlugRow struct {
-	ID              uuid.UUID `json:"id"`
-	Slug            string    `json:"slug"`
-	Name            string    `json:"name"`
-	CategoryID      uuid.UUID `json:"category_id"`
-	LogoUrl         *string   `json:"logo_url"`
-	SignupUrl       string    `json:"signup_url"`
-	RewardDesc      string    `json:"reward_desc"`
-	CodeFormatRegex *string   `json:"code_format_regex"`
-	IsActive        bool      `json:"is_active"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
-	Countries       []string  `json:"countries"`
-	RewardDescEn    *string   `json:"reward_desc_en"`
-	RewardDescJa    *string   `json:"reward_desc_ja"`
-	CategoryName    string    `json:"category_name"`
-	CategoryNameEn  *string   `json:"category_name_en"`
-	CategoryNameJa  *string   `json:"category_name_ja"`
+	ID                      uuid.UUID `json:"id"`
+	Slug                    string    `json:"slug"`
+	Name                    string    `json:"name"`
+	CategoryID              uuid.UUID `json:"category_id"`
+	LogoUrl                 *string   `json:"logo_url"`
+	SignupUrl               string    `json:"signup_url"`
+	RewardDesc              string    `json:"reward_desc"`
+	CodeFormatRegex         *string   `json:"code_format_regex"`
+	IsActive                bool      `json:"is_active"`
+	CreatedAt               time.Time `json:"created_at"`
+	UpdatedAt               time.Time `json:"updated_at"`
+	Countries               []string  `json:"countries"`
+	RewardDescEn            *string   `json:"reward_desc_en"`
+	RewardDescJa            *string   `json:"reward_desc_ja"`
+	AllowedCodeTypes        []string  `json:"allowed_code_types"`
+	DiscountCodeFormatRegex *string   `json:"discount_code_format_regex"`
+	CategoryName            string    `json:"category_name"`
+	CategoryNameEn          *string   `json:"category_name_en"`
+	CategoryNameJa          *string   `json:"category_name_ja"`
 }
 
 func (q *Queries) GetMerchantBySlug(ctx context.Context, slug string) (GetMerchantBySlugRow, error) {
@@ -274,6 +286,8 @@ func (q *Queries) GetMerchantBySlug(ctx context.Context, slug string) (GetMercha
 		&i.Countries,
 		&i.RewardDescEn,
 		&i.RewardDescJa,
+		&i.AllowedCodeTypes,
+		&i.DiscountCodeFormatRegex,
 		&i.CategoryName,
 		&i.CategoryNameEn,
 		&i.CategoryNameJa,
@@ -345,7 +359,7 @@ func (q *Queries) ListMerchantSlugs(ctx context.Context) ([]ListMerchantSlugsRow
 
 const listMerchants = `-- name: ListMerchants :many
 SELECT
-    m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, m.reward_desc_en, m.reward_desc_ja,
+    m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, m.reward_desc_en, m.reward_desc_ja, m.allowed_code_types, m.discount_code_format_regex,
     c.name AS category_name,
     c.name_en AS category_name_en,
     c.name_ja AS category_name_ja,
@@ -411,26 +425,28 @@ type ListMerchantsParams struct {
 }
 
 type ListMerchantsRow struct {
-	ID               uuid.UUID   `json:"id"`
-	Slug             string      `json:"slug"`
-	Name             string      `json:"name"`
-	CategoryID       uuid.UUID   `json:"category_id"`
-	LogoUrl          *string     `json:"logo_url"`
-	SignupUrl        string      `json:"signup_url"`
-	RewardDesc       string      `json:"reward_desc"`
-	CodeFormatRegex  *string     `json:"code_format_regex"`
-	IsActive         bool        `json:"is_active"`
-	CreatedAt        time.Time   `json:"created_at"`
-	UpdatedAt        time.Time   `json:"updated_at"`
-	Countries        []string    `json:"countries"`
-	RewardDescEn     *string     `json:"reward_desc_en"`
-	RewardDescJa     *string     `json:"reward_desc_ja"`
-	CategoryName     string      `json:"category_name"`
-	CategoryNameEn   *string     `json:"category_name_en"`
-	CategoryNameJa   *string     `json:"category_name_ja"`
-	ActiveCodeCount  int64       `json:"active_code_count"`
-	SoonestExpiresAt interface{} `json:"soonest_expires_at"`
-	TotalCount       int64       `json:"total_count"`
+	ID                      uuid.UUID   `json:"id"`
+	Slug                    string      `json:"slug"`
+	Name                    string      `json:"name"`
+	CategoryID              uuid.UUID   `json:"category_id"`
+	LogoUrl                 *string     `json:"logo_url"`
+	SignupUrl               string      `json:"signup_url"`
+	RewardDesc              string      `json:"reward_desc"`
+	CodeFormatRegex         *string     `json:"code_format_regex"`
+	IsActive                bool        `json:"is_active"`
+	CreatedAt               time.Time   `json:"created_at"`
+	UpdatedAt               time.Time   `json:"updated_at"`
+	Countries               []string    `json:"countries"`
+	RewardDescEn            *string     `json:"reward_desc_en"`
+	RewardDescJa            *string     `json:"reward_desc_ja"`
+	AllowedCodeTypes        []string    `json:"allowed_code_types"`
+	DiscountCodeFormatRegex *string     `json:"discount_code_format_regex"`
+	CategoryName            string      `json:"category_name"`
+	CategoryNameEn          *string     `json:"category_name_en"`
+	CategoryNameJa          *string     `json:"category_name_ja"`
+	ActiveCodeCount         int64       `json:"active_code_count"`
+	SoonestExpiresAt        interface{} `json:"soonest_expires_at"`
+	TotalCount              int64       `json:"total_count"`
 }
 
 // 目錄頁：帶上每家目前有幾個可用的碼，前端才能顯示「12 個可用推薦碼」。
@@ -500,6 +516,8 @@ func (q *Queries) ListMerchants(ctx context.Context, arg ListMerchantsParams) ([
 			&i.Countries,
 			&i.RewardDescEn,
 			&i.RewardDescJa,
+			&i.AllowedCodeTypes,
+			&i.DiscountCodeFormatRegex,
 			&i.CategoryName,
 			&i.CategoryNameEn,
 			&i.CategoryNameJa,
@@ -519,7 +537,7 @@ func (q *Queries) ListMerchants(ctx context.Context, arg ListMerchantsParams) ([
 
 const listMerchantsForAdmin = `-- name: ListMerchantsForAdmin :many
 SELECT
-    m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, m.reward_desc_en, m.reward_desc_ja,
+    m.id, m.slug, m.name, m.category_id, m.logo_url, m.signup_url, m.reward_desc, m.code_format_regex, m.is_active, m.created_at, m.updated_at, m.countries, m.reward_desc_en, m.reward_desc_ja, m.allowed_code_types, m.discount_code_format_regex,
     c.name AS category_name,
     (SELECT count(*) FROM referral_code_bonus.referral_codes rc
       WHERE rc.merchant_id = m.id AND rc.status = 'active'
@@ -530,22 +548,24 @@ ORDER BY m.name
 `
 
 type ListMerchantsForAdminRow struct {
-	ID              uuid.UUID `json:"id"`
-	Slug            string    `json:"slug"`
-	Name            string    `json:"name"`
-	CategoryID      uuid.UUID `json:"category_id"`
-	LogoUrl         *string   `json:"logo_url"`
-	SignupUrl       string    `json:"signup_url"`
-	RewardDesc      string    `json:"reward_desc"`
-	CodeFormatRegex *string   `json:"code_format_regex"`
-	IsActive        bool      `json:"is_active"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
-	Countries       []string  `json:"countries"`
-	RewardDescEn    *string   `json:"reward_desc_en"`
-	RewardDescJa    *string   `json:"reward_desc_ja"`
-	CategoryName    string    `json:"category_name"`
-	ActiveCodeCount int64     `json:"active_code_count"`
+	ID                      uuid.UUID `json:"id"`
+	Slug                    string    `json:"slug"`
+	Name                    string    `json:"name"`
+	CategoryID              uuid.UUID `json:"category_id"`
+	LogoUrl                 *string   `json:"logo_url"`
+	SignupUrl               string    `json:"signup_url"`
+	RewardDesc              string    `json:"reward_desc"`
+	CodeFormatRegex         *string   `json:"code_format_regex"`
+	IsActive                bool      `json:"is_active"`
+	CreatedAt               time.Time `json:"created_at"`
+	UpdatedAt               time.Time `json:"updated_at"`
+	Countries               []string  `json:"countries"`
+	RewardDescEn            *string   `json:"reward_desc_en"`
+	RewardDescJa            *string   `json:"reward_desc_ja"`
+	AllowedCodeTypes        []string  `json:"allowed_code_types"`
+	DiscountCodeFormatRegex *string   `json:"discount_code_format_regex"`
+	CategoryName            string    `json:"category_name"`
+	ActiveCodeCount         int64     `json:"active_code_count"`
 }
 
 // 後台維護用：不過濾 is_active，而且要帶齊編輯表單需要的欄位
@@ -574,6 +594,8 @@ func (q *Queries) ListMerchantsForAdmin(ctx context.Context) ([]ListMerchantsFor
 			&i.Countries,
 			&i.RewardDescEn,
 			&i.RewardDescJa,
+			&i.AllowedCodeTypes,
+			&i.DiscountCodeFormatRegex,
 			&i.CategoryName,
 			&i.ActiveCodeCount,
 		); err != nil {
@@ -677,24 +699,27 @@ const updateMerchant = `-- name: UpdateMerchant :one
 UPDATE referral_code_bonus.merchants
 SET slug = $2, name = $3, category_id = $4, logo_url = $5, signup_url = $6,
     reward_desc = $7, code_format_regex = $8, is_active = $9, countries = $10,
-    reward_desc_en = $11, reward_desc_ja = $12, updated_at = now()
+    reward_desc_en = $11, reward_desc_ja = $12,
+    allowed_code_types = $13, discount_code_format_regex = $14, updated_at = now()
 WHERE id = $1
-RETURNING id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries, reward_desc_en, reward_desc_ja
+RETURNING id, slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, is_active, created_at, updated_at, countries, reward_desc_en, reward_desc_ja, allowed_code_types, discount_code_format_regex
 `
 
 type UpdateMerchantParams struct {
-	ID              uuid.UUID `json:"id"`
-	Slug            string    `json:"slug"`
-	Name            string    `json:"name"`
-	CategoryID      uuid.UUID `json:"category_id"`
-	LogoUrl         *string   `json:"logo_url"`
-	SignupUrl       string    `json:"signup_url"`
-	RewardDesc      string    `json:"reward_desc"`
-	CodeFormatRegex *string   `json:"code_format_regex"`
-	IsActive        bool      `json:"is_active"`
-	Countries       []string  `json:"countries"`
-	RewardDescEn    *string   `json:"reward_desc_en"`
-	RewardDescJa    *string   `json:"reward_desc_ja"`
+	ID                      uuid.UUID `json:"id"`
+	Slug                    string    `json:"slug"`
+	Name                    string    `json:"name"`
+	CategoryID              uuid.UUID `json:"category_id"`
+	LogoUrl                 *string   `json:"logo_url"`
+	SignupUrl               string    `json:"signup_url"`
+	RewardDesc              string    `json:"reward_desc"`
+	CodeFormatRegex         *string   `json:"code_format_regex"`
+	IsActive                bool      `json:"is_active"`
+	Countries               []string  `json:"countries"`
+	RewardDescEn            *string   `json:"reward_desc_en"`
+	RewardDescJa            *string   `json:"reward_desc_ja"`
+	AllowedCodeTypes        []string  `json:"allowed_code_types"`
+	DiscountCodeFormatRegex *string   `json:"discount_code_format_regex"`
 }
 
 func (q *Queries) UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) (Merchant, error) {
@@ -711,6 +736,8 @@ func (q *Queries) UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) 
 		arg.Countries,
 		arg.RewardDescEn,
 		arg.RewardDescJa,
+		arg.AllowedCodeTypes,
+		arg.DiscountCodeFormatRegex,
 	)
 	var i Merchant
 	err := row.Scan(
@@ -728,6 +755,8 @@ func (q *Queries) UpdateMerchant(ctx context.Context, arg UpdateMerchantParams) 
 		&i.Countries,
 		&i.RewardDescEn,
 		&i.RewardDescJa,
+		&i.AllowedCodeTypes,
+		&i.DiscountCodeFormatRegex,
 	)
 	return i, err
 }

@@ -140,8 +140,8 @@ WHERE m.slug = $1 AND m.is_active;
 SELECT * FROM referral_code_bonus.merchants WHERE id = $1;
 
 -- name: CreateMerchant :one
-INSERT INTO referral_code_bonus.merchants (slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, countries, reward_desc_en, reward_desc_ja)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO referral_code_bonus.merchants (slug, name, category_id, logo_url, signup_url, reward_desc, code_format_regex, countries, reward_desc_en, reward_desc_ja, allowed_code_types, discount_code_format_regex)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING *;
 
 -- 匯入用（cmd/appimport）。從 App Store 拉回來的只有名稱、圖示與官網，
@@ -169,7 +169,8 @@ WHERE slug = @slug AND NOT (countries @> ARRAY[@country::text]);
 UPDATE referral_code_bonus.merchants
 SET slug = $2, name = $3, category_id = $4, logo_url = $5, signup_url = $6,
     reward_desc = $7, code_format_regex = $8, is_active = $9, countries = $10,
-    reward_desc_en = $11, reward_desc_ja = $12, updated_at = now()
+    reward_desc_en = $11, reward_desc_ja = $12,
+    allowed_code_types = $13, discount_code_format_regex = $14, updated_at = now()
 WHERE id = $1
 RETURNING *;
 

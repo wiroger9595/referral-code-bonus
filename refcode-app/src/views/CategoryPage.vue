@@ -11,7 +11,7 @@ import {
   IonToolbar,
   actionSheetController,
 } from '@ionic/vue'
-import { alertCircleOutline, chevronForward, earthOutline, searchOutline } from 'ionicons/icons'
+import { addOutline, alertCircleOutline, chevronForward, earthOutline, searchOutline } from 'ionicons/icons'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -114,6 +114,13 @@ async function applyRegion(next: string) {
           <IonBackButton default-href="/tabs/category" text="" />
         </IonButtons>
         <IonTitle>{{ category?.name ?? '' }}</IonTitle>
+        <IonButtons slot="end">
+          <!-- 上架入口在每個瀏覽頁都有：想上架的念頭多半是在看別人的碼時冒出來的，
+               不該逼使用者先切回「我的碼」分頁才找得到。 -->
+          <IonButton router-link="/add-code">
+            <IonIcon slot="icon-only" :icon="addOutline" />
+          </IonButton>
+        </IonButtons>
       </IonToolbar>
     </IonHeader>
 

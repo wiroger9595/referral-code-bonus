@@ -1,4 +1,6 @@
 import type {
+  AdminCodeItem,
+  AdminCodeStatus,
   AdminLoginResponse,
   AdminMerchant,
   AdminUserItem,
@@ -118,6 +120,27 @@ export const api = {
   listPendingCodes(limit = 50, offset = 0) {
     return request<{ codes: PendingCode[]; total: number }>(
       `/v1/admin/codes/pending?limit=${limit}&offset=${offset}`,
+    )
+  },
+
+  // 已上架的碼（不含 pending）。後端把有負面回報的排在最前面，
+  // 所以不翻頁也看得到該處理的那些。
+  listCodes(
+    opts: { status?: AdminCodeStatus | null; q?: string; limit?: number; offset?: number } = {},
+  ) {
+    const params = new URLSearchParams({
+      limit: String(opts.limit ?? 50),
+      offset: String(opts.offset ?? 0),
+    })
+    if (opts.status) params.set('status', opts.status)
+    if (opts.q) params.set('q', opts.q)
+    return request<{ codes: AdminCodeItem[]; total: number }>(`/v1/admin/codes?${params}`)
+  },
+
+  // 被系統自動打掉、還沒有人複核的碼。複核過（恢復或維持下架）就會離開這份清單。
+  listAutoDisabledCodes(limit = 50, offset = 0) {
+    return request<{ codes: AdminCodeItem[]; total: number }>(
+      `/v1/admin/codes/auto-disabled?limit=${limit}&offset=${offset}`,
     )
   },
 

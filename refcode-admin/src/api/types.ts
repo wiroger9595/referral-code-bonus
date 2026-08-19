@@ -29,6 +29,11 @@ export interface Category {
   created_at: string
 }
 
+// 上架的碼有兩種來源：使用者自己的推薦碼（雙方各拿獎勵），
+// 或手上的折扣碼（只有使用的人拿到折扣）。
+// 兩種的欄位一模一樣，折扣碼的優惠內容寫在 note 裡。
+export type CodeType = 'referral' | 'discount'
+
 export interface Merchant {
   id: string
   slug: string
@@ -42,6 +47,11 @@ export interface Merchant {
   reward_desc_en: string | null
   reward_desc_ja: string | null
   code_format_regex: string | null
+  // 折扣碼的格式規則。跟推薦碼分開驗 —— 推薦碼多半是系統發的固定格式，
+  // 折扣碼是行銷活動字串，共用一條會把其中一種全部誤擋。
+  discount_code_format_regex: string | null
+  // 這家收哪幾種碼。至少會有一種；沒有推薦計畫的服務商只勾折扣碼。
+  allowed_code_types: CodeType[]
   is_active: boolean
   // 適用國家（ISO 3166-1 alpha-2）。空陣列代表不分地區。
   countries: string[]
@@ -74,6 +84,7 @@ export interface PendingCode {
   code: string
   note: string
   status: CodeStatus
+  code_type: CodeType
   // null 代表永久有效，沒有到期日。
   expires_at: string | null
   quality_score: number
@@ -84,6 +95,7 @@ export interface PendingCode {
   merchant_slug: string
   merchant_name: string
   code_format_regex: string | null
+  discount_code_format_regex: string | null
   owner_email: string
   owner_name: string
 }
@@ -95,6 +107,7 @@ export interface ReferralCode {
   code: string
   note: string
   status: CodeStatus
+  code_type: CodeType
   // null 代表永久有效，沒有到期日。
   expires_at: string | null
   quality_score: number
@@ -102,6 +115,28 @@ export interface ReferralCode {
   created_at: string
   activated_at: string | null
   updated_at: string
+}
+
+// 後台碼列表能篩的狀態。pending 不在裡面 —— 那批在審核佇列處理。
+export type AdminCodeStatus = Exclude<CodeStatus, 'pending'>
+
+// 後台的已上架推薦碼，比 ReferralCode 多了服務商、上架者與使用者回報統計。
+export interface AdminCodeItem extends ReferralCode {
+  merchant_slug: string
+  merchant_name: string
+  owner_email: string
+  owner_name: string
+  // 使用者回報。四種分開數，因為處理方式不同：invalid_code 要找上架者，
+  // merchant_closed 代表整家服務商的活動可能都結束了。
+  report_total: number
+  report_worked: number
+  report_failed: number
+  report_invalid_code: number
+  report_merchant_closed: number
+  // null 代表這個碼還沒有人回報過。
+  last_reported_at: string | null
+  // 只有自動下架清單那支會帶：系統把它打掉的時間。
+  disabled_at?: string
 }
 
 // 客服查帳號、查訂閱狀態用的（退款爭議、手動補發/撤銷 Pro）。
@@ -127,6 +162,8 @@ export interface MerchantInput {
   reward_desc_en: string | null
   reward_desc_ja: string | null
   code_format_regex: string | null
+  discount_code_format_regex: string | null
+  allowed_code_types: CodeType[]
   is_active?: boolean
   countries: string[]
 }

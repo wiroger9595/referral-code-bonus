@@ -62,21 +62,27 @@ const (
 	codeMerchantClosed      = "merchant_closed"
 	codeCodeRequired        = "code_required"
 	codeCodeFormatMismatch  = "code_format_mismatch"
-	codeExpiryInPast        = "expiry_in_past"
-	codeExpiryTooFar        = "expiry_too_far"
-	codeCodeAlreadyListed   = "code_already_listed"
-	codeCodeNotFound        = "code_not_found"
-	codeCodeNotActive       = "code_not_active"
-	codeEventTypeInvalid    = "event_type_invalid"
-	codeReportResultInvalid = "report_result_invalid"
-	codeProRequired         = "pro_required"
-	codeDeleteConfirmation  = "delete_confirmation_mismatch"
+	codeCodeTypeInvalid     = "code_type_invalid"
+	// 這家服務商沒開放這種碼（例如沒有推薦計畫的服務商只收折扣碼）。
+	codeCodeTypeNotAllowed = "code_type_not_allowed"
+	// 折扣碼沒有結構化的優惠欄位，備註就是唯一說明優惠內容的地方。
+	codeDiscountNoteRequired = "discount_note_required"
+	codeExpiryInPast         = "expiry_in_past"
+	codeExpiryTooFar         = "expiry_too_far"
+	codeCodeAlreadyListed    = "code_already_listed"
+	codeCodeNotFound         = "code_not_found"
+	codeCodeNotActive        = "code_not_active"
+	codeEventTypeInvalid     = "event_type_invalid"
+	codeReportResultInvalid  = "report_result_invalid"
+	codeProRequired          = "pro_required"
+	codeDeleteConfirmation   = "delete_confirmation_mismatch"
 )
 
 // 後台。這幾個只有 refcode-admin 會遇到，admin 是單一語言，不需要翻譯。
 const (
 	codeReviewActionInvalid  = "review_action_invalid"
 	codeReviewReasonRequired = "review_reason_required"
+	codeCodeStatusInvalid    = "code_status_invalid"
 	codeSlugInvalid          = "slug_invalid"
 	codeSlugTaken            = "slug_taken"
 	codeNameRequired         = "name_required"

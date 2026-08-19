@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import {
+  IonButton,
+  IonButtons,
   IonContent,
   IonHeader,
   IonIcon,
@@ -10,7 +12,7 @@ import {
   IonToolbar,
 } from '@ionic/vue'
 import type { RefresherCustomEvent } from '@ionic/vue'
-import { alertCircleOutline, appsOutline, chevronForward } from 'ionicons/icons'
+import { addOutline, alertCircleOutline, appsOutline, chevronForward } from 'ionicons/icons'
 import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -55,6 +57,13 @@ async function refresh(event: RefresherCustomEvent) {
     <IonHeader>
       <IonToolbar>
         <IonTitle>{{ $t('tabs.category') }}</IonTitle>
+        <IonButtons slot="end">
+          <!-- 上架入口在每個瀏覽頁都有：想上架的念頭多半是在看別人的碼時冒出來的，
+               不該逼使用者先切回「我的碼」分頁才找得到。 -->
+          <IonButton router-link="/add-code">
+            <IonIcon slot="icon-only" :icon="addOutline" />
+          </IonButton>
+        </IonButtons>
       </IonToolbar>
     </IonHeader>
 

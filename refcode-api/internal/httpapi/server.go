@@ -113,7 +113,9 @@ func (s *Server) Routes() http.Handler {
 			r.Group(func(r chi.Router) {
 				r.Use(s.requireAdmin)
 
+				r.Get("/codes", s.handleAdminListCodes)
 				r.Get("/codes/pending", s.handleListPendingCodes)
+				r.Get("/codes/auto-disabled", s.handleListAutoDisabledCodes)
 				r.Post("/codes/{id}/review", s.handleReviewCode)
 
 				r.Group(func(r chi.Router) {

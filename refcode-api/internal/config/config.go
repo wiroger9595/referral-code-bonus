@@ -117,7 +117,7 @@ func Load() (*Config, error) {
 		Ranking: loadRanking(),
 
 		RevenueCatWebhookAuth: env("REVENUECAT_WEBHOOK_AUTH", ""),
-		ProEntitlement:        env("PRO_ENTITLEMENT", "pro"),
+		ProEntitlement:        env("PRO_ENTITLEMENT", "refcode_pro"),
 		FreeActiveCodeLimit:   envInt("FREE_ACTIVE_CODE_LIMIT", 3),
 
 		CloudinaryCloudName: env("CLOUDINARY_CLOUD_NAME", ""),

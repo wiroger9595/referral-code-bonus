@@ -99,11 +99,12 @@
   },
   "myCodes": {
     "title": "マイコード",
-    "emptyTitle": "まだ紹介コードを登録していません",
+    "emptyTitle": "まだコードを登録していません",
     "emptyDesc": "登録すると、表示・タップ・コピーされた回数を確認できます。",
     "addOne": "登録する",
     "refresh": "更新",
     "refreshed": "最新の状態です",
+    "rejectReason": "審査に通らなかった理由",
     "impressions": "表示",
     "qualityScore": "品質スコア",
     "expiresAt": "期限",
@@ -130,7 +131,7 @@
     "titleSuffix": "{name}の紹介コード",
     "copiedToast": "コピーしました。使ったあとで結果を教えてください",
     "thanksToast": "ご報告ありがとうございます",
-    "activeCodes": "有効な紹介コード {count} 件",
+    "activeCodes": "有効なコード {count} 件",
     "reviewed": "掲載中のコードはすべて人による審査を通っています",
     "ctaBest": "品質がいちばん高いコードです",
     "workedReports": "{count}人が使えたと報告",
@@ -145,14 +146,14 @@
     "worked": "使えた",
     "failed": "使えなかった",
     "thanksInline": "ありがとうございます。今後の表示順に反映されます",
-    "emptyTitle": "現在、有効な紹介コードはありません",
+    "emptyTitle": "現在、有効なコードはありません",
     "emptyDesc": "期限切れのコードは自動的に掲載終了します。しばらくしてから確認するか、ご自身のコードを登録してください。",
-    "addMine": "自分のコードを登録",
+    "addMine": "登録する",
     "rewardPending": "特典情報はまだありません"
   },
   "addCode": {
-    "title": "紹介コードを登録",
-    "sectionCode": "紹介コード",
+    "title": "コードを登録",
+    "sectionCode": "コード",
     "merchant": "サービス",
     "merchantPlaceholder": "選択してください",
     "code": "紹介コード",
@@ -168,7 +169,11 @@
     "submitted": "送信しました。審査を通過すると掲載されます",
     "chooseMerchant": "サービスを選択してください",
     "loadMerchantsFailed": "サービスの読み込みに失敗しました",
-    "submitFailed": "送信に失敗しました"
+    "submitFailed": "送信に失敗しました",
+    "codeTypeLabel": "どちらを掲載しますか",
+    "noteDiscountPlaceholder": "例：初回100円引き、全品15%オフ、1か月無料",
+    "discountNoteRequired": "この割引コードの特典内容を書いてください",
+    "noteDiscount": "どんな特典か"
   },
   "login": {
     "titleLogin": "ログイン",
@@ -207,7 +212,7 @@
     "avatarUploading": "アップロード中…",
     "avatarDone": "プロフィール画像を更新しました",
     "avatarFailed": "アップロードできませんでした。別の画像でお試しください。",
-    "addCode": "紹介コードを登録",
+    "addCode": "コードを登録",
     "contact": "お問い合わせ / 通報",
     "contactDesc": "不適切な内容や使えないコードはご連絡ください",
     "terms": "利用規約",
@@ -255,13 +260,13 @@
     "display_name_required": "表示名を入力してください",
     "merchant_not_found": "このサービスは見つかりません",
     "merchant_closed": "このサービスは現在、紹介コードの登録を受け付けていません",
-    "code_required": "紹介コードを入力してください",
-    "code_format_mismatch": "このサービスの紹介コードの形式に合っていません",
+    "code_required": "コードを入力してください",
+    "code_format_mismatch": "このサービスのコードの形式に合っていません",
     "expiry_required": "有効期限を入力してください",
     "expiry_in_past": "有効期限は明日以降を指定してください",
     "expiry_too_far": "有効期限は最長1年です",
-    "code_already_listed": "このサービスには既に掲載中の紹介コードがあります",
-    "code_not_found": "この紹介コードは見つかりません",
+    "code_already_listed": "このサービスには既に掲載中の同じ種類のコードがあります",
+    "code_not_found": "このコードは見つかりません",
     "code_not_active": "このコードは現在掲載されていません。",
     "image_invalid": "画像の形式が正しくないか、サイズが大きすぎます（上限 2MB）。",
     "event_type_invalid": "イベントの種類が正しくありません",
@@ -271,7 +276,10 @@
     "reset_code_invalid": "確認コードが正しくありません",
     "reset_too_many_attempts": "失敗回数が多すぎます。確認コードを取得し直してください",
     "reset_too_many_requests": "確認コードの取得が多すぎます。しばらくしてからお試しください",
-    "reset_unavailable": "パスワード再設定は現在ご利用いただけません。しばらくしてからお試しください"
+    "reset_unavailable": "パスワード再設定は現在ご利用いただけません。しばらくしてからお試しください",
+    "code_type_invalid": "コードの種類が正しくありません",
+    "code_type_not_allowed": "この事業者はこの種類のコードを受け付けていません",
+    "discount_note_required": "割引コードは備考に特典内容を書いてください"
   },
   "pro": {
     "title": "Pro",
@@ -318,5 +326,11 @@
     "trialMonth": "{count}か月の無料トライアル",
     "trialDisclosure": "無料トライアル期間中は請求されません。トライアル終了後は上記の価格で自動的に有料サブスクリプションへ移行します。終了前に解約すれば料金は発生しません。",
     "notLinked": "アカウントとストアをまだ連携できていません。しばらくしてからもう一度お試しください。料金は発生していません。"
+  },
+  "codeType": {
+    "referral": "紹介コード",
+    "discount": "割引コード",
+    "referralHint": "あなた自身の紹介コードです。使われると双方に特典があります。",
+    "discountHint": "手持ちの割引コードです。使った人だけが割引を受けられます。"
   }
 }

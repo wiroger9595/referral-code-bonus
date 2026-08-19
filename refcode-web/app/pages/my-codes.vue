@@ -151,8 +151,10 @@ const loginTo = computed(() => ({
         </div>
 
         <ul v-else class="grid gap-3 sm:grid-cols-2">
-          <li v-for="c in visible" :key="c.id" class="rounded-2xl border border-line bg-surface p-4">
-            <div class="flex items-start justify-between gap-3">
+          <!-- flex-col 配下面那排數據的 mt-auto：雙欄時 grid 本來就把同一列拉成等高，
+               不壓到底邊的話矮的那張會在下方開一個洞。 -->
+          <li v-for="c in visible" :key="c.id" class="flex flex-col rounded-2xl border border-line bg-surface p-4">
+            <div class="mb-4 flex items-start justify-between gap-3">
               <div class="flex min-w-0 items-center gap-3">
                 <span
                   class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-brand-soft font-bold text-brand-ink"
@@ -174,6 +176,10 @@ const loginTo = computed(() => ({
                     {{ c.merchant_name }}
                   </NuxtLink>
                   <p class="truncate font-mono text-xs tracking-wider text-muted">{{ c.code }}</p>
+                  <!-- 同一家可以同時上架推薦碼與折扣碼，不標的話兩張卡看起來一模一樣。 -->
+                  <p class="mt-1">
+                    <span class="pill">{{ $t(`codeType.${c.code_type}`) }}</span>
+                  </p>
                 </div>
               </div>
               <span class="pill shrink-0" :class="statusPill[c.status]">
@@ -182,7 +188,7 @@ const loginTo = computed(() => ({
             </div>
 
             <!-- 上架者唯一在意的是「有沒有人看到」，所以數字要比碼本身大。 -->
-            <dl class="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3">
+            <dl class="mt-auto grid grid-cols-3 gap-2 border-t border-line pt-3">
               <div>
                 <dd class="text-lg font-bold">{{ c.impressions }}</dd>
                 <dt class="text-xs text-muted">{{ $t('myCodes.impressions') }}</dt>
@@ -198,6 +204,17 @@ const loginTo = computed(() => ({
                 <dt class="text-xs text-muted">{{ $t('myCodes.expiresAt') }}</dt>
               </div>
             </dl>
+
+            <!-- 光看到紅色的「已拒絕」不知道要改什麼。官網這邊改不了碼（見檔頭），
+                 但至少要看得到原因，才知道回 app 之後該怎麼重上。 -->
+            <div
+              v-if="c.status === 'rejected' && c.reject_reason"
+              class="mt-3 rounded-xl bg-alert-soft px-3 py-2.5 text-alert-ink"
+            >
+              <span class="text-xs font-bold">{{ $t('myCodes.rejectReason') }}</span>
+              <!-- 審核理由是人工填的，長度沒有上限，不斷行會把卡片撐爆。 -->
+              <p class="mt-0.5 text-sm leading-relaxed break-words">{{ c.reject_reason }}</p>
+            </div>
           </li>
         </ul>
 

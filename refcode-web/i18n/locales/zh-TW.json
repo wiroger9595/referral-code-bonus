@@ -5,7 +5,7 @@
   },
   "nav": {
     "about": "這是什麼",
-    "myCodes": "我的推薦碼",
+    "myCodes": "我的碼",
     "login": "登入",
     "logout": "登出",
     "register": "註冊"
@@ -79,8 +79,8 @@
     "seoTitle": "{name}推薦碼",
     "seoDescription": "{name}推薦碼：{reward}。目前有 {count} 組還在有效期內的推薦碼，登入即可查看完整內容。",
     "heading": "{name}推薦碼",
-    "copyBlocked": "瀏覽器擋下了自動複製，請手動選取下方的推薦碼。",
-    "activeCodes": "{count} 組有效推薦碼",
+    "copyBlocked": "瀏覽器擋下了自動複製，請手動選取下方的碼。",
+    "activeCodes": "{count} 組有效的碼",
     "sharedBy": "{name} 分享",
     "maskedPlaceholder": "登入才能看到完整碼",
     "loginToReveal": "登入查看",
@@ -92,7 +92,7 @@
     "worked": "可以用",
     "failed": "不能用",
     "thanks": "謝謝回報，這會影響它之後的排序。",
-    "empty": "目前沒有還在有效期內的推薦碼。",
+    "empty": "目前沒有還在有效期內的碼。",
     "reviewed": "這裡的每一組碼都經過人工審核",
     "ctaBest": "已為你挑出品質最高的一組"
   },
@@ -152,18 +152,19 @@
     "backToLogin": "回登入頁"
   },
   "myCodes": {
-    "title": "我的推薦碼",
-    "signInFirst": "要先登入才能看自己上架的推薦碼。",
+    "title": "我的碼",
+    "signInFirst": "要先登入才能看自己上架的碼。",
     "loading": "載入中…",
     "total": "共 {count} 組",
-    "emptyTitle": "還沒有上架任何推薦碼",
+    "emptyTitle": "還沒有上架任何碼",
     "emptyDesc": "在手機 app 裡上架之後，這裡就會看到它的曝光與狀態。",
     "impressions": "曝光",
     "qualityScore": "品質分數",
     "expiresAt": "到期",
+    "rejectReason": "審核未通過的原因",
     "manageInApp": "上架與下架請到手機 app 操作。",
     "filterAll": "全部",
-    "filterEmptyTitle": "沒有「{status}」的推薦碼",
+    "filterEmptyTitle": "沒有「{status}」的碼",
     "filterShowAll": "看全部",
     "status": {
       "pending": "審核中",
@@ -208,13 +209,13 @@
     "display_name_required": "顯示名稱不能空白",
     "merchant_not_found": "找不到這個服務商",
     "merchant_closed": "這個服務商目前沒有開放上架",
-    "code_required": "推薦碼不能空白",
-    "code_format_mismatch": "推薦碼格式不符合這家服務商的規則",
+    "code_required": "碼不能空白",
+    "code_format_mismatch": "格式不符合這家服務商的規則",
     "expiry_required": "請填寫有效期限",
     "expiry_in_past": "有效期限最早只能是明天",
     "expiry_too_far": "有效期限最長一年",
-    "code_already_listed": "你在這家服務商已經有一個上架中的推薦碼了",
-    "code_not_found": "找不到這個推薦碼",
+    "code_already_listed": "你在這家服務商已經有一個上架中的同類型碼了",
+    "code_not_found": "找不到這個碼",
     "event_type_invalid": "事件類型不正確",
     "report_result_invalid": "回報的結果不正確",
     "pro_required": "免費方案的上架數已達上限，升級 Pro 就能無限上架",
@@ -248,5 +249,9 @@
     "doneBody": "你的帳號與上架的推薦碼都已經移除。感謝你曾經使用。",
     "backHome": "回首頁",
     "contactNote": "遇到問題無法自己完成刪除的話，來信 {email}，我們會在 30 天內處理。"
+  },
+  "codeType": {
+    "referral": "推薦碼",
+    "discount": "折扣碼"
   }
 }

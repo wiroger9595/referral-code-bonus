@@ -4,6 +4,7 @@ import type {
   AuthResponse,
   Category,
   CodeStats,
+  CodeType,
   MerchantDetail,
   MerchantListResponse,
   MyCode,
@@ -39,6 +40,31 @@ let accessToken: string | null = null
 let refreshToken: string | null = null
 let deviceId = ''
 
+// crypto.randomUUID 只有 secure context 才有。iOS 的 WebView 跑在
+// capacitor://localhost，那個 custom scheme 不算 secure context，randomUUID 會是
+// undefined —— 直接呼叫就是 TypeError，而這行踩在 main.ts 的 top-level await 上，
+// 一炸整個 app 就不 mount，畫面全白、連錯誤畫面都沒有。
+// 只有全新安裝（Preferences 還沒存過 device id）才會走到這裡，所以很難重現。
+function newDeviceId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+
+  // 退路自己組一組 v4。getRandomValues 的支援範圍比 randomUUID 廣得多，
+  // 兩個都沒有才退到 Math.random —— 這個值只用來匿名去重，不是安全用途。
+  const bytes = new Uint8Array(16)
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    crypto.getRandomValues(bytes)
+  } else {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256)
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
 // Preferences 是 async 的，所以 app 啟動時要先跑這個才能發請求。
 export async function initTokens() {
   const [a, r, d] = await Promise.all([
@@ -49,7 +75,7 @@ export async function initTokens() {
   accessToken = a.value
   refreshToken = r.value
 
-  deviceId = d.value ?? crypto.randomUUID()
+  deviceId = d.value ?? newDeviceId()
   if (!d.value) await Preferences.set({ key: KEY_DEVICE, value: deviceId })
 }
 
@@ -257,7 +283,13 @@ export const api = {
   },
 
   // expires_at 傳 null 是「永久有效」，後端會存成 NULL。
-  createCode(input: { merchant_id: string; code: string; note: string; expires_at: string | null }) {
+  createCode(input: {
+    merchant_id: string
+    code: string
+    note: string
+    expires_at: string | null
+    code_type: CodeType
+  }) {
     return request<MyCode>('/v1/codes', { method: 'POST', body: JSON.stringify(input) })
   },
 

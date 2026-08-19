@@ -238,6 +238,8 @@ function formatDate(iso: string | null) {
                 <div>
                   <h2>{{ c.merchant_name }}</h2>
                   <p class="mono tiny muted">{{ c.code }}</p>
+                  <!-- 同一家可以同時上架推薦碼與折扣碼，不標的話兩張卡看起來一模一樣。 -->
+                  <p class="tiny muted type">{{ $t(`codeType.${c.code_type}`) }}</p>
                 </div>
               </div>
               <span class="pill" :class="statusTone[c.status]">{{ statusLabel(c.status) }}</span>
@@ -257,6 +259,13 @@ function formatDate(iso: string | null) {
                 <strong>{{ formatDate(c.expires_at) }}</strong>
                 <span class="tiny muted">{{ $t('myCodes.expiresAt') }}</span>
               </div>
+            </div>
+
+            <!-- 被拒的碼沒有下架按鈕，理由剛好補在那個位置 —— 上架者最需要知道的
+                 是「為什麼」，光看到紅色的「已拒絕」不知道要改什麼。 -->
+            <div v-if="c.status === 'rejected' && c.reject_reason" class="reason">
+              <span class="tiny">{{ $t('myCodes.rejectReason') }}</span>
+              <p>{{ c.reject_reason }}</p>
             </div>
 
             <IonButton
@@ -320,7 +329,13 @@ function formatDate(iso: string | null) {
   padding-bottom: 24px;
 }
 
+/* flex column + 底下的 .stats margin-top:auto，是雙欄時卡片等高的另一半：
+   grid 把矮的那張拉高之後，內容要嘛全部擠在上面、底下開一個洞，要嘛像現在這樣
+   把數據那排壓到底邊，兩張卡的數字就對齊了。單欄時每張卡本來就只有自己的高度，
+   margin-top:auto 沒有多餘空間可以吃，不影響。 */
 .card {
+  display: flex;
+  flex-direction: column;
   padding: 16px;
 }
 
@@ -329,6 +344,10 @@ function formatDate(iso: string | null) {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  /* 原本這 16px 掛在 .stats 的 margin-top 上，那格現在要留給 auto 撐高度。
+     移到這裡，單欄時的間距不變（16 + .stats 的 padding-top 14），
+     雙欄被拉高時 auto 疊在這 16px 之上，不會貼死。 */
+  margin-bottom: 16px;
 }
 
 .who {
@@ -376,7 +395,9 @@ function formatDate(iso: string | null) {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  margin-top: 16px;
+  /* auto 而不是固定值：見 .card 的說明，這是把數據排壓到卡片底邊的那一半。
+     min-height 由 padding-top 撐著，不會因為 auto 而貼上標題。 */
+  margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid var(--app-line);
 }
@@ -393,6 +414,40 @@ function formatDate(iso: string | null) {
   letter-spacing: -0.01em;
 }
 
+.type {
+  margin-top: 2px;
+}
+
+/* 拒絕理由。淡紅底照 style.css 的 .pill.danger 那套配色，但這裡是一段會換行的
+   文字不是標籤，所以走方框而不是膠囊。 */
+.reason {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(var(--ion-color-danger-rgb), 0.1);
+  color: var(--ion-color-danger-shade);
+}
+
+.reason span {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.reason p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  /* 審核理由是人工填的，長度沒有上限，不斷行會把卡片撐爆。 */
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-color-scheme: dark) {
+  /* 深色底下 shade 比底色還暗，讀不到 —— 跟 .pill.danger 同一個處理。 */
+  .reason {
+    color: var(--ion-color-danger-tint);
+  }
+}
+
 /* 破壞性動作靠右且不搶眼，主要動線還是看數據。 */
 .disable {
   display: block;
@@ -404,10 +459,11 @@ function formatDate(iso: string | null) {
 /* ── 平板 ───────────────────────────────────────────── */
 
 @media (min-width: 768px) {
+  /* 不設 align-items：預設的 stretch 讓同一列的卡片等高。原本是 start，
+     卡片各自照內容長高，被拒的碼少了下架按鈕就比隔壁矮一截，看起來像沒對齊。 */
   .list {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    align-items: start;
   }
 }
 </style>

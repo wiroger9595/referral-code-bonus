@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   IonButton,
+  IonButtons,
   IonContent,
   IonHeader,
   IonIcon,
@@ -14,6 +15,7 @@ import {
 } from '@ionic/vue'
 import type { RefresherCustomEvent } from '@ionic/vue'
 import {
+  addOutline,
   alertCircleOutline,
   chevronForward,
   earthOutline,
@@ -199,6 +201,13 @@ const sorted = computed(() => {
     <IonHeader>
       <IonToolbar>
         <IonTitle>{{ $t('explore.title') }}</IonTitle>
+        <IonButtons slot="end">
+          <!-- 上架入口在每個瀏覽頁都有：想上架的念頭多半是在看別人的碼時冒出來的，
+               不該逼使用者先切回「我的碼」分頁才找得到。 -->
+          <IonButton router-link="/add-code">
+            <IonIcon slot="icon-only" :icon="addOutline" />
+          </IonButton>
+        </IonButtons>
       </IonToolbar>
     </IonHeader>
 

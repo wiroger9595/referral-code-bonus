@@ -104,6 +104,7 @@
     "addOne": "Share a code",
     "refresh": "Refresh",
     "refreshed": "Up to date",
+    "rejectReason": "Why it was rejected",
     "impressions": "Views",
     "qualityScore": "Quality",
     "expiresAt": "Expires",
@@ -147,12 +148,12 @@
     "thanksInline": "Thanks — this affects how it ranks from now on",
     "emptyTitle": "No valid codes right now",
     "emptyDesc": "Expired codes are removed automatically. Check back later, or share one of your own.",
-    "addMine": "Share my code",
+    "addMine": "Share yours",
     "rewardPending": "No reward details yet"
   },
   "addCode": {
-    "title": "Share a referral code",
-    "sectionCode": "Referral code",
+    "title": "Share a code",
+    "sectionCode": "The code",
     "merchant": "Service",
     "merchantPlaceholder": "Pick one",
     "code": "Referral code",
@@ -168,7 +169,11 @@
     "submitted": "Submitted — it goes live once approved",
     "chooseMerchant": "Please pick a service",
     "loadMerchantsFailed": "Couldn't load services",
-    "submitFailed": "Couldn't submit"
+    "submitFailed": "Couldn't submit",
+    "codeTypeLabel": "What are you listing",
+    "noteDiscountPlaceholder": "e.g. $10 off your first order, 15% off sitewide, one month free",
+    "discountNoteRequired": "Describe what this discount code gets you",
+    "noteDiscount": "What's the offer"
   },
   "login": {
     "titleLogin": "Sign in",
@@ -207,7 +212,7 @@
     "avatarUploading": "Uploading…",
     "avatarDone": "Photo updated",
     "avatarFailed": "Couldn't upload that image. Try another one.",
-    "addCode": "Share a referral code",
+    "addCode": "Share a code",
     "contact": "Contact us / report content",
     "contactDesc": "Email us about inappropriate content or codes that don't work",
     "terms": "Terms of service",
@@ -255,13 +260,13 @@
     "display_name_required": "Display name can't be empty",
     "merchant_not_found": "Service not found",
     "merchant_closed": "This service isn't accepting new codes right now",
-    "code_required": "Referral code can't be empty",
+    "code_required": "Code can't be empty",
     "code_format_mismatch": "That code doesn't match this service's format",
     "expiry_required": "Please set an expiry date",
     "expiry_in_past": "The expiry date must be tomorrow or later",
     "expiry_too_far": "The expiry date can be one year out at most",
-    "code_already_listed": "You already have a live code for this service",
-    "code_not_found": "Referral code not found",
+    "code_already_listed": "You already have a live code of that type for this service",
+    "code_not_found": "Code not found",
     "code_not_active": "This code is not live right now.",
     "image_invalid": "That image is the wrong format or too large (2MB max).",
     "event_type_invalid": "That event type isn't valid",
@@ -271,7 +276,10 @@
     "reset_code_invalid": "That code is not correct.",
     "reset_too_many_attempts": "Too many wrong attempts. Request a new code.",
     "reset_too_many_requests": "Too many requests. Try again later.",
-    "reset_unavailable": "Password reset is temporarily unavailable. Please try again later."
+    "reset_unavailable": "Password reset is temporarily unavailable. Please try again later.",
+    "code_type_invalid": "Invalid code type",
+    "code_type_not_allowed": "This merchant doesn't accept that kind of code",
+    "discount_note_required": "Describe what the discount code gets you in the note"
   },
   "pro": {
     "title": "Pro",
@@ -318,5 +326,11 @@
     "trialMonth": "{count}-month free trial",
     "trialDisclosure": "You won't be charged during the free trial. It converts to a paid subscription at the price above when the trial ends; cancel any time before then and you pay nothing.",
     "notLinked": "We couldn't link your account to the store yet. Please try again shortly — you haven't been charged."
+  },
+  "codeType": {
+    "referral": "Referral code",
+    "discount": "Discount code",
+    "referralHint": "Your own referral code — both sides get a reward when someone uses it.",
+    "discountHint": "A discount code you have. Whoever uses it gets the discount; you get nothing."
   }
 }

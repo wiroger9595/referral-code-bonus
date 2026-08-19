@@ -11,6 +11,8 @@ import {
   IonItem,
   IonList,
   IonPage,
+  IonSegment,
+  IonSegmentButton,
   IonSelect,
   IonSelectOption,
   IonTitle,
@@ -19,23 +21,30 @@ import {
   toastController,
 } from '@ionic/vue'
 import { alertCircle, giftOutline, shieldCheckmarkOutline } from 'ionicons/icons'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError, api } from '../api/client'
-import type { MerchantSummary } from '../api/types'
+import type { CodeType, MerchantSummary } from '../api/types'
 import { apiErrorMessage } from '../i18n'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 
 const merchants = ref<MerchantSummary[]>([])
-const merchantId = ref('')
+// 從服務商頁按「上架」進來時網址會帶著那一家，直接選好 —— 使用者剛剛才在
+// 那個頁面上，再讓他從整份清單裡把同一家找出來一次很蠢。
+const merchantId = ref(typeof route.query.merchant === 'string' ? route.query.merchant : '')
 const code = ref('')
 const note = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
+
+// 上架的是自己的推薦碼，還是手上的折扣碼。哪幾種能選是服務商的設定
+// （沒有推薦計畫的服務商只收折扣碼），所以要等選完服務商才知道。
+const codeType = ref<CodeType>('referral')
 
 // IonDatetime 在 presentation="date" 下只比對日期那一段，這裡不能用 toISOString()
 // —— 那是 UTC，台灣凌晨那幾個小時會算成前一天，今天就又選得到了。
@@ -64,6 +73,24 @@ onMounted(async () => {
 
 const selected = computed(() => merchants.value.find((m) => m.id === merchantId.value))
 
+// 「我要上架的是哪一種」是使用者一進來就想做的選擇，不能等到選完服務商才出現
+// —— 藏在後面等於整個折扣碼功能看不見。還沒選服務商時兩種都給點，
+// 選完之後才收斂成那家實際收的類型。
+const ALL_CODE_TYPES: CodeType[] = ['referral', 'discount']
+const allowedTypes = computed<CodeType[]>(
+  () => selected.value?.allowed_code_types ?? ALL_CODE_TYPES,
+)
+
+// 換服務商時把類型拉回這家收的第一種：上一家能選推薦碼、下一家只收折扣碼的話，
+// 留著舊的選擇會讓使用者送出後才被後端擋下來。
+watch(selected, (m) => {
+  if (m && !m.allowed_code_types.includes(codeType.value)) {
+    codeType.value = m.allowed_code_types[0] ?? 'referral'
+  }
+})
+
+const isDiscount = computed(() => codeType.value === 'discount')
+
 // merchant.name 是從 App Store 上架名稱整個匯進來的，例如
 // 「Klook - 全球旅遊＆玩樂體驗預訂平台」，選單裡只需要品牌名那一段。
 function shortName(name: string) {
@@ -85,6 +112,13 @@ async function submit() {
     return
   }
 
+  // 折扣碼的優惠內容只有備註講得出來，空著送出去撿到的人不知道能換到什麼。
+  // 後端也擋（discount_note_required），這裡先擋是免得白跑一趟。
+  if (isDiscount.value && !note.value.trim()) {
+    errorMessage.value = t('addCode.discountNoteRequired')
+    return
+  }
+
   loading.value = true
   try {
     await api.createCode({
@@ -92,6 +126,7 @@ async function submit() {
       code: code.value.trim(),
       note: note.value.trim(),
       expires_at: hasExpiry.value ? endOfLocalDay(expiresAt.value) : null,
+      code_type: codeType.value,
     })
     const toast = await toastController.create({
       message: t('addCode.submitted'),
@@ -143,10 +178,22 @@ async function submit() {
               </IonSelect>
             </IonItem>
 
+            <!-- 只收一種碼的服務商不給選，直接照那一種走；有選擇才值得佔一整列。 -->
+            <IonItem v-if="allowedTypes.length > 1" lines="none">
+              <div class="type-picker">
+                <span class="type-label">{{ $t('addCode.codeTypeLabel') }}</span>
+                <IonSegment v-model="codeType">
+                  <IonSegmentButton v-for="ty in allowedTypes" :key="ty" :value="ty">
+                    {{ $t(`codeType.${ty}`) }}
+                  </IonSegmentButton>
+                </IonSegment>
+              </div>
+            </IonItem>
+
             <IonItem>
               <IonInput
                 v-model="code"
-                :label="$t('addCode.code')"
+                :label="isDiscount ? $t('codeType.discount') : $t('codeType.referral')"
                 label-placement="stacked"
                 :placeholder="$t('addCode.codePlaceholder')"
                 autocapitalize="off"
@@ -158,15 +205,20 @@ async function submit() {
             <IonItem>
               <IonInput
                 v-model="note"
-                :label="$t('addCode.note')"
+                :label="isDiscount ? $t('addCode.noteDiscount') : $t('addCode.note')"
                 label-placement="stacked"
-                :placeholder="$t('addCode.notePlaceholder')"
+                :placeholder="isDiscount ? $t('addCode.noteDiscountPlaceholder') : $t('addCode.notePlaceholder')"
               />
             </IonItem>
           </IonList>
 
-          <!-- 選了服務商就把獎勵秀出來，確認選對家了。 -->
-          <div v-if="selected?.reward_desc" class="callout">
+          <p class="tiny muted type-hint">
+            {{ isDiscount ? $t('codeType.discountHint') : $t('codeType.referralHint') }}
+          </p>
+
+          <!-- 選了服務商就把獎勵秀出來，確認選對家了。獎勵說明講的是推薦計畫，
+               上架折扣碼時把它秀出來只會誤導。 -->
+          <div v-if="selected?.reward_desc && !isDiscount" class="callout">
             <IonIcon :icon="giftOutline" />
             <span>{{ selected.reward_desc }}</span>
           </div>
@@ -226,6 +278,22 @@ async function submit() {
 
 .sub {
   margin: -6px 0 10px;
+}
+
+.type-picker {
+  width: 100%;
+  padding: 10px 0;
+}
+
+.type-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--app-muted);
+}
+
+.type-hint {
+  margin: 10px 2px 0;
 }
 
 /* .sub 的負 margin 是給緊接在 .label 後面用的，接在 IonList 後面會被卡片蓋掉。 */

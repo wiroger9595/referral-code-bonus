@@ -2,6 +2,7 @@
 import { Clipboard } from '@capacitor/clipboard'
 import {
   IonButton,
+  IonButtons,
   IonContent,
   IonHeader,
   IonIcon,
@@ -11,7 +12,7 @@ import {
   alertController,
   toastController,
 } from '@ionic/vue'
-import { checkmarkOutline, copyOutline, timeOutline } from 'ionicons/icons'
+import { addOutline, checkmarkOutline, copyOutline, timeOutline } from 'ionicons/icons'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -74,6 +75,13 @@ async function confirmClear(which: 'codes' | 'merchants') {
     <IonHeader>
       <IonToolbar>
         <IonTitle>{{ $t('tabs.record') }}</IonTitle>
+        <IonButtons slot="end">
+          <!-- 上架入口在每個瀏覽頁都有：想上架的念頭多半是在看別人的碼時冒出來的，
+               不該逼使用者先切回「我的碼」分頁才找得到。 -->
+          <IonButton router-link="/add-code">
+            <IonIcon slot="icon-only" :icon="addOutline" />
+          </IonButton>
+        </IonButtons>
       </IonToolbar>
     </IonHeader>
 

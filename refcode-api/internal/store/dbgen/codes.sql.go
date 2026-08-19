@@ -40,9 +40,11 @@ func (q *Queries) CountPendingCodes(ctx context.Context) (int64, error) {
 }
 
 const createCode = `-- name: CreateCode :one
-INSERT INTO referral_code_bonus.referral_codes (user_id, merchant_id, code, note, expires_at)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, user_id, merchant_id, code, note, status, expires_at, quality_score, impressions, created_at, activated_at, updated_at
+INSERT INTO referral_code_bonus.referral_codes (
+    user_id, merchant_id, code, note, expires_at, code_type
+)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, user_id, merchant_id, code, note, status, expires_at, quality_score, impressions, created_at, activated_at, updated_at, code_type
 `
 
 type CreateCodeParams struct {
@@ -51,6 +53,7 @@ type CreateCodeParams struct {
 	Code       string     `json:"code"`
 	Note       string     `json:"note"`
 	ExpiresAt  *time.Time `json:"expires_at"`
+	CodeType   string     `json:"code_type"`
 }
 
 func (q *Queries) CreateCode(ctx context.Context, arg CreateCodeParams) (ReferralCode, error) {
@@ -60,6 +63,7 @@ func (q *Queries) CreateCode(ctx context.Context, arg CreateCodeParams) (Referra
 		arg.Code,
 		arg.Note,
 		arg.ExpiresAt,
+		arg.CodeType,
 	)
 	var i ReferralCode
 	err := row.Scan(
@@ -75,6 +79,7 @@ func (q *Queries) CreateCode(ctx context.Context, arg CreateCodeParams) (Referra
 		&i.CreatedAt,
 		&i.ActivatedAt,
 		&i.UpdatedAt,
+		&i.CodeType,
 	)
 	return i, err
 }
@@ -181,7 +186,7 @@ func (q *Queries) ExpireOverdueCodes(ctx context.Context) ([]ExpireOverdueCodesR
 }
 
 const getCodeByID = `-- name: GetCodeByID :one
-SELECT id, user_id, merchant_id, code, note, status, expires_at, quality_score, impressions, created_at, activated_at, updated_at FROM referral_code_bonus.referral_codes WHERE id = $1
+SELECT id, user_id, merchant_id, code, note, status, expires_at, quality_score, impressions, created_at, activated_at, updated_at, code_type FROM referral_code_bonus.referral_codes WHERE id = $1
 `
 
 func (q *Queries) GetCodeByID(ctx context.Context, id uuid.UUID) (ReferralCode, error) {
@@ -200,6 +205,7 @@ func (q *Queries) GetCodeByID(ctx context.Context, id uuid.UUID) (ReferralCode, 
 		&i.CreatedAt,
 		&i.ActivatedAt,
 		&i.UpdatedAt,
+		&i.CodeType,
 	)
 	return i, err
 }
@@ -236,6 +242,7 @@ const listActiveCodesForMerchant = `-- name: ListActiveCodesForMerchant :many
 SELECT
     c.id, c.user_id, c.code, c.note, c.quality_score, c.impressions,
     c.expires_at, c.created_at, c.activated_at,
+    c.code_type,
     u.display_name AS owner_name,
     u.avatar_url   AS owner_avatar_url,
     (SELECT count(*) FROM referral_code_bonus.code_reports r
@@ -268,6 +275,7 @@ type ListActiveCodesForMerchantRow struct {
 	ExpiresAt      *time.Time `json:"expires_at"`
 	CreatedAt      time.Time  `json:"created_at"`
 	ActivatedAt    *time.Time `json:"activated_at"`
+	CodeType       string     `json:"code_type"`
 	OwnerName      string     `json:"owner_name"`
 	OwnerAvatarUrl *string    `json:"owner_avatar_url"`
 	WorkedCount    int64      `json:"worked_count"`
@@ -297,11 +305,140 @@ func (q *Queries) ListActiveCodesForMerchant(ctx context.Context, merchantID uui
 			&i.ExpiresAt,
 			&i.CreatedAt,
 			&i.ActivatedAt,
+			&i.CodeType,
 			&i.OwnerName,
 			&i.OwnerAvatarUrl,
 			&i.WorkedCount,
 			&i.FailedCount,
 			&i.OwnerIsPro,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAutoDisabledCodes = `-- name: ListAutoDisabledCodes :many
+SELECT
+    c.id, c.user_id, c.merchant_id, c.code, c.note, c.status, c.expires_at, c.quality_score, c.impressions, c.created_at, c.activated_at, c.updated_at, c.code_type,
+    m.slug AS merchant_slug,
+    m.name AS merchant_name,
+    u.email AS owner_email,
+    u.display_name AS owner_name,
+    coalesce(rs.total, 0) AS report_total,
+    coalesce(rs.worked, 0) AS report_worked,
+    coalesce(rs.failed, 0) AS report_failed,
+    coalesce(rs.invalid_code, 0) AS report_invalid_code,
+    coalesce(rs.merchant_closed, 0) AS report_merchant_closed,
+    rs.last_reported_at,
+    last_review.created_at AS disabled_at,
+    count(*) OVER () AS total_count
+FROM referral_code_bonus.referral_codes c
+JOIN referral_code_bonus.merchants m ON m.id = c.merchant_id
+JOIN referral_code_bonus.users u     ON u.id = c.user_id
+LEFT JOIN LATERAL (
+    SELECT
+        count(*)                                              AS total,
+        count(*) FILTER (WHERE r.result = 'worked')           AS worked,
+        count(*) FILTER (WHERE r.result = 'failed')           AS failed,
+        count(*) FILTER (WHERE r.result = 'invalid_code')     AS invalid_code,
+        count(*) FILTER (WHERE r.result = 'merchant_closed')  AS merchant_closed,
+        max(r.created_at)                                     AS last_reported_at
+    FROM referral_code_bonus.code_reports r
+    WHERE r.code_id = c.id
+) rs ON true
+JOIN LATERAL (
+    SELECT rv.action, rv.created_at
+    FROM referral_code_bonus.code_reviews rv
+    WHERE rv.code_id = c.id
+    ORDER BY rv.created_at DESC
+    LIMIT 1
+) last_review ON true
+WHERE c.status = 'disabled'
+  AND last_review.action = 'auto_disable'
+ORDER BY last_review.created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListAutoDisabledCodesParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListAutoDisabledCodesRow struct {
+	ID                   uuid.UUID   `json:"id"`
+	UserID               uuid.UUID   `json:"user_id"`
+	MerchantID           uuid.UUID   `json:"merchant_id"`
+	Code                 string      `json:"code"`
+	Note                 string      `json:"note"`
+	Status               string      `json:"status"`
+	ExpiresAt            *time.Time  `json:"expires_at"`
+	QualityScore         int32       `json:"quality_score"`
+	Impressions          int64       `json:"impressions"`
+	CreatedAt            time.Time   `json:"created_at"`
+	ActivatedAt          *time.Time  `json:"activated_at"`
+	UpdatedAt            time.Time   `json:"updated_at"`
+	CodeType             string      `json:"code_type"`
+	MerchantSlug         string      `json:"merchant_slug"`
+	MerchantName         string      `json:"merchant_name"`
+	OwnerEmail           string      `json:"owner_email"`
+	OwnerName            string      `json:"owner_name"`
+	ReportTotal          int64       `json:"report_total"`
+	ReportWorked         int64       `json:"report_worked"`
+	ReportFailed         int64       `json:"report_failed"`
+	ReportInvalidCode    int64       `json:"report_invalid_code"`
+	ReportMerchantClosed int64       `json:"report_merchant_closed"`
+	LastReportedAt       interface{} `json:"last_reported_at"`
+	DisabledAt           time.Time   `json:"disabled_at"`
+	TotalCount           int64       `json:"total_count"`
+}
+
+// 自動下架後還沒有人複核過的碼。
+//
+// 判定看「最後一筆審核紀錄是不是 auto_disable」，不另外開欄位記已處理：
+// admin 按了維持下架或恢復上架都會再寫一筆 code_reviews，那個碼自然就離開清單。
+//
+// 這份清單非看不可的原因是誤判會沉默地發生：ShouldAutoDisable 只看最近 10 筆回報，
+// 湊得出幾筆負評就能打掉競爭對手的碼，沒有人複核的話上架者只會覺得平台不可靠。
+func (q *Queries) ListAutoDisabledCodes(ctx context.Context, arg ListAutoDisabledCodesParams) ([]ListAutoDisabledCodesRow, error) {
+	rows, err := q.db.Query(ctx, listAutoDisabledCodes, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAutoDisabledCodesRow{}
+	for rows.Next() {
+		var i ListAutoDisabledCodesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.MerchantID,
+			&i.Code,
+			&i.Note,
+			&i.Status,
+			&i.ExpiresAt,
+			&i.QualityScore,
+			&i.Impressions,
+			&i.CreatedAt,
+			&i.ActivatedAt,
+			&i.UpdatedAt,
+			&i.CodeType,
+			&i.MerchantSlug,
+			&i.MerchantName,
+			&i.OwnerEmail,
+			&i.OwnerName,
+			&i.ReportTotal,
+			&i.ReportWorked,
+			&i.ReportFailed,
+			&i.ReportInvalidCode,
+			&i.ReportMerchantClosed,
+			&i.LastReportedAt,
+			&i.DisabledAt,
+			&i.TotalCount,
 		); err != nil {
 			return nil, err
 		}
@@ -344,10 +481,161 @@ func (q *Queries) ListCodeReviews(ctx context.Context, codeID uuid.UUID) ([]Code
 	return items, nil
 }
 
-const listMyCodes = `-- name: ListMyCodes :many
-SELECT c.id, c.user_id, c.merchant_id, c.code, c.note, c.status, c.expires_at, c.quality_score, c.impressions, c.created_at, c.activated_at, c.updated_at, m.slug AS merchant_slug, m.name AS merchant_name, m.logo_url AS merchant_logo_url
+const listCodesForAdmin = `-- name: ListCodesForAdmin :many
+SELECT
+    c.id, c.user_id, c.merchant_id, c.code, c.note, c.status, c.expires_at, c.quality_score, c.impressions, c.created_at, c.activated_at, c.updated_at, c.code_type,
+    m.slug AS merchant_slug,
+    m.name AS merchant_name,
+    u.email AS owner_email,
+    u.display_name AS owner_name,
+    coalesce(rs.total, 0) AS report_total,
+    coalesce(rs.worked, 0) AS report_worked,
+    coalesce(rs.failed, 0) AS report_failed,
+    coalesce(rs.invalid_code, 0) AS report_invalid_code,
+    coalesce(rs.merchant_closed, 0) AS report_merchant_closed,
+    rs.last_reported_at,
+    count(*) OVER () AS total_count
 FROM referral_code_bonus.referral_codes c
 JOIN referral_code_bonus.merchants m ON m.id = c.merchant_id
+JOIN referral_code_bonus.users u     ON u.id = c.user_id
+LEFT JOIN LATERAL (
+    SELECT
+        count(*)                                              AS total,
+        count(*) FILTER (WHERE r.result = 'worked')           AS worked,
+        count(*) FILTER (WHERE r.result = 'failed')           AS failed,
+        count(*) FILTER (WHERE r.result = 'invalid_code')     AS invalid_code,
+        count(*) FILTER (WHERE r.result = 'merchant_closed')  AS merchant_closed,
+        max(r.created_at)                                     AS last_reported_at
+    FROM referral_code_bonus.code_reports r
+    WHERE r.code_id = c.id
+) rs ON true
+WHERE c.status <> 'pending'
+  AND ($3::text IS NULL OR c.status = $3::text)
+  AND (
+    $4::text IS NULL
+    OR c.code ILIKE '%' || $4::text || '%'
+    OR m.name ILIKE '%' || $4::text || '%'
+    OR u.email ILIKE '%' || $4::text || '%'
+  )
+ORDER BY
+    coalesce(rs.failed, 0) + coalesce(rs.invalid_code, 0) + coalesce(rs.merchant_closed, 0) DESC,
+    c.quality_score,
+    c.updated_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListCodesForAdminParams struct {
+	Limit  int32   `json:"limit"`
+	Offset int32   `json:"offset"`
+	Status *string `json:"status"`
+	Search *string `json:"search"`
+}
+
+type ListCodesForAdminRow struct {
+	ID                   uuid.UUID   `json:"id"`
+	UserID               uuid.UUID   `json:"user_id"`
+	MerchantID           uuid.UUID   `json:"merchant_id"`
+	Code                 string      `json:"code"`
+	Note                 string      `json:"note"`
+	Status               string      `json:"status"`
+	ExpiresAt            *time.Time  `json:"expires_at"`
+	QualityScore         int32       `json:"quality_score"`
+	Impressions          int64       `json:"impressions"`
+	CreatedAt            time.Time   `json:"created_at"`
+	ActivatedAt          *time.Time  `json:"activated_at"`
+	UpdatedAt            time.Time   `json:"updated_at"`
+	CodeType             string      `json:"code_type"`
+	MerchantSlug         string      `json:"merchant_slug"`
+	MerchantName         string      `json:"merchant_name"`
+	OwnerEmail           string      `json:"owner_email"`
+	OwnerName            string      `json:"owner_name"`
+	ReportTotal          int64       `json:"report_total"`
+	ReportWorked         int64       `json:"report_worked"`
+	ReportFailed         int64       `json:"report_failed"`
+	ReportInvalidCode    int64       `json:"report_invalid_code"`
+	ReportMerchantClosed int64       `json:"report_merchant_closed"`
+	LastReportedAt       interface{} `json:"last_reported_at"`
+	TotalCount           int64       `json:"total_count"`
+}
+
+// 後台的「已上架推薦碼」列表，帶使用者回報統計。
+//
+// pending 不在這裡：那批還沒進過候選池、沒有人看得到，回報永遠是 0，
+// 列出來只會讓審核佇列的工作在兩個地方各做一半。
+//
+// 四種回報分開數而不是收成「成功／失敗」兩欄，因為處理方式不同：
+// invalid_code 是碼本身有問題（找上架者），merchant_closed 是活動結束
+// （整家服務商都該檢查），failed 才是單純沒拿到獎勵。
+//
+// total_count 跟 ListMerchants 一樣用 window function 帶出來，不必為了一個數字
+// 再打一次 count 查詢。
+// 搜尋比對碼本身、服務商名與上架者 email：後台找碼的起點不外乎這三個
+// （使用者來信抱怨某個碼、某家服務商出事、某個帳號在洗榜）。
+// 被回報成用不了的排最前面：這頁存在的理由就是把這些碼撈出來處理，
+// 沒有負評的碼再新也不需要 admin 看。三種負面回報一起算，
+// 同分再讓品質分數低的、以及最近才動過的排前面。
+func (q *Queries) ListCodesForAdmin(ctx context.Context, arg ListCodesForAdminParams) ([]ListCodesForAdminRow, error) {
+	rows, err := q.db.Query(ctx, listCodesForAdmin,
+		arg.Limit,
+		arg.Offset,
+		arg.Status,
+		arg.Search,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCodesForAdminRow{}
+	for rows.Next() {
+		var i ListCodesForAdminRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.MerchantID,
+			&i.Code,
+			&i.Note,
+			&i.Status,
+			&i.ExpiresAt,
+			&i.QualityScore,
+			&i.Impressions,
+			&i.CreatedAt,
+			&i.ActivatedAt,
+			&i.UpdatedAt,
+			&i.CodeType,
+			&i.MerchantSlug,
+			&i.MerchantName,
+			&i.OwnerEmail,
+			&i.OwnerName,
+			&i.ReportTotal,
+			&i.ReportWorked,
+			&i.ReportFailed,
+			&i.ReportInvalidCode,
+			&i.ReportMerchantClosed,
+			&i.LastReportedAt,
+			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMyCodes = `-- name: ListMyCodes :many
+SELECT c.id, c.user_id, c.merchant_id, c.code, c.note, c.status, c.expires_at, c.quality_score, c.impressions, c.created_at, c.activated_at, c.updated_at, c.code_type, m.slug AS merchant_slug, m.name AS merchant_name, m.logo_url AS merchant_logo_url,
+       coalesce(rej.reason, '') AS reject_reason
+FROM referral_code_bonus.referral_codes c
+JOIN referral_code_bonus.merchants m ON m.id = c.merchant_id
+LEFT JOIN LATERAL (
+    SELECT r.reason
+    FROM referral_code_bonus.code_reviews r
+    WHERE r.code_id = c.id AND r.action = 'reject'
+    ORDER BY r.created_at DESC
+    LIMIT 1
+) rej ON true
 WHERE c.user_id = $1
 ORDER BY c.created_at DESC
 `
@@ -365,11 +653,20 @@ type ListMyCodesRow struct {
 	CreatedAt       time.Time  `json:"created_at"`
 	ActivatedAt     *time.Time `json:"activated_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
+	CodeType        string     `json:"code_type"`
 	MerchantSlug    string     `json:"merchant_slug"`
 	MerchantName    string     `json:"merchant_name"`
 	MerchantLogoUrl *string    `json:"merchant_logo_url"`
+	RejectReason    string     `json:"reject_reason"`
 }
 
+// reject_reason 是最近一次被拒的理由，上架者要知道自己該改什麼才有得申訴。
+// 沒有被拒過就是空字串 —— code_reviews.reason 本身就是 NOT NULL DEFAULT ”，
+// 空字串代表「沒有理由」是既有語意。這裡的 coalesce 不能省：LEFT JOIN 沒配到時
+// 那一格是 NULL，而 sqlc 看的是欄位本身的 NOT NULL，會產出非指標的 string，
+// 掃到 NULL 直接噴錯。
+// 沒有限制 c.status：被拒之後又被 restore 的碼照樣帶著上一次的理由，
+// 現在是什麼狀態該不該顯示交給前端判斷，SQL 這裡只負責把事實撈出來。
 func (q *Queries) ListMyCodes(ctx context.Context, userID uuid.UUID) ([]ListMyCodesRow, error) {
 	rows, err := q.db.Query(ctx, listMyCodes, userID)
 	if err != nil {
@@ -392,9 +689,11 @@ func (q *Queries) ListMyCodes(ctx context.Context, userID uuid.UUID) ([]ListMyCo
 			&i.CreatedAt,
 			&i.ActivatedAt,
 			&i.UpdatedAt,
+			&i.CodeType,
 			&i.MerchantSlug,
 			&i.MerchantName,
 			&i.MerchantLogoUrl,
+			&i.RejectReason,
 		); err != nil {
 			return nil, err
 		}
@@ -407,8 +706,9 @@ func (q *Queries) ListMyCodes(ctx context.Context, userID uuid.UUID) ([]ListMyCo
 }
 
 const listPendingCodes = `-- name: ListPendingCodes :many
-SELECT c.id, c.user_id, c.merchant_id, c.code, c.note, c.status, c.expires_at, c.quality_score, c.impressions, c.created_at, c.activated_at, c.updated_at, m.slug AS merchant_slug, m.name AS merchant_name,
-       m.code_format_regex, u.email AS owner_email, u.display_name AS owner_name,
+SELECT c.id, c.user_id, c.merchant_id, c.code, c.note, c.status, c.expires_at, c.quality_score, c.impressions, c.created_at, c.activated_at, c.updated_at, c.code_type, m.slug AS merchant_slug, m.name AS merchant_name,
+       m.code_format_regex, m.discount_code_format_regex,
+       u.email AS owner_email, u.display_name AS owner_name,
        EXISTS (
            SELECT 1 FROM referral_code_bonus.subscriptions s
            WHERE s.user_id = c.user_id
@@ -429,24 +729,26 @@ type ListPendingCodesParams struct {
 }
 
 type ListPendingCodesRow struct {
-	ID              uuid.UUID  `json:"id"`
-	UserID          uuid.UUID  `json:"user_id"`
-	MerchantID      uuid.UUID  `json:"merchant_id"`
-	Code            string     `json:"code"`
-	Note            string     `json:"note"`
-	Status          string     `json:"status"`
-	ExpiresAt       *time.Time `json:"expires_at"`
-	QualityScore    int32      `json:"quality_score"`
-	Impressions     int64      `json:"impressions"`
-	CreatedAt       time.Time  `json:"created_at"`
-	ActivatedAt     *time.Time `json:"activated_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
-	MerchantSlug    string     `json:"merchant_slug"`
-	MerchantName    string     `json:"merchant_name"`
-	CodeFormatRegex *string    `json:"code_format_regex"`
-	OwnerEmail      string     `json:"owner_email"`
-	OwnerName       string     `json:"owner_name"`
-	OwnerIsPro      bool       `json:"owner_is_pro"`
+	ID                      uuid.UUID  `json:"id"`
+	UserID                  uuid.UUID  `json:"user_id"`
+	MerchantID              uuid.UUID  `json:"merchant_id"`
+	Code                    string     `json:"code"`
+	Note                    string     `json:"note"`
+	Status                  string     `json:"status"`
+	ExpiresAt               *time.Time `json:"expires_at"`
+	QualityScore            int32      `json:"quality_score"`
+	Impressions             int64      `json:"impressions"`
+	CreatedAt               time.Time  `json:"created_at"`
+	ActivatedAt             *time.Time `json:"activated_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
+	CodeType                string     `json:"code_type"`
+	MerchantSlug            string     `json:"merchant_slug"`
+	MerchantName            string     `json:"merchant_name"`
+	CodeFormatRegex         *string    `json:"code_format_regex"`
+	DiscountCodeFormatRegex *string    `json:"discount_code_format_regex"`
+	OwnerEmail              string     `json:"owner_email"`
+	OwnerName               string     `json:"owner_name"`
+	OwnerIsPro              bool       `json:"owner_is_pro"`
 }
 
 // 待審佇列。Pro 的碼排在前面，兌現 paywall 的「優先審核」賣點——
@@ -475,9 +777,11 @@ func (q *Queries) ListPendingCodes(ctx context.Context, arg ListPendingCodesPara
 			&i.CreatedAt,
 			&i.ActivatedAt,
 			&i.UpdatedAt,
+			&i.CodeType,
 			&i.MerchantSlug,
 			&i.MerchantName,
 			&i.CodeFormatRegex,
+			&i.DiscountCodeFormatRegex,
 			&i.OwnerEmail,
 			&i.OwnerName,
 			&i.OwnerIsPro,
@@ -498,7 +802,7 @@ SET status = $2,
     activated_at = CASE WHEN $2 = 'active' AND activated_at IS NULL THEN now() ELSE activated_at END,
     updated_at = now()
 WHERE id = $1
-RETURNING id, user_id, merchant_id, code, note, status, expires_at, quality_score, impressions, created_at, activated_at, updated_at
+RETURNING id, user_id, merchant_id, code, note, status, expires_at, quality_score, impressions, created_at, activated_at, updated_at, code_type
 `
 
 type SetCodeStatusParams struct {
@@ -522,6 +826,7 @@ func (q *Queries) SetCodeStatus(ctx context.Context, arg SetCodeStatusParams) (R
 		&i.CreatedAt,
 		&i.ActivatedAt,
 		&i.UpdatedAt,
+		&i.CodeType,
 	)
 	return i, err
 }
