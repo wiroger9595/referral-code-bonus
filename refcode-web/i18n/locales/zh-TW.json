@@ -68,7 +68,27 @@
     "historyTitle": "最近搜過",
     "historyClear": "清除",
     "historyRemove": "移除「{term}」",
-    "startHint": "輸入關鍵字開始搜尋。"
+    "startHint": "輸入關鍵字開始搜尋。",
+    "suggestCta": "提報這個平台"
+  },
+  "suggest": {
+    "title": "提報平台",
+    "lead": "目錄裡沒有你要的那一家？告訴我們是哪一家，確認過就會加進來。",
+    "signInFirst": "提報平台需要先登入。",
+    "name": "平台名稱",
+    "namePlaceholder": "例如：某某銀行、某某訂房網",
+    "url": "官網連結",
+    "urlHint": "貼上這個平台的官網或註冊頁網址。",
+    "note": "備註",
+    "notePlaceholder": "選填。例如：它的推薦計畫送什麼、在哪個國家能用",
+    "reviewNotice": "每一筆都由人工確認，通過之後才會出現在目錄裡。",
+    "submit": "送出",
+    "pending": "送出中…",
+    "doneTitle": "已送出",
+    "doneDesc": "我們確認過就會把它加進目錄。",
+    "again": "再提報一家",
+    "nameRequired": "請填寫平台名稱",
+    "urlRequired": "請填寫官網連結"
   },
   "merchant": {
     "codesAvailable": "{count} 個可用",
@@ -224,7 +244,14 @@
     "reset_too_many_attempts": "錯誤次數過多，請重新索取驗證碼",
     "reset_too_many_requests": "索取驗證碼太頻繁，請過一陣子再試",
     "reset_unavailable": "忘記密碼功能暫時無法使用，請稍後再試",
-    "image_invalid": "圖片格式不對或檔案太大（上限 2MB）。"
+    "image_invalid": "圖片格式不對或檔案太大（上限 2MB）。",
+    "suggestion_name_required": "請填寫平台名稱",
+    "suggestion_name_too_long": "平台名稱太長了",
+    "suggestion_note_too_long": "備註太長了",
+    "suggestion_url_invalid": "請填寫這個平台的官網連結",
+    "suggestion_duplicate": "你已經提報過這個平台了，審核中",
+    "suggestion_merchant_exists": "這個平台已經在目錄裡了，搜尋看看",
+    "suggestion_limit_reached": "你還有幾筆平台建議在審核中，等審完再提報新的"
   },
   "deleteAccount": {
     "title": "刪除帳號",

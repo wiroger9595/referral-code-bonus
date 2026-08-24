@@ -2,12 +2,16 @@ import {
   airplaneOutline,
   appsOutline,
   bagHandleOutline,
+  barbellOutline,
+  carOutline,
   cardOutline,
   cellularOutline,
   cloudOutline,
+  constructOutline,
   fastFoodOutline,
   gameControllerOutline,
   playCircleOutline,
+  schoolOutline,
   trendingUpOutline,
 } from 'ionicons/icons'
 
@@ -27,6 +31,10 @@ const CATEGORY_ICONS: { match: RegExp; icon: string }[] = [
   { match: /購物|電商|通販|shop|retail|commerce/i, icon: bagHandleOutline },
   { match: /遊戲|ゲーム|game/i, icon: gameControllerOutline },
   { match: /軟體|訂閱|クラウド|saas|software|cloud/i, icon: cloudOutline },
+  { match: /交通|出行|移動|ride|transport/i, icon: carOutline },
+  { match: /健康|運動|フィットネス|health|fitness/i, icon: barbellOutline },
+  { match: /學習|教育|学習|learning|education/i, icon: schoolOutline },
+  { match: /工具|生產力|効率|productivity|business/i, icon: constructOutline },
 ]
 
 export function categoryIcon(name: string): string {

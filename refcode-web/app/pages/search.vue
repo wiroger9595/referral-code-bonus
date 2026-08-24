@@ -120,6 +120,14 @@ watch(q, (v) => {
           </div>
         </section>
 
+        <!-- 搜不到最常見的原因是目錄真的沒有這一家。提報的入口要放在這裡，
+             因為使用者就是在這一刻發現的；名字直接帶過去，不用再打一次。 -->
+        <section class="mt-8">
+          <NuxtLink :to="{ path: localePath('/suggest'), query: { name: q } }" class="btn btn-outline">
+            {{ $t('search.suggestCta') }}
+          </NuxtLink>
+        </section>
+
         <!-- 空結果頁一定要給一條出路，不然使用者只能按上一頁。 -->
         <section v-if="popularTerms.length" class="mt-8">
           <h2 class="mb-3 text-sm font-bold">{{ $t('search.popularTitle') }}</h2>

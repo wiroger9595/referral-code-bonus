@@ -139,6 +139,30 @@ export interface AdminCodeItem extends ReferralCode {
   disabled_at?: string
 }
 
+// 使用者提報「希望上架的平台」。目錄只由 admin 維護，這是使用者唯一能把
+// 「你們少了這一家」講出來的管道（見 refcode-api 的 00016 migration）。
+// 通過審核時後台補 slug 與分類，直接建成停用的服務商草稿。
+export interface MerchantSuggestion {
+  id: string
+  user_id: string
+  name: string
+  signup_url: string
+  note: string
+  // 佇列只回 pending；另外兩個狀態是審完之後的紀錄，後台不再列出來。
+  status: 'pending' | 'approved' | 'rejected'
+  reviewed_by: string | null
+  reviewed_at: string | null
+  review_reason: string
+  // 通過時建出來的那家服務商。
+  merchant_id: string | null
+  created_at: string
+  owner_email: string
+  owner_name: string
+}
+
+// 建議單只會被審一次，沒有下架、恢復這種後續動作。
+export type SuggestionReviewAction = 'approve' | 'reject'
+
 // 客服查帳號、查訂閱狀態用的（退款爭議、手動補發/撤銷 Pro）。
 export interface AdminUserItem {
   id: string

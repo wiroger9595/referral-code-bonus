@@ -17,7 +17,7 @@
 - [x] `.env` 的 `VITE_SUPPORT_EMAIL` 與 `VITE_SITE_URL` 已填
       —— 帳號頁的「聯絡我們 / 檢舉」與條款連結沒填就不會顯示，那三列是 UGC 的送審要件
 - [ ] 有封鎖 / 檢舉上架者的機制
-- [ ] 忘記密碼流程可用
+- [x] 忘記密碼流程可用
 - [ ] Apple 登入實際可用（不是只有按鈕）
 - [x] 正式 API 是 HTTPS，`VITE_API_BASE_URL` 指向正式網域
 
@@ -35,7 +35,7 @@
 - [ ] `refcode-api/.env` 的 `REVENUECAT_WEBHOOK_AUTH` 已填，且與 RevenueCat 後台的
       Authorization 標頭值一致
 - [ ] RevenueCat 後台的 webhook URL 指向正式環境的 `https://.../v1/webhooks/revenuecat`
-- [ ] 兩邊的 entitlement 名稱一致（app 的 `VITE_REVENUECAT_ENTITLEMENT` 與後端的 `PRO_ENTITLEMENT`）
+- [x] 兩邊的 entitlement 名稱一致（app 的 `VITE_REVENUECAT_ENTITLEMENT` 與後端的 `PRO_ENTITLEMENT`）
 - [ ] sandbox 買過一次，`subscriptions` 表真的有 upsert 進去
 - [ ] paywall 上有自動續訂揭露（期間、價格、扣款時間、怎麼取消）與服務條款連結
 - [ ] app 內找得到「恢復購買」

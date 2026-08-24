@@ -177,6 +177,143 @@ func (s *Server) handleReviewCode(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, updated)
 }
 
+// handleListMerchantSuggestions 是使用者提報的待審平台。
+// 審過的不再回來——建議單只會被審一次，通過的那些已經變成服務商了。
+func (s *Server) handleListMerchantSuggestions(w http.ResponseWriter, r *http.Request) {
+	limit, offset := paginate(r, 50, 200)
+
+	rows, err := s.store.ListPendingMerchantSuggestions(r.Context(), dbgen.ListPendingMerchantSuggestionsParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+
+	// total_count 是 window function 的結果，每一列都一樣；沒有列就是 0 筆。
+	var total int64
+	if len(rows) > 0 {
+		total = rows[0].TotalCount
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"suggestions": rows, "total": total})
+}
+
+// handleReviewMerchantSuggestion 審一筆平台建議。
+//
+// 通過會直接建出一家停用的服務商——使用者填得出來的只有名稱與官網，slug 與分類
+// 得由 admin 在這裡補（兩個都是 merchants 的必要欄位），獎勵說明、logo 與適用國家
+// 留給後續在服務商頁編輯。跟 cmd/appimport 匯進來的那批一樣是 is_active=false 的
+// 草稿：沒有獎勵說明就上架，使用者點進去只會看到空白。
+func (s *Server) handleReviewMerchantSuggestion(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		badRequest(w, codeInvalidID, "id 格式錯誤")
+		return
+	}
+
+	var req struct {
+		Action string `json:"action"`
+		Reason string `json:"reason"`
+		// 只有 approve 用得到：要建出來的那家服務商缺的兩個必填欄位。
+		Slug       string `json:"slug"`
+		CategoryID string `json:"category_id"`
+	}
+	if err := decodeJSON(w, r, &req); err != nil {
+		badRequest(w, codeInvalidRequest, "請求格式錯誤")
+		return
+	}
+	if req.Action != "approve" && req.Action != "reject" {
+		badRequest(w, codeReviewActionInvalid, "action 只能是 approve / reject")
+		return
+	}
+
+	var categoryID uuid.UUID
+	if req.Action == "approve" {
+		if !slugPattern.MatchString(req.Slug) {
+			badRequest(w, codeSlugInvalid, "slug 只能是小寫英數字與連字號")
+			return
+		}
+		if categoryID, err = uuid.Parse(req.CategoryID); err != nil {
+			badRequest(w, codeInvalidRequest, "category_id 格式錯誤")
+			return
+		}
+	} else if strings.TrimSpace(req.Reason) == "" {
+		// 跟拒絕推薦碼一樣要留下理由：使用者問「為什麼沒上」時要拿得出當初的判斷。
+		badRequest(w, codeReviewReasonRequired, "拒絕必須填寫原因")
+		return
+	}
+
+	ctx := r.Context()
+	suggestion, err := s.store.GetMerchantSuggestionByID(ctx, id)
+	if err != nil {
+		if store.IsNotFound(err) {
+			notFound(w, codeSuggestionNotFound, "找不到這筆平台建議")
+			return
+		}
+		internalError(w, r, err)
+		return
+	}
+	if suggestion.Status != "pending" {
+		conflict(w, codeSuggestionReviewed, "這筆建議已經審過了")
+		return
+	}
+
+	admin, _ := auth.Admin(ctx)
+	params := dbgen.ReviewMerchantSuggestionParams{
+		ID:           id,
+		Status:       "rejected",
+		ReviewedBy:   &admin.ID,
+		ReviewReason: strings.TrimSpace(req.Reason),
+	}
+
+	var created dbgen.Merchant
+	err = s.store.InTx(ctx, func(q *dbgen.Queries) error {
+		if req.Action == "approve" {
+			// 使用者提報的平台不分地區（他填不出適用國家），countries 留空，
+			// 由後台之後在服務商頁補——空陣列在目錄裡是「哪裡都看得到」。
+			var cerr error
+			created, cerr = q.CreateImportedMerchant(ctx, dbgen.CreateImportedMerchantParams{
+				Slug:       req.Slug,
+				Name:       suggestion.Name,
+				CategoryID: categoryID,
+				SignupUrl:  suggestion.SignupUrl,
+				Countries:  []string{},
+			})
+			if cerr != nil {
+				return cerr
+			}
+			params.Status = "approved"
+			params.MerchantID = &created.ID
+		}
+
+		// 撈不到列代表狀態在剛才那次讀取之後被別人改掉了（兩個 admin 同時審）。
+		// 回傳的錯誤會讓整個交易回滾，上面建出來的服務商也跟著不算數。
+		_, err := q.ReviewMerchantSuggestion(ctx, params)
+		return err
+	})
+	if err != nil {
+		switch {
+		case store.IsNotFound(err):
+			conflict(w, codeSuggestionReviewed, "這筆建議已經審過了")
+		case store.IsUniqueViolation(err):
+			conflict(w, codeSlugTaken, "這個 slug 已經有人用了")
+		case store.IsForeignKeyViolation(err):
+			badRequest(w, codeCategoryNotFound, "找不到這個分類，請重新整理後再試")
+		default:
+			internalError(w, r, err)
+		}
+		return
+	}
+
+	// 拒絕時沒有服務商，merchant 是 null——後台靠它決定要不要顯示「去補資料」的連結。
+	if req.Action == "approve" {
+		writeJSON(w, http.StatusOK, map[string]any{"merchant": created})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"merchant": nil})
+}
+
 func (s *Server) handleListMerchantsForAdmin(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.store.ListMerchantsForAdmin(r.Context())
 	if err != nil {

@@ -79,6 +79,20 @@ type MerchantCategory struct {
 	NameJa    *string   `json:"name_ja"`
 }
 
+type MerchantSuggestion struct {
+	ID           uuid.UUID  `json:"id"`
+	UserID       uuid.UUID  `json:"user_id"`
+	Name         string     `json:"name"`
+	SignupUrl    string     `json:"signup_url"`
+	Note         string     `json:"note"`
+	Status       string     `json:"status"`
+	ReviewedBy   *uuid.UUID `json:"reviewed_by"`
+	ReviewedAt   *time.Time `json:"reviewed_at"`
+	ReviewReason string     `json:"review_reason"`
+	MerchantID   *uuid.UUID `json:"merchant_id"`
+	CreatedAt    time.Time  `json:"created_at"`
+}
+
 type OAuthIdentity struct {
 	ID             uuid.UUID `json:"id"`
 	UserID         uuid.UUID `json:"user_id"`

@@ -103,6 +103,9 @@ func (s *Server) Routes() http.Handler {
 			r.Post("/me/avatar", s.handleUploadAvatar)
 			r.Get("/me/codes", s.handleListMyCodes)
 			r.Post("/codes", s.handleCreateCode)
+			// 提報希望上架的平台。要登入 —— 建議單會進人工審核佇列，
+			// 匿名放行等於開一個沒有成本的洗版管道。
+			r.Post("/merchant-suggestions", s.handleCreateMerchantSuggestion)
 			r.Post("/codes/{id}/disable", s.handleDisableMyCode)
 			r.Get("/codes/{id}/stats", s.handleCodeStats)
 		})
@@ -124,6 +127,10 @@ func (s *Server) Routes() http.Handler {
 					r.Post("/categories", s.handleCreateCategory)
 					r.Patch("/categories/{id}", s.handleUpdateCategory)
 					r.Delete("/categories/{id}", s.handleDeleteCategory)
+					// 平台建議放在 owner 這一段而不是審核佇列：通過等於建立一家
+					// 服務商，那本來就只有 owner 能做（見下面的 /merchants）。
+					r.Get("/merchant-suggestions", s.handleListMerchantSuggestions)
+					r.Post("/merchant-suggestions/{id}/review", s.handleReviewMerchantSuggestion)
 					r.Get("/merchants", s.handleListMerchantsForAdmin)
 					r.Post("/merchants", s.handleCreateMerchant)
 					r.Patch("/merchants/{id}", s.handleUpdateMerchant)

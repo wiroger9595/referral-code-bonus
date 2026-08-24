@@ -8,6 +8,8 @@ import {
   IonPage,
   IonRefresher,
   IonRefresherContent,
+  IonSegment,
+  IonSegmentButton,
   IonSpinner,
   IonTitle,
   IonToolbar,
@@ -21,7 +23,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { api } from '../api/client'
-import type { CodeStatus, MyCode } from '../api/types'
+import type { CodeStatus, CodeType, MyCode } from '../api/types'
 import EmptyState from '../components/EmptyState.vue'
 import SkeletonList from '../components/SkeletonList.vue'
 import { apiErrorMessage } from '../i18n'
@@ -45,6 +47,17 @@ const statusTone: Record<CodeStatus, string> = {
   disabled: 'danger',
 }
 
+// 推薦碼與折扣碼分成兩大類：同一家服務商底下兩種可以各上架一個，混在一起的話
+// 同一個服務商會出現兩張長得幾乎一樣的卡，要瞇著眼看小字才分得出誰是誰。
+const GROUPS = ['referral', 'discount'] as const
+
+const group = ref<CodeType>('referral')
+
+const groupCounts = computed(() => ({
+  referral: codes.value.filter((c) => c.code_type === 'referral').length,
+  discount: codes.value.filter((c) => c.code_type === 'discount').length,
+}))
+
 // 'all' 之後照使用者實際會找的順序排：還在架上的擺前面，
 // 已經沒救的（拒絕、到期）擺最後。
 const FILTERS = ['all', 'active', 'pending', 'disabled', 'expired', 'rejected'] as const
@@ -54,15 +67,18 @@ const filter = ref<Filter>('all')
 
 // 清單一頁就抓完（免費 3 個、Pro 也不會多到哪去），篩選純在前端做 ——
 // 切籤不用重打 API，換來的體感差很多。
+const inGroup = computed(() => codes.value.filter((c) => c.code_type === group.value))
+
 const visible = computed(() =>
-  filter.value === 'all' ? codes.value : codes.value.filter((c) => c.status === filter.value),
+  filter.value === 'all' ? inGroup.value : inGroup.value.filter((c) => c.status === filter.value),
 )
 
 // 籤上直接標數量，才不用逐一點進去才知道哪個籤是空的。
+// 數量只算目前這一類：切到折扣碼卻看到推薦碼的張數，籤上的數字就成了假訊息。
 const counts = computed(() => {
-  const map = { all: codes.value.length } as Record<Filter, number>
+  const map = { all: inGroup.value.length } as Record<Filter, number>
   for (const f of FILTERS) {
-    if (f !== 'all') map[f] = codes.value.filter((c) => c.status === f).length
+    if (f !== 'all') map[f] = inGroup.value.filter((c) => c.status === f).length
   }
   return map
 })
@@ -76,6 +92,11 @@ async function load() {
   errorMessage.value = ''
   try {
     codes.value = (await api.listMyCodes()).codes
+    // 只有折扣碼的人不該一進來就看到空白的推薦碼分類。反過來不必處理 ——
+    // referral 是預設，有推薦碼就停在那裡。
+    if (groupCounts.value.referral === 0 && groupCounts.value.discount > 0) {
+      group.value = 'discount'
+    }
   } catch (e) {
     errorMessage.value = apiErrorMessage(e, 'common.loadFailed')
   } finally {
@@ -200,6 +221,16 @@ function formatDate(iso: string | null) {
       </EmptyState>
 
       <template v-else>
+        <!-- 兩大類先分：推薦碼是自己的碼、折扣碼是手上的碼，管理它們的心態不一樣。
+             狀態籤在它底下，只作用在目前這一類。 -->
+        <div class="page-pad groups">
+          <IonSegment v-model="group">
+            <IonSegmentButton v-for="g in GROUPS" :key="g" :value="g">
+              {{ $t(`codeType.${g}`) }} {{ groupCounts[g] }}
+            </IonSegmentButton>
+          </IonSegment>
+        </div>
+
         <!-- 六個籤放不進一行，所以橫向捲 —— 跟 ExploreTab 的排序列同一套視覺與行為。
              放在內容區而不是 toolbar 裡：塞進 header 的話這排會把整個版面撐寬。 -->
         <div class="filters">
@@ -217,7 +248,16 @@ function formatDate(iso: string | null) {
         <!-- 有碼但這個籤是空的：不要跟「一組碼都沒有」共用同一句話，
              那會讓人以為資料不見了。 -->
         <EmptyState
-          v-if="visible.length === 0"
+          v-if="inGroup.length === 0"
+          :icon="pricetagsOutline"
+          :title="$t('myCodes.groupEmptyTitle', { type: $t(`codeType.${group}`) })"
+          :description="$t('myCodes.groupEmptyDesc')"
+        >
+          <IonButton router-link="/add-code" class="wide">{{ $t('myCodes.addOne') }}</IonButton>
+        </EmptyState>
+
+        <EmptyState
+          v-else-if="visible.length === 0"
           :icon="funnelOutline"
           :title="$t('myCodes.filterEmptyTitle', { status: filterLabel(filter) })"
           :description="$t('myCodes.filterEmptyDesc')"
@@ -238,8 +278,6 @@ function formatDate(iso: string | null) {
                 <div>
                   <h2>{{ c.merchant_name }}</h2>
                   <p class="mono tiny muted">{{ c.code }}</p>
-                  <!-- 同一家可以同時上架推薦碼與折扣碼，不標的話兩張卡看起來一模一樣。 -->
-                  <p class="tiny muted type">{{ $t(`codeType.${c.code_type}`) }}</p>
                 </div>
               </div>
               <span class="pill" :class="statusTone[c.status]">{{ statusLabel(c.status) }}</span>
@@ -414,8 +452,9 @@ function formatDate(iso: string | null) {
   letter-spacing: -0.01em;
 }
 
-.type {
-  margin-top: 2px;
+.groups {
+  padding-top: 12px;
+  padding-bottom: 4px;
 }
 
 /* 拒絕理由。淡紅底照 style.css 的 .pill.danger 那套配色，但這裡是一段會換行的

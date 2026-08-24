@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -447,6 +448,114 @@ func (s *Server) recordImpressions(r *http.Request, merchantID uuid.UUID, shown 
 			slog.Error("累加曝光數失敗", "err", err)
 		}
 	}()
+}
+
+// 一個人同時掛得住幾筆待審建議。擋的不是惡意灌爆（那由 unique index 與人工審核
+// 處理），是「一口氣把想得到的十家全送出來」——那種清單審起來永遠是同一批雜訊，
+// 而且會把真的缺的那幾家淹掉。審完就會釋出額度。
+const maxPendingSuggestions = 5
+
+// normalizeSignupURL 把使用者貼進來的官網連結收成存得下去的樣子。
+//
+// 只收 https：這個值通過審核之後會原封不動變成服務商的 signup_url，而那裡本來
+// 就只收 https（見 merchantInput.validate），現在放行等於把問題留到建立服務商時
+// 才炸。沒帶 scheme 的（直接打 example.com）補上 https:// 而不是回錯誤——
+// 從瀏覽器複製的人會帶，自己打的人多半不會，為這件事要他重打一次很沒必要。
+func normalizeSignupURL(raw string) (string, bool) {
+	v := strings.TrimSpace(raw)
+	if v == "" {
+		return "", false
+	}
+	if !strings.Contains(v, "://") {
+		v = "https://" + v
+	}
+
+	u, err := url.Parse(v)
+	if err != nil || u.Scheme != "https" || u.Host == "" || len(v) > 500 {
+		return "", false
+	}
+	return v, true
+}
+
+// handleCreateMerchantSuggestion 是使用者提報「希望上架的平台」的入口。
+//
+// 目錄只由 admin 維護，所以手上有一家目錄裡沒有的平台的碼時，使用者原本是完全
+// 走不下去的——他放棄，我們也不知道少了哪一家。這支不建立任何公開的東西，
+// 只把那個名字送進後台的審核佇列。
+func (s *Server) handleCreateMerchantSuggestion(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name      string `json:"name"`
+		SignupURL string `json:"signup_url"`
+		Note      string `json:"note"`
+	}
+	if err := decodeJSON(w, r, &req); err != nil {
+		badRequest(w, codeInvalidRequest, "請求格式錯誤")
+		return
+	}
+
+	name := strings.TrimSpace(req.Name)
+	note := strings.TrimSpace(req.Note)
+	switch {
+	case name == "":
+		badRequest(w, codeSuggestionNameRequired, "請填寫平台名稱")
+		return
+	// 用 rune 數而不是 byte 數：中文名一個字三個 byte，照 byte 算會在 33 個字
+	// 就被擋下來，但資料庫的 CHECK 用的是 char_length（rune）。
+	case len([]rune(name)) > 100:
+		badRequest(w, codeSuggestionNameTooLong, "平台名稱太長了")
+		return
+	case len([]rune(note)) > 500:
+		badRequest(w, codeSuggestionNoteTooLong, "備註太長了")
+		return
+	}
+
+	signupURL, ok := normalizeSignupURL(req.SignupURL)
+	if !ok {
+		badRequest(w, codeSuggestionURLInvalid, "請填寫這個平台的官網連結")
+		return
+	}
+
+	ctx := r.Context()
+	userID, _ := auth.UserID(ctx)
+
+	// 已經在目錄裡的就不必提報了，直接告訴他去搜——他多半是沒搜到（名字不一樣、
+	// 或被地區排序推到後面），這比讓建議進佇列再被 admin 拒絕快得多。
+	existing, err := s.store.CountActiveMerchantsByName(ctx, name)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if existing > 0 {
+		conflict(w, codeSuggestionMerchantExists, "這個平台已經在目錄裡了")
+		return
+	}
+
+	pending, err := s.store.CountPendingSuggestionsByUser(ctx, userID)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if pending >= maxPendingSuggestions {
+		conflict(w, codeSuggestionLimitReached, "你還有幾筆平台建議在審核中，等審完再提報新的")
+		return
+	}
+
+	suggestion, err := s.store.CreateMerchantSuggestion(ctx, dbgen.CreateMerchantSuggestionParams{
+		UserID:    userID,
+		Name:      name,
+		SignupUrl: signupURL,
+		Note:      note,
+	})
+	if err != nil {
+		// 撞到 merchant_suggestions_user_pending_idx：同一個人已經送過這家了。
+		if store.IsUniqueViolation(err) {
+			conflict(w, codeSuggestionDuplicate, "你已經提報過這個平台了，審核中")
+			return
+		}
+		internalError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, suggestion)
 }
 
 func paginate(r *http.Request, def, max int32) (limit, offset int32) {

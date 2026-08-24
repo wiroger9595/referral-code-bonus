@@ -125,7 +125,9 @@
       "rejected": "Rejected",
       "expired": "Expired",
       "disabled": "Removed"
-    }
+    },
+    "groupEmptyTitle": "No {type} listed yet",
+    "groupEmptyDesc": "Once listed, you can see how often it gets viewed, tapped and copied."
   },
   "merchant": {
     "titleSuffix": "{name} referral codes",
@@ -174,6 +176,23 @@
     "noteDiscountPlaceholder": "e.g. $10 off your first order, 15% off sitewide, one month free",
     "discountNoteRequired": "Describe what this discount code gets you",
     "noteDiscount": "What's the offer"
+  },
+  "suggestMerchant": {
+    "entry": "Can't find your platform? Tell us",
+    "title": "Suggest a platform",
+    "intro": "Tell us which one it is and where its site is. We'll add it once we've checked.",
+    "name": "Platform name",
+    "namePlaceholder": "e.g. a bank, a booking site",
+    "url": "Website",
+    "urlPlaceholder": "https://",
+    "note": "Note",
+    "notePlaceholder": "Optional. e.g. what its referral program gives",
+    "reviewNotice": "We review every suggestion by hand. It shows up in the list once approved.",
+    "submit": "Submit",
+    "submitted": "Sent. We'll add it once we've checked.",
+    "nameRequired": "Please enter the platform name",
+    "urlRequired": "Please enter the website",
+    "submitFailed": "Couldn't send it"
   },
   "login": {
     "titleLogin": "Sign in",
@@ -279,7 +298,14 @@
     "reset_unavailable": "Password reset is temporarily unavailable. Please try again later.",
     "code_type_invalid": "Invalid code type",
     "code_type_not_allowed": "This merchant doesn't accept that kind of code",
-    "discount_note_required": "Describe what the discount code gets you in the note"
+    "discount_note_required": "Describe what the discount code gets you in the note",
+    "suggestion_name_required": "Please enter the platform name",
+    "suggestion_name_too_long": "That name is too long",
+    "suggestion_note_too_long": "That note is too long",
+    "suggestion_url_invalid": "Please enter the platform's website",
+    "suggestion_duplicate": "You've already suggested this one — it's under review",
+    "suggestion_merchant_exists": "This platform is already listed, try searching for it",
+    "suggestion_limit_reached": "You still have suggestions under review. Wait for those before sending more."
   },
   "pro": {
     "title": "Pro",

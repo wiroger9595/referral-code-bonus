@@ -102,6 +102,17 @@ export interface MerchantDetail {
 export type ReportResult = 'worked' | 'failed' | 'invalid_code' | 'merchant_closed'
 
 // 對應 referral_codes.status 的 CHECK 約束（refcode-api 的 00003_referral_codes.sql）。
+// 使用者提報的「希望上架的平台」。目錄只由 admin 維護，這是唯一能把
+// 「你們少了這一家」講出來的管道；送出後進後台的審核佇列。
+export interface MerchantSuggestion {
+  id: string
+  name: string
+  signup_url: string
+  note: string
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+}
+
 export type CodeStatus = 'pending' | 'active' | 'rejected' | 'expired' | 'disabled'
 
 // /v1/me/codes 的一列。跟公開列表的 CodeItem 形狀不一樣 ——

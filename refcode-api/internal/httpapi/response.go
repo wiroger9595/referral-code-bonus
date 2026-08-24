@@ -76,6 +76,14 @@ const (
 	codeReportResultInvalid  = "report_result_invalid"
 	codeProRequired          = "pro_required"
 	codeDeleteConfirmation   = "delete_confirmation_mismatch"
+	// 使用者提報希望上架的平台（見 handleCreateMerchantSuggestion）。
+	codeSuggestionNameRequired   = "suggestion_name_required"
+	codeSuggestionNameTooLong    = "suggestion_name_too_long"
+	codeSuggestionNoteTooLong    = "suggestion_note_too_long"
+	codeSuggestionURLInvalid     = "suggestion_url_invalid"
+	codeSuggestionDuplicate      = "suggestion_duplicate"
+	codeSuggestionMerchantExists = "suggestion_merchant_exists"
+	codeSuggestionLimitReached   = "suggestion_limit_reached"
 )
 
 // 後台。這幾個只有 refcode-admin 會遇到，admin 是單一語言，不需要翻譯。
@@ -90,6 +98,8 @@ const (
 	codeCategoryInUse        = "category_in_use"
 	codeImageInvalid         = "image_invalid"
 	codeUserNotFound         = "user_not_found"
+	codeSuggestionNotFound   = "suggestion_not_found"
+	codeSuggestionReviewed   = "suggestion_already_reviewed"
 )
 
 // 基礎設施與 webhook。前兩個是機器對機器，不會顯示給使用者。

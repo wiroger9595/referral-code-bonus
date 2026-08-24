@@ -7,6 +7,7 @@ import type {
   CodeType,
   MerchantDetail,
   MerchantListResponse,
+  MerchantSuggestion,
   MyCode,
   OAuthProvider,
   PopularTerm,
@@ -291,6 +292,15 @@ export const api = {
     code_type: CodeType
   }) {
     return request<MyCode>('/v1/codes', { method: 'POST', body: JSON.stringify(input) })
+  },
+
+  // 提報一家目錄裡沒有的平台。這支不會建立任何公開的東西，只是把名字送進
+  // 後台的審核佇列；通過之後那家才會出現在服務商清單裡。
+  suggestMerchant(input: { name: string; signup_url: string; note: string }) {
+    return request<MerchantSuggestion>('/v1/merchant-suggestions', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
   },
 
   // 下架不是刪除：碼會留在「我的推薦碼」裡標成已下架，公開列表看不到。

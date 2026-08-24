@@ -125,7 +125,9 @@
       "rejected": "已拒絕",
       "expired": "已到期",
       "disabled": "已下架"
-    }
+    },
+    "groupEmptyTitle": "還沒有上架任何{type}",
+    "groupEmptyDesc": "上架之後可以看到它被曝光、點擊、複製了幾次。"
   },
   "merchant": {
     "titleSuffix": "{name}推薦碼",
@@ -174,6 +176,23 @@
     "noteDiscountPlaceholder": "例如：新戶首購折 100、全站 85 折、免費試用一個月",
     "discountNoteRequired": "請說明這組折扣碼是什麼優惠",
     "noteDiscount": "這是什麼優惠"
+  },
+  "suggestMerchant": {
+    "entry": "找不到你的平台？告訴我們",
+    "title": "提報平台",
+    "intro": "填一下是哪一家、官網在哪，我們確認過就會把它加進目錄。",
+    "name": "平台名稱",
+    "namePlaceholder": "例如：某某銀行、某某訂房網",
+    "url": "官網連結",
+    "urlPlaceholder": "https://",
+    "note": "備註",
+    "notePlaceholder": "選填。例如：它的推薦計畫送什麼",
+    "reviewNotice": "送出後會由人工確認，通過才會出現在服務商清單裡。",
+    "submit": "送出",
+    "submitted": "已送出，我們確認後就會加進目錄",
+    "nameRequired": "請填寫平台名稱",
+    "urlRequired": "請填寫官網連結",
+    "submitFailed": "送出失敗"
   },
   "login": {
     "titleLogin": "登入",
@@ -279,7 +298,14 @@
     "reset_unavailable": "忘記密碼功能暫時無法使用，請稍後再試",
     "code_type_invalid": "碼的類型不正確",
     "code_type_not_allowed": "這個服務商沒有開放上架這種碼",
-    "discount_note_required": "折扣碼請在備註說明這是什麼優惠"
+    "discount_note_required": "折扣碼請在備註說明這是什麼優惠",
+    "suggestion_name_required": "請填寫平台名稱",
+    "suggestion_name_too_long": "平台名稱太長了",
+    "suggestion_note_too_long": "備註太長了",
+    "suggestion_url_invalid": "請填寫這個平台的官網連結",
+    "suggestion_duplicate": "你已經提報過這個平台了，審核中",
+    "suggestion_merchant_exists": "這個平台已經在清單裡了，搜尋看看",
+    "suggestion_limit_reached": "你還有幾筆平台建議在審核中，等審完再提報新的"
   },
   "pro": {
     "title": "Pro",

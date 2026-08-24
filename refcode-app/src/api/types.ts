@@ -99,6 +99,18 @@ export interface MerchantDetail {
   total: number
 }
 
+// 提報「希望上架的平台」之後拿到的建議單。目錄只由 admin 維護，這是使用者
+// 唯一能把「你們少了這一家」講出來的管道；送出後進後台的審核佇列，
+// 通過才會變成一家服務商。app 目前只用到送出的結果，不列出自己提過哪些。
+export interface MerchantSuggestion {
+  id: string
+  name: string
+  signup_url: string
+  note: string
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+}
+
 // 我的推薦碼列表帶了服務商資訊，跟公開列表的形狀不一樣。
 export interface MyCode {
   id: string

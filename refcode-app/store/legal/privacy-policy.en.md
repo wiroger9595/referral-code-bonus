@@ -50,6 +50,7 @@ view their performance.
 | Password | Email sign-up only. Stored as a one-way hash and **cannot be reversed** |
 | Profile photo | From Google / Apple Sign-In if you allow it, or an image you upload yourself. Images are hosted on Cloudinary and shown publicly alongside your display name |
 | Google / Apple user identifier | Used to recognise you on return visits |
+| Location (country) | **Optional.** Chosen by you from a country list at sign-up, and changeable or removable at any time from the Account tab. We use it to rank merchants available in your country higher in the directory; leaving it blank affects nothing else. **This is a country you select yourself, not derived from device location** — the app never requests or uses any location permission |
 
 If you use Sign in with Apple with "Hide My Email", we receive only Apple's relay address
 (`@privaterelay.appleid.com`) and cannot learn your real address.

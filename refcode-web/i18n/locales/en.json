@@ -68,7 +68,27 @@
     "historyTitle": "Recent searches",
     "historyClear": "Clear",
     "historyRemove": "Remove “{term}”",
-    "startHint": "Type a keyword to start searching."
+    "startHint": "Type a keyword to start searching.",
+    "suggestCta": "Suggest this platform"
+  },
+  "suggest": {
+    "title": "Suggest a platform",
+    "lead": "Not finding the one you're after? Tell us which it is and we'll add it once we've checked.",
+    "signInFirst": "Please sign in to suggest a platform.",
+    "name": "Platform name",
+    "namePlaceholder": "e.g. a bank, a booking site",
+    "url": "Website",
+    "urlHint": "Paste the platform's website or sign-up page.",
+    "note": "Note",
+    "notePlaceholder": "Optional. e.g. what its referral program gives, where it works",
+    "reviewNotice": "Every suggestion is reviewed by hand. It appears in the directory once approved.",
+    "submit": "Submit",
+    "pending": "Sending…",
+    "doneTitle": "Sent",
+    "doneDesc": "We'll add it to the directory once we've checked.",
+    "again": "Suggest another",
+    "nameRequired": "Please enter the platform name",
+    "urlRequired": "Please enter the website"
   },
   "merchant": {
     "codesAvailable": "{count} available",
@@ -224,7 +244,14 @@
     "reset_too_many_attempts": "Too many wrong attempts. Request a new code.",
     "reset_too_many_requests": "Too many requests. Try again later.",
     "reset_unavailable": "Password reset is temporarily unavailable. Please try again later.",
-    "image_invalid": "That image is the wrong format or too large (2MB max)."
+    "image_invalid": "That image is the wrong format or too large (2MB max).",
+    "suggestion_name_required": "Please enter the platform name",
+    "suggestion_name_too_long": "That name is too long",
+    "suggestion_note_too_long": "That note is too long",
+    "suggestion_url_invalid": "Please enter the platform's website",
+    "suggestion_duplicate": "You've already suggested this one — it's under review",
+    "suggestion_merchant_exists": "This platform is already in the directory, try searching for it",
+    "suggestion_limit_reached": "You still have suggestions under review. Wait for those before sending more."
   },
   "deleteAccount": {
     "title": "Delete your account",

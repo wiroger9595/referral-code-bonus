@@ -10,6 +10,7 @@ import {
   IonInput,
   IonItem,
   IonList,
+  IonModal,
   IonPage,
   IonSegment,
   IonSegmentButton,
@@ -18,10 +19,11 @@ import {
   IonTitle,
   IonToggle,
   IonToolbar,
+  onIonViewWillEnter,
   toastController,
 } from '@ionic/vue'
-import { alertCircle, giftOutline, shieldCheckmarkOutline } from 'ionicons/icons'
-import { computed, onMounted, ref, watch } from 'vue'
+import { addCircleOutline, alertCircle, giftOutline, shieldCheckmarkOutline } from 'ionicons/icons'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -63,7 +65,19 @@ const hasExpiry = ref(false)
 // 開關打開時才用得到，預設先擺三個月 —— 大部分活動不會撐更久。
 const expiresAt = ref(localDate(new Date(Date.now() + 90 * 86400000)))
 
-onMounted(async () => {
+// 不能用 onMounted：Ionic 把離開的頁面留在 DOM 裡重用（同 MyCodesTab），
+// setup 只跑一次，從第二家服務商按上架進來時表單會還停在上一家。
+onIonViewWillEnter(async () => {
+  // 帶了服務商就照它設；沒帶（從分頁或帳號頁進來）就保留使用者原本選的，
+  // 免得去 paywall 繞一圈回來，剛選好的服務商被清掉。
+  const fromQuery = route.query.merchant
+  if (typeof fromQuery === 'string' && fromQuery) {
+    merchantId.value = fromQuery
+  }
+
+  if (merchants.value.length > 0) {
+    return
+  }
   try {
     merchants.value = (await api.listMerchants()).merchants
   } catch (e) {
@@ -95,6 +109,57 @@ const isDiscount = computed(() => codeType.value === 'discount')
 // 「Klook - 全球旅遊＆玩樂體驗預訂平台」，選單裡只需要品牌名那一段。
 function shortName(name: string) {
   return name.split(/\s*[-|｜]\s*/)[0]
+}
+
+// 目錄裡沒有那一家的時候的出口。沒有這個，手上有碼但服務商還沒上架的人
+// 在這一頁就是完全走不下去 —— 他只能放棄，我們也不知道少了哪幾家。
+//
+// 用 modal 而不是另開一頁：他正填到一半，跳頁回來表單就沒了。
+const suggestOpen = ref(false)
+const suggestName = ref('')
+const suggestUrl = ref('')
+const suggestNote = ref('')
+const suggestLoading = ref(false)
+const suggestError = ref('')
+
+function openSuggest() {
+  suggestError.value = ''
+  suggestOpen.value = true
+}
+
+async function submitSuggestion() {
+  suggestError.value = ''
+  if (!suggestName.value.trim()) {
+    suggestError.value = t('suggestMerchant.nameRequired')
+    return
+  }
+  if (!suggestUrl.value.trim()) {
+    suggestError.value = t('suggestMerchant.urlRequired')
+    return
+  }
+
+  suggestLoading.value = true
+  try {
+    await api.suggestMerchant({
+      name: suggestName.value.trim(),
+      signup_url: suggestUrl.value.trim(),
+      note: suggestNote.value.trim(),
+    })
+    suggestOpen.value = false
+    suggestName.value = ''
+    suggestUrl.value = ''
+    suggestNote.value = ''
+
+    const toast = await toastController.create({
+      message: t('suggestMerchant.submitted'),
+      duration: 2600,
+    })
+    await toast.present()
+  } catch (e) {
+    suggestError.value = apiErrorMessage(e, 'suggestMerchant.submitFailed')
+  } finally {
+    suggestLoading.value = false
+  }
 }
 
 // 使用者選的是「有效到這一天」，所以送當地時區那天的最後一刻。
@@ -133,6 +198,12 @@ async function submit() {
       duration: 2200,
     })
     await toast.present()
+    // 這一輪結束了，把表單清乾淨 —— 頁面實例會被留著，不清的話下次進來
+    // 還看得到剛剛送出去的那組碼。
+    code.value = ''
+    note.value = ''
+    hasExpiry.value = false
+    codeType.value = 'referral'
     router.replace('/tabs/my-codes')
   } catch (e) {
     // 撞到免費方案上限時後端回 pro_required，這是要導去 paywall 而不是
@@ -176,6 +247,12 @@ async function submit() {
                   {{ shortName(m.name) }}
                 </IonSelectOption>
               </IonSelect>
+            </IonItem>
+
+            <!-- 選單裡找不到的那些人在這裡才會發現，出口就要放在選單旁邊。 -->
+            <IonItem lines="none" button :detail="false" @click="openSuggest">
+              <IonIcon slot="start" :icon="addCircleOutline" class="suggest-icon" />
+              <span class="suggest-link">{{ $t('suggestMerchant.entry') }}</span>
             </IonItem>
 
             <!-- 只收一種碼的服務商不給選，直接照那一種走；有選擇才值得佔一整列。 -->
@@ -255,6 +332,75 @@ async function submit() {
 
         <IonButton expand="block" class="wide" :disabled="loading" @click="submit">{{ $t('addCode.submit') }}</IonButton>
       </div>
+
+      <IonModal :is-open="suggestOpen" @did-dismiss="suggestOpen = false">
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>{{ $t('suggestMerchant.title') }}</IonTitle>
+            <IonButtons slot="end">
+              <IonButton @click="suggestOpen = false">{{ $t('common.cancel') }}</IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+
+        <IonContent>
+          <div class="page-pad form">
+            <p class="tiny muted">{{ $t('suggestMerchant.intro') }}</p>
+
+            <IonList class="app-form" lines="full">
+              <IonItem>
+                <IonInput
+                  v-model="suggestName"
+                  :label="$t('suggestMerchant.name')"
+                  label-placement="stacked"
+                  :placeholder="$t('suggestMerchant.namePlaceholder')"
+                />
+              </IonItem>
+
+              <IonItem>
+                <IonInput
+                  v-model="suggestUrl"
+                  :label="$t('suggestMerchant.url')"
+                  label-placement="stacked"
+                  :placeholder="$t('suggestMerchant.urlPlaceholder')"
+                  type="url"
+                  inputmode="url"
+                  autocapitalize="off"
+                  autocorrect="off"
+                />
+              </IonItem>
+
+              <IonItem>
+                <IonInput
+                  v-model="suggestNote"
+                  :label="$t('suggestMerchant.note')"
+                  label-placement="stacked"
+                  :placeholder="$t('suggestMerchant.notePlaceholder')"
+                />
+              </IonItem>
+            </IonList>
+
+            <div v-if="suggestError" class="error">
+              <IonIcon :icon="alertCircle" />
+              <span>{{ suggestError }}</span>
+            </div>
+
+            <div class="callout muted">
+              <IonIcon :icon="shieldCheckmarkOutline" />
+              <span>{{ $t('suggestMerchant.reviewNotice') }}</span>
+            </div>
+
+            <IonButton
+              expand="block"
+              class="wide"
+              :disabled="suggestLoading"
+              @click="submitSuggestion"
+            >
+              {{ $t('suggestMerchant.submit') }}
+            </IonButton>
+          </div>
+        </IonContent>
+      </IonModal>
     </IonContent>
   </IonPage>
 </template>
@@ -278,6 +424,19 @@ async function submit() {
 
 .sub {
   margin: -6px 0 10px;
+}
+
+/* 提報入口刻意做得比表單欄位輕：它是這一頁的支線，不該跟「選服務商」搶注意力。 */
+.suggest-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ion-color-primary);
+}
+
+.suggest-icon {
+  font-size: 18px;
+  color: var(--ion-color-primary);
+  margin-inline-end: 8px;
 }
 
 .type-picker {

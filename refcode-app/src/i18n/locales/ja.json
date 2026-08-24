@@ -125,7 +125,9 @@
       "rejected": "却下",
       "expired": "期限切れ",
       "disabled": "掲載終了"
-    }
+    },
+    "groupEmptyTitle": "{type}はまだ登録されていません",
+    "groupEmptyDesc": "登録すると、表示・タップ・コピーされた回数を確認できます。"
   },
   "merchant": {
     "titleSuffix": "{name}の紹介コード",
@@ -174,6 +176,23 @@
     "noteDiscountPlaceholder": "例：初回100円引き、全品15%オフ、1か月無料",
     "discountNoteRequired": "この割引コードの特典内容を書いてください",
     "noteDiscount": "どんな特典か"
+  },
+  "suggestMerchant": {
+    "entry": "お探しのサービスがない？教えてください",
+    "title": "サービスをリクエスト",
+    "intro": "どのサービスか、公式サイトはどこかを教えてください。確認のうえ追加します。",
+    "name": "サービス名",
+    "namePlaceholder": "例：銀行、宿泊予約サイト",
+    "url": "公式サイト",
+    "urlPlaceholder": "https://",
+    "note": "メモ",
+    "notePlaceholder": "任意。例：紹介プログラムの特典",
+    "reviewNotice": "送信後に手動で確認します。承認されると一覧に表示されます。",
+    "submit": "送信",
+    "submitted": "送信しました。確認のうえ追加します",
+    "nameRequired": "サービス名を入力してください",
+    "urlRequired": "公式サイトを入力してください",
+    "submitFailed": "送信できませんでした"
   },
   "login": {
     "titleLogin": "ログイン",
@@ -279,7 +298,14 @@
     "reset_unavailable": "パスワード再設定は現在ご利用いただけません。しばらくしてからお試しください",
     "code_type_invalid": "コードの種類が正しくありません",
     "code_type_not_allowed": "この事業者はこの種類のコードを受け付けていません",
-    "discount_note_required": "割引コードは備考に特典内容を書いてください"
+    "discount_note_required": "割引コードは備考に特典内容を書いてください",
+    "suggestion_name_required": "サービス名を入力してください",
+    "suggestion_name_too_long": "サービス名が長すぎます",
+    "suggestion_note_too_long": "メモが長すぎます",
+    "suggestion_url_invalid": "公式サイトを入力してください",
+    "suggestion_duplicate": "このサービスはすでにリクエスト済みです（確認中）",
+    "suggestion_merchant_exists": "このサービスはすでに掲載されています。検索してみてください",
+    "suggestion_limit_reached": "確認中のリクエストがあります。完了してから追加してください"
   },
   "pro": {
     "title": "Pro",

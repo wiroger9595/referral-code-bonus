@@ -25,6 +25,10 @@ const menuOptions = computed(() => {
   if (auth.isOwner) {
     items.push(
       {
+        label: () => h(RouterLink, { to: { name: 'suggestions' } }, () => '平台建議'),
+        key: 'suggestions',
+      },
+      {
         label: () => h(RouterLink, { to: { name: 'merchants' } }, () => '服務商'),
         key: 'merchants',
       },

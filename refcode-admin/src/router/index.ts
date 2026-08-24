@@ -26,6 +26,12 @@ const router = createRouter({
       component: () => import('../views/CodesView.vue'),
     },
     {
+      path: '/suggestions',
+      name: 'suggestions',
+      component: () => import('../views/SuggestionsView.vue'),
+      meta: { ownerOnly: true },
+    },
+    {
       path: '/merchants',
       name: 'merchants',
       component: () => import('../views/MerchantsView.vue'),

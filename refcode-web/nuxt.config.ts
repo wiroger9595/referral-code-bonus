@@ -62,9 +62,14 @@ export default defineNuxtConfig({
       // 瀏覽器預設的隱性請求會 404，所以要明確宣告。
       // SVG 版擺前面：它靠內嵌的 prefers-color-scheme 在深色分頁列上換色，
       // ico 是給不吃 SVG favicon 的環境的退路。
+      // 同理，iOS Safari 在沒有宣告的情況下會自己去試 /apple-touch-icon.png
+      // 與 -precomposed 版，兩條都不存在，Nuxt 會把它們當成頁面路徑丟給
+      // Vue Router，於是每次開站都洗出幾行 R0004 警告。指到現成的 app 圖示，
+      // 順便讓「加入主畫面」有正確的圖。
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/images/favicon.svg' },
         { rel: 'icon', type: 'image/x-icon', href: '/images/favicon.ico' },
+        { rel: 'apple-touch-icon', href: '/images/app-icon-1024.png' },
       ],
     },
   },

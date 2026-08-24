@@ -7,6 +7,7 @@ import type {
   Category,
   Merchant,
   MerchantInput,
+  MerchantSuggestion,
   PendingCode,
   ReferralCode,
   ReviewAction,
@@ -192,6 +193,27 @@ export const api = {
     return request<Merchant>(`/v1/admin/merchants/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(input),
+    })
+  },
+
+  // 使用者提報的待審平台。只有 owner 打得動這兩支 —— 通過等於建立服務商。
+  listMerchantSuggestions(limit = 50, offset = 0) {
+    return request<{ suggestions: MerchantSuggestion[]; total: number }>(
+      `/v1/admin/merchant-suggestions?limit=${limit}&offset=${offset}`,
+    )
+  },
+
+  // approve 要帶 slug 與分類（使用者填不出這兩個，但 merchants 兩個都必填），
+  // reject 要帶原因。回傳通過時建出來的那家服務商，拒絕時是 null。
+  reviewMerchantSuggestion(
+    id: string,
+    input:
+      | { action: 'approve'; slug: string; category_id: string; reason?: string }
+      | { action: 'reject'; reason: string },
+  ) {
+    return request<{ merchant: Merchant | null }>(`/v1/admin/merchant-suggestions/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: '', slug: '', category_id: '', ...input }),
     })
   },
 
