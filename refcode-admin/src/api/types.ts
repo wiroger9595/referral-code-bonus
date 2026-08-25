@@ -133,6 +133,10 @@ export interface AdminCodeItem extends ReferralCode {
   report_failed: number
   report_invalid_code: number
   report_merchant_closed: number
+  // 「內容令人反感」的檢舉。跟上面四種分開看：那四種在講碼還能不能用，
+  // 這個是 UGC 政策要處理的內容問題，不影響品質分數也不會自動下架，
+  // 所以只有人工看到才會有動作。
+  report_objectionable: number
   // null 代表這個碼還沒有人回報過。
   last_reported_at: string | null
   // 只有自動下架清單那支會帶：系統把它打掉的時間。

@@ -66,6 +66,29 @@ WHERE m.is_active
 --
 -- search 進來之前已經在 handler escape 過 % 與 _（見 escapeLike），
 -- 這裡不必再處理萬用字元。
+--
+-- 最後那條是打錯字的救援：ILIKE 是子字串比對，'coupng' 少一個字母就一筆都不中。
+--
+-- 用 word_similarity 而不是 similarity：後者比的是整個字串，名字帶後綴時分數
+-- 會被稀釋掉 —— 'amazn' 對 'Amazon Shopping' 只有 0.222，對 'Amazon' 才夠高，
+-- 而目錄裡的名字十家有八家帶後綴。word_similarity 是拿查詢去比對方最像的那一段，
+-- 同一組實測 0.667。參數順序不能反：第一個是要拿去找的詞，第二個是被找的字串。
+--
+-- 門檻 0.5 是照現有 263 家實測出來的：典型 typo 最低的是 'coupng'→'Coupang' 的
+-- 0.571，抓得到；再往上一階到 pg_trgm 預設的 0.6 就會漏掉它。
+--
+-- length >= 4 這道更重要。三個字母的查詢 trigram 太少，'pay' 在 0.5 會撈出
+-- Paramount+、Papa Johns、Panera Bread 這種只是開頭像的；四個字以上就乾淨了
+-- （bank / shop / food / card 實測都沒有多撈）。短查詢本來就容易精確命中，
+-- 不需要模糊救。中日文查詢通常只有兩三個字，會被這道擋掉 —— 但三連字元對中文
+-- 本來就切不出東西（見 SuggestMerchants 的說明），擋掉沒有損失。
+--
+-- 比對的是 search_raw（未 escape）。word_similarity 不吃 LIKE 的萬用字元，
+-- 餵 escape 過的字串進去，反斜線會變成要比對的內容之一。
+--
+-- 這條走不到 merchants_name_trgm 那個 GIN 索引（要 <% 運算子才走得到，但它的
+-- 門檻是 session 層級的 GUC，連線池底下設了會殘留給下一個請求），所以是全表計算。
+-- 263 家的規模這個代價無所謂，真的長到幾萬家再回頭換成 <% 加 set_limit。
   AND (
     sqlc.narg(search)::text IS NULL
     OR (
@@ -75,6 +98,10 @@ WHERE m.is_active
     OR (
         c.name || ' ' || coalesce(c.name_en, '') || ' ' || coalesce(c.name_ja, '')
     ) ILIKE '%' || sqlc.narg(search)::text || '%'
+    OR (
+        length(sqlc.narg(search_raw)::text) >= 4
+        AND extensions.word_similarity(sqlc.narg(search_raw)::text, m.name) >= 0.5
+    )
   )
 -- 地區過濾。region 是 NULL 就完全不篩 —— 匿名訪客、沒填所在地、或使用者自己
 -- 選了「所有地區」都走這條，官網匿名的 SSR 內容因此不會因人而異，SEO 不受影響。
@@ -102,7 +129,14 @@ ORDER BY
         WHEN m.name ILIKE sqlc.narg(search)::text THEN 0                 -- 名稱就是這個字
         WHEN m.name ILIKE sqlc.narg(search)::text || '%' THEN 1          -- 名稱開頭命中
         WHEN m.name ILIKE '%' || sqlc.narg(search)::text || '%' THEN 2   -- 名稱中間命中
-        ELSE 3                                                            -- 只有說明或分類名命中
+        WHEN (
+            m.name || ' ' || m.reward_desc || ' ' ||
+            coalesce(m.reward_desc_en, '') || ' ' || coalesce(m.reward_desc_ja, '')
+        ) ILIKE '%' || sqlc.narg(search)::text || '%'
+          OR (
+            c.name || ' ' || coalesce(c.name_en, '') || ' ' || coalesce(c.name_ja, '')
+        ) ILIKE '%' || sqlc.narg(search)::text || '%' THEN 3              -- 說明或分類名命中
+        ELSE 4                                                            -- 名字只是「像」，靠 similarity 撈回來的
     END,
     CASE
         WHEN sqlc.narg(viewer_country)::text IS NULL THEN 1
@@ -188,6 +222,33 @@ FROM referral_code_bonus.merchants m
 JOIN referral_code_bonus.merchant_categories c ON c.id = m.category_id
 ORDER BY m.name;
 
+-- app 的地區選單要照「實際有服務商的國家」給，不是寫死一份清單 ——
+-- 目錄是從 App Store 排行榜匯進來的，涵蓋哪些國家會隨著匯入與停用一直變。
+-- 寫死的清單遲早會同時出現「選了卻是空的」與「有服務商卻選不到」兩種錯。
+--
+-- countries 是空陣列的服務商（不分地區）不會貢獻任何國家，這是對的：
+-- 它們在任何地區都看得到，不構成「選這個國家」的理由。
+-- name: ListActiveMerchantCountries :many
+-- ::text 不能省：sqlc 推不出 unnest() 的型別，沒有 cast 會產出 interface{}。
+SELECT c::text AS country, count(*) AS merchant_count
+FROM referral_code_bonus.merchants m, unnest(m.countries) AS c
+WHERE m.is_active
+GROUP BY c
+ORDER BY merchant_count DESC, c;
+
 -- sitemap 用：所有可索引的服務商 slug。
 -- name: ListMerchantSlugs :many
 SELECT slug, updated_at FROM referral_code_bonus.merchants WHERE is_active ORDER BY slug;
+
+-- logo 補圖用（cmd/logobackfill）。只動 logo_url，不像 UpdateMerchant 那樣整列覆蓋 ——
+-- 補圖跟後台編輯是兩件事，用全欄位更新會把後台剛改好的欄位一起蓋回舊值。
+-- 只補還沒有圖的，重複跑不會覆蓋已經有圖的（包含後台手動換過的）。
+-- name: SetMerchantLogo :execrows
+UPDATE referral_code_bonus.merchants
+SET logo_url = @logo_url, updated_at = now()
+WHERE id = @id AND logo_url IS NULL;
+
+-- 補圖用：還沒有 logo 的啟用中服務商。
+-- name: ListMerchantsWithoutLogo :many
+SELECT id, slug, name, signup_url FROM referral_code_bonus.merchants
+WHERE is_active AND logo_url IS NULL ORDER BY name;

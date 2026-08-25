@@ -151,7 +151,16 @@
     "emptyTitle": "No valid codes right now",
     "emptyDesc": "Expired codes are removed automatically. Check back later, or share one of your own.",
     "addMine": "Share yours",
-    "rewardPending": "No reward details yet"
+    "rewardPending": "No reward details yet",
+    "moreLabel": "More",
+    "moreHeader": "Code shared by {name}",
+    "reportObjectionable": "Report objectionable content",
+    "blockOwner": "Block this person",
+    "blockConfirmTitle": "Block this person?",
+    "blockConfirmBody": "Codes shared by {name} will no longer appear for you. You can undo this in Account → Blocked people.",
+    "blockConfirm": "Block",
+    "blockDone": "Blocked {name}",
+    "blockFailed": "Couldn't block. Please try again."
   },
   "addCode": {
     "title": "Share a code",
@@ -305,7 +314,8 @@
     "suggestion_url_invalid": "Please enter the platform's website",
     "suggestion_duplicate": "You've already suggested this one — it's under review",
     "suggestion_merchant_exists": "This platform is already listed, try searching for it",
-    "suggestion_limit_reached": "You still have suggestions under review. Wait for those before sending more."
+    "suggestion_limit_reached": "You still have suggestions under review. Wait for those before sending more.",
+    "cannot_block_self": "You can't block yourself"
   },
   "pro": {
     "title": "Pro",
@@ -358,5 +368,14 @@
     "discount": "Discount code",
     "referralHint": "Your own referral code — both sides get a reward when someone uses it.",
     "discountHint": "A discount code you have. Whoever uses it gets the discount; you get nothing."
+  },
+  "blocks": {
+    "title": "Blocked people",
+    "lead": "Codes from these people won't appear for you. They aren't told they were blocked.",
+    "emptyTitle": "You haven't blocked anyone",
+    "emptyDesc": "Tap \"⋯\" on any code to report or block.",
+    "unblock": "Unblock",
+    "unblocked": "Unblocked {name}",
+    "unblockFailed": "Couldn't unblock. Please try again."
   }
 }

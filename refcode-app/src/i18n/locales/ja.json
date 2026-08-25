@@ -151,7 +151,16 @@
     "emptyTitle": "現在、有効なコードはありません",
     "emptyDesc": "期限切れのコードは自動的に掲載終了します。しばらくしてから確認するか、ご自身のコードを登録してください。",
     "addMine": "登録する",
-    "rewardPending": "特典情報はまだありません"
+    "rewardPending": "特典情報はまだありません",
+    "moreLabel": "その他",
+    "moreHeader": "{name} さんのコード",
+    "reportObjectionable": "不適切な内容を報告",
+    "blockOwner": "この人をブロック",
+    "blockConfirmTitle": "この人をブロックしますか？",
+    "blockConfirmBody": "{name} さんのコードは表示されなくなります。「アカウント → ブロックした人」で解除できます。",
+    "blockConfirm": "ブロック",
+    "blockDone": "{name} さんをブロックしました",
+    "blockFailed": "ブロックできませんでした。しばらくしてからお試しください。"
   },
   "addCode": {
     "title": "コードを登録",
@@ -305,7 +314,8 @@
     "suggestion_url_invalid": "公式サイトを入力してください",
     "suggestion_duplicate": "このサービスはすでにリクエスト済みです（確認中）",
     "suggestion_merchant_exists": "このサービスはすでに掲載されています。検索してみてください",
-    "suggestion_limit_reached": "確認中のリクエストがあります。完了してから追加してください"
+    "suggestion_limit_reached": "確認中のリクエストがあります。完了してから追加してください",
+    "cannot_block_self": "自分をブロックすることはできません"
   },
   "pro": {
     "title": "Pro",
@@ -358,5 +368,14 @@
     "discount": "割引コード",
     "referralHint": "あなた自身の紹介コードです。使われると双方に特典があります。",
     "discountHint": "手持ちの割引コードです。使った人だけが割引を受けられます。"
+  },
+  "blocks": {
+    "title": "ブロックした人",
+    "lead": "この人たちのコードは表示されません。ブロックされたことは相手に通知されません。",
+    "emptyTitle": "ブロックした人はいません",
+    "emptyDesc": "コードの「⋯」から報告またはブロックできます。",
+    "unblock": "解除",
+    "unblocked": "{name} さんのブロックを解除しました",
+    "unblockFailed": "解除できませんでした。しばらくしてからお試しください。"
   }
 }

@@ -4,7 +4,22 @@ export type CodeStatus = 'pending' | 'active' | 'rejected' | 'expired' | 'disabl
 // 上架的碼有兩種來源：自己的推薦碼（雙方各拿獎勵），或手上的折扣碼（只有使用的人拿到折扣）。
 // 兩種的欄位一模一樣，折扣碼的優惠內容寫在 note 裡。
 export type CodeType = 'referral' | 'discount'
-export type ReportResult = 'worked' | 'failed' | 'invalid_code' | 'merchant_closed'
+// 前四種在講「這組碼還能不能用」，objectionable 是 UGC 政策要的
+// 「檢舉令人反感的內容」—— 後者不影響品質分數與自動下架，只給後台看。
+export type ReportResult =
+  | 'worked'
+  | 'failed'
+  | 'invalid_code'
+  | 'merchant_closed'
+  | 'objectionable'
+
+// 被我封鎖的上架者。封鎖是單向的，對方不會知道。
+export interface BlockedUser {
+  blocked_id: string
+  display_name: string
+  avatar_url: string | null
+  created_at: string
+}
 export type OAuthProvider = 'google' | 'apple'
 
 export interface TokenPair {
@@ -55,6 +70,13 @@ export interface MerchantSummary {
   countries: string[]
   // 這家收哪幾種碼。沒有推薦計畫的服務商只會有 discount，上架表單靠它決定選項。
   allowed_code_types: CodeType[]
+}
+
+// 目錄實際涵蓋的國家，由後端從啟用中的服務商算出來（見 /v1/regions）。
+// 地區選單照這份給，不在前端寫死 —— 寫死的清單會跟匯入／停用分岔。
+export interface Region {
+  code: string
+  merchant_count: number
 }
 
 // 搜不到東西時後端給的「你是不是要找」。有結果時是空陣列。

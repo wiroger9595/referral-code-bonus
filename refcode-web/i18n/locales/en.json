@@ -280,5 +280,35 @@
   "codeType": {
     "referral": "Referral code",
     "discount": "Discount code"
+  },
+  "support": {
+    "seoTitle": "Support & FAQ",
+    "seoDescription": "Frequently asked questions, contact details and account help.",
+    "heading": "Support",
+    "lead": "Most questions are answered below. If yours is not, email us.",
+    "faqTitle": "Frequently asked questions",
+    "faq": {
+      "code": {
+        "q": "The code I copied was rejected",
+        "a": "Codes are case-sensitive. Paste the whole string exactly, with no extra spaces. If it still fails, go back and tap \"Did not work\" — enough reports and the code is taken down automatically."
+      },
+      "expired": {
+        "q": "Why are there fewer codes than yesterday?",
+        "a": "Codes carry an expiry date and come down automatically when they pass it, as do codes reported as dead too often. The catalogue only keeps what still works."
+      },
+      "rewards": {
+        "q": "When does my reward arrive?",
+        "a": "Rewards are issued by each service, not by us — we never handle rewards, points or money. Check that service’s own terms for timing and conditions."
+      },
+      "account": {
+        "q": "What if I see something objectionable?",
+        "a": "Tap \"⋯\" on any code in the app to report the content or block the person who shared it. Blocked people’s codes stop appearing for you. Every code is reviewed by a human before it goes live."
+      }
+    },
+    "contactTitle": "Contact us",
+    "contactBody": "If your answer is not above, email us. Include the service name and the code itself so we can find it faster.",
+    "accountTitle": "Account & privacy",
+    "accountBody": "You can delete your account without installing the app.",
+    "deleteAccountLink": "Delete account"
   }
 }

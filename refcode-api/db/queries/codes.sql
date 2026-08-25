@@ -52,10 +52,19 @@ SELECT
     ) AS owner_is_pro
 FROM referral_code_bonus.referral_codes c
 JOIN referral_code_bonus.users u ON u.id = c.user_id
-WHERE c.merchant_id = $1
+WHERE c.merchant_id = sqlc.arg(merchant_id)
   AND c.status = 'active'
   -- expires_at IS NULL 是永久有效的碼，永遠留在候選池裡。
   AND (c.expires_at IS NULL OR c.expires_at > now())
+  -- 被我封鎖的人，他的碼不該再出現在我眼前 —— 這是封鎖的全部意義
+  -- （見 00012_user_blocks.sql）。viewer_id 是 NULL 代表沒登入，沒有封鎖名單可言。
+  AND (
+    sqlc.narg(viewer_id)::uuid IS NULL
+    OR NOT EXISTS (
+        SELECT 1 FROM referral_code_bonus.user_blocks b
+        WHERE b.blocker_id = sqlc.narg(viewer_id)::uuid AND b.blocked_id = c.user_id
+    )
+  )
 ORDER BY c.quality_score DESC, c.created_at DESC
 LIMIT 200;
 
@@ -106,6 +115,7 @@ SELECT
     coalesce(rs.failed, 0) AS report_failed,
     coalesce(rs.invalid_code, 0) AS report_invalid_code,
     coalesce(rs.merchant_closed, 0) AS report_merchant_closed,
+    coalesce(rs.objectionable, 0) AS report_objectionable,
     rs.last_reported_at,
     count(*) OVER () AS total_count
 FROM referral_code_bonus.referral_codes c
@@ -118,6 +128,7 @@ LEFT JOIN LATERAL (
         count(*) FILTER (WHERE r.result = 'failed')           AS failed,
         count(*) FILTER (WHERE r.result = 'invalid_code')     AS invalid_code,
         count(*) FILTER (WHERE r.result = 'merchant_closed')  AS merchant_closed,
+        count(*) FILTER (WHERE r.result = 'objectionable')    AS objectionable,
         max(r.created_at)                                     AS last_reported_at
     FROM referral_code_bonus.code_reports r
     WHERE r.code_id = c.id
@@ -160,6 +171,7 @@ SELECT
     coalesce(rs.failed, 0) AS report_failed,
     coalesce(rs.invalid_code, 0) AS report_invalid_code,
     coalesce(rs.merchant_closed, 0) AS report_merchant_closed,
+    coalesce(rs.objectionable, 0) AS report_objectionable,
     rs.last_reported_at,
     last_review.created_at AS disabled_at,
     count(*) OVER () AS total_count
@@ -173,6 +185,7 @@ LEFT JOIN LATERAL (
         count(*) FILTER (WHERE r.result = 'failed')           AS failed,
         count(*) FILTER (WHERE r.result = 'invalid_code')     AS invalid_code,
         count(*) FILTER (WHERE r.result = 'merchant_closed')  AS merchant_closed,
+        count(*) FILTER (WHERE r.result = 'objectionable')    AS objectionable,
         max(r.created_at)                                     AS last_reported_at
     FROM referral_code_bonus.code_reports r
     WHERE r.code_id = c.id
@@ -240,6 +253,9 @@ SELECT
 FROM (
     SELECT result FROM referral_code_bonus.code_reports
     WHERE code_id = $1
+      -- objectionable 是「內容令人反感」，不是「碼不能用」。算進來的話，
+      -- 檢舉幾次就能把對手的碼推過自動下架的門檻（見 ranking.ShouldAutoDisable）。
+      AND result <> 'objectionable'
     ORDER BY created_at DESC
     LIMIT 10
 ) recent;

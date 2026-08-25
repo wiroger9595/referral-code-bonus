@@ -151,7 +151,16 @@
     "emptyTitle": "目前沒有有效的碼",
     "emptyDesc": "到期的碼會自動下架。晚點再回來看看，或自己上架一組。",
     "addMine": "上架",
-    "rewardPending": "這家還沒有獎勵資訊"
+    "rewardPending": "這家還沒有獎勵資訊",
+    "moreLabel": "更多",
+    "moreHeader": "{name} 分享的碼",
+    "reportObjectionable": "檢舉不當內容",
+    "blockOwner": "封鎖這位上架者",
+    "blockConfirmTitle": "封鎖這位上架者？",
+    "blockConfirmBody": "{name} 上架的碼都不會再出現在你的目錄裡。你可以在「帳號 → 已封鎖的上架者」解除。",
+    "blockConfirm": "封鎖",
+    "blockDone": "已封鎖 {name}",
+    "blockFailed": "封鎖失敗，請稍後再試"
   },
   "addCode": {
     "title": "上架",
@@ -305,7 +314,8 @@
     "suggestion_url_invalid": "請填寫這個平台的官網連結",
     "suggestion_duplicate": "你已經提報過這個平台了，審核中",
     "suggestion_merchant_exists": "這個平台已經在清單裡了，搜尋看看",
-    "suggestion_limit_reached": "你還有幾筆平台建議在審核中，等審完再提報新的"
+    "suggestion_limit_reached": "你還有幾筆平台建議在審核中，等審完再提報新的",
+    "cannot_block_self": "不能封鎖自己"
   },
   "pro": {
     "title": "Pro",
@@ -358,5 +368,14 @@
     "discount": "折扣碼",
     "referralHint": "你自己的推薦碼，別人用了雙方都拿得到獎勵。",
     "discountHint": "你手上的折扣碼，用的人可以拿到折扣，你不會有獎勵。"
+  },
+  "blocks": {
+    "title": "已封鎖的上架者",
+    "lead": "這些人上架的碼不會出現在你的目錄裡。他們不會知道自己被封鎖。",
+    "emptyTitle": "沒有封鎖任何人",
+    "emptyDesc": "在服務商頁的碼上點「⋯」就可以檢舉或封鎖。",
+    "unblock": "解除",
+    "unblocked": "已解除封鎖 {name}",
+    "unblockFailed": "解除失敗，請稍後再試"
   }
 }

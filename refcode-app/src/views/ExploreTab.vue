@@ -32,7 +32,7 @@ import type { Category, MerchantSummary, PopularTerm, SearchSuggestion } from '.
 import { categoryIcon } from '../categories'
 import EmptyState from '../components/EmptyState.vue'
 import SkeletonList from '../components/SkeletonList.vue'
-import { countryName, countryOptions } from '../countries'
+import { countryName, regionOptions } from '../countries'
 import { apiErrorMessage, daysUntilExpiry, expiryLabel, rewardText } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { ALL_REGIONS, useRegionStore } from '../stores/region'
@@ -90,6 +90,9 @@ async function load(commit = false) {
 onMounted(async () => {
   // 地區要在第一次查詢之前決定，不然會先閃一份全地區的清單再跳掉。
   await regionStore.load().catch(() => {})
+  // 不 await：地區清單只影響選單與判定的邊界，晚幾百毫秒到不該擋住首屏。
+  // load() 已經把上次的快取讀進來了，這支只是把它更新成最新的。
+  void regionStore.refreshSupported()
   await load()
 
   // 以下都是加分項：分類磁磚、熱門關鍵字、搜尋歷史任何一個掛掉，
@@ -113,7 +116,10 @@ async function pickRegion() {
   const sheet = await actionSheetController.create({
     header: t('explore.regionHeader'),
     buttons: [
-      ...countryOptions().map((c) => ({ text: c.label, handler: () => applyRegion(c.code) })),
+      ...regionOptions(regionStore.supported).map((c) => ({
+        text: c.label,
+        handler: () => applyRegion(c.code),
+      })),
       { text: t('explore.allRegions'), handler: () => applyRegion(ALL_REGIONS) },
       { text: t('common.cancel'), role: 'cancel' },
     ],

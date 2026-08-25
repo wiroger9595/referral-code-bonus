@@ -34,6 +34,7 @@ export default defineEventHandler(async (event) => {
   const pages: Page[] = [
     { path: '', priority: '1.0' },
     { path: '/about', priority: '0.3' },
+    { path: '/support', priority: '0.3' },
     ...categories.categories.map((c) => ({ path: `/category/${c.id}`, priority: '0.7' })),
     ...merchants.entries.map((m) => ({
       path: `/referral/${m.slug}`,

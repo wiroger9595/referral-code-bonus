@@ -84,6 +84,7 @@ func (s *Server) Routes() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.optionalUser)
 
+			r.Get("/regions", s.handleListRegions)
 			r.Get("/categories", s.handleListCategories)
 			r.Get("/categories/{id}", s.handleGetCategory)
 			r.Get("/merchants", s.handleListMerchants)
@@ -101,6 +102,9 @@ func (s *Server) Routes() http.Handler {
 			r.Patch("/me", s.handleUpdateMe)
 			r.Delete("/me", s.handleDeleteMe)
 			r.Post("/me/avatar", s.handleUploadAvatar)
+			r.Get("/me/blocks", s.handleListMyBlocks)
+			r.Delete("/me/blocks/{id}", s.handleUnblockUser)
+			r.Post("/codes/{id}/block-owner", s.handleBlockCodeOwner)
 			r.Get("/me/codes", s.handleListMyCodes)
 			r.Post("/codes", s.handleCreateCode)
 			// 提報希望上架的平台。要登入 —— 建議單會進人工審核佇列，

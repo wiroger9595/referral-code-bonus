@@ -135,6 +135,10 @@ async function signOut() {
         <NuxtLink :to="localePath('/terms')" class="hover:text-ink">
           {{ $t('legal.termsSeoTitle') }}
         </NuxtLink>
+        <span aria-hidden="true">·</span>
+        <NuxtLink :to="localePath('/support')" class="hover:text-ink">
+          {{ $t('support.heading') }}
+        </NuxtLink>
         <template v-if="cfg.supportEmail">
           <span aria-hidden="true">·</span>
           <a :href="`mailto:${cfg.supportEmail}`" class="hover:text-ink">

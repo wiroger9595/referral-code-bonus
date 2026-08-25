@@ -455,7 +455,9 @@ func (s *Server) handleCreateReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch req.Result {
-	case "worked", "failed", "invalid_code", "merchant_closed":
+	// objectionable 是 UGC 政策要的「檢舉令人反感的內容」，跟前四種
+	// 「這組碼還能不能用」是不同性質的事（見 00012_user_blocks.sql）。
+	case "worked", "failed", "invalid_code", "merchant_closed", "objectionable":
 	default:
 		badRequest(w, codeReportResultInvalid, "result 不在允許的值內")
 		return
@@ -492,10 +494,89 @@ func (s *Server) handleCreateReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.applyReportOutcome(r, code); err != nil {
+	// 內容檢舉不重算品質分數：那是給後台人工看的，不是「碼不能用」的訊號。
+	// GetRecentReportStats 也把 objectionable 排除在外，兩邊要一致。
+	if req.Result != "objectionable" {
+		if err := s.applyReportOutcome(r, code); err != nil {
+			internalError(w, r, err)
+			return
+		}
+	}
+	writeJSON(w, http.StatusNoContent, nil)
+}
+
+// handleBlockCodeOwner 封鎖某組碼的上架者。
+//
+// 用 code id 而不是 user id：公開 API 從來沒有把 user id 吐出去過
+// （codeItem 只有 owner_name 與頭像），為了封鎖而開始曝光使用者 id 不划算。
+//
+// 封鎖是單向的，不通知對方，也不動對方的帳號 —— 要不要處分是後台看了檢舉
+// 之後的事。這裡只負責讓這個使用者馬上看不到那個人的碼。
+func (s *Server) handleBlockCodeOwner(w http.ResponseWriter, r *http.Request) {
+	codeID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		badRequest(w, codeInvalidID, "id 格式錯誤")
+		return
+	}
+
+	ctx := r.Context()
+	code, err := s.store.GetCodeByID(ctx, codeID)
+	if err != nil {
+		if store.IsNotFound(err) {
+			notFound(w, codeCodeNotFound, "找不到這個碼")
+			return
+		}
 		internalError(w, r, err)
 		return
 	}
+
+	userID, _ := auth.UserID(ctx)
+	// 資料庫的 user_blocks_not_self 也會擋，但那會變成 500。
+	if code.UserID == userID {
+		badRequest(w, codeCannotBlockSelf, "不能封鎖自己")
+		return
+	}
+
+	if err := s.store.BlockUser(ctx, dbgen.BlockUserParams{
+		BlockerID: userID,
+		BlockedID: code.UserID,
+	}); err != nil {
+		internalError(w, r, err)
+		return
+	}
+
+	slog.Info("封鎖上架者", "blocker", userID, "blocked", code.UserID, "code_id", codeID)
+	writeJSON(w, http.StatusNoContent, nil)
+}
+
+// handleListMyBlocks 是解除封鎖的唯一入口 —— 封鎖之後對方的碼就消失了，
+// 沒有這一頁，誤封的人再也找不到那個人。
+func (s *Server) handleListMyBlocks(w http.ResponseWriter, r *http.Request) {
+	userID, _ := auth.UserID(r.Context())
+	rows, err := s.store.ListMyBlocks(r.Context(), userID)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"blocks": rows})
+}
+
+func (s *Server) handleUnblockUser(w http.ResponseWriter, r *http.Request) {
+	blockedID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		badRequest(w, codeInvalidID, "id 格式錯誤")
+		return
+	}
+
+	userID, _ := auth.UserID(r.Context())
+	if err := s.store.UnblockUser(r.Context(), dbgen.UnblockUserParams{
+		BlockerID: userID,
+		BlockedID: blockedID,
+	}); err != nil {
+		internalError(w, r, err)
+		return
+	}
+	// 本來就沒封鎖也回 204：結果一樣是「現在沒有封鎖他」。
 	writeJSON(w, http.StatusNoContent, nil)
 }
 

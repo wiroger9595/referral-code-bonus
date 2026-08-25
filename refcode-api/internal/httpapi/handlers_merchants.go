@@ -142,6 +142,33 @@ func (s *Server) handleListCategories(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"categories": out})
 }
 
+// handleListRegions 回目錄實際涵蓋哪些國家，給 app 的地區選單與自動判定用。
+//
+// 存在的理由是「寫死的清單一定會跟資料分岔」：目錄從 App Store 排行榜匯進來，
+// 涵蓋的國家隨著匯入與停用一直變。app 端原本那份寫死的清單就同時有兩種錯 ——
+// 列了沒有任何服務商的國家（選了看到空目錄），也漏掉服務商最多的國家（選不到）。
+//
+// 不做語言在地化：回的是 ISO 代碼，國名交給前端的 Intl.DisplayNames，
+// 跟 countries.ts 現在的做法一致，不必為了十幾個國名多維護三份語系。
+func (s *Server) handleListRegions(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.store.ListActiveMerchantCountries(r.Context())
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+
+	type region struct {
+		Code string `json:"code"`
+		// 給前端排序與顯示「N 家」用。名稱同樣不在這裡翻。
+		MerchantCount int64 `json:"merchant_count"`
+	}
+	out := make([]region, len(rows))
+	for i, row := range rows {
+		out[i] = region{Code: row.Country, MerchantCount: row.MerchantCount}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"regions": out})
+}
+
 // handleGetCategory 給分類頁用：網址上只有 id，但頁面要顯示分類名稱。
 func (s *Server) handleGetCategory(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -227,12 +254,13 @@ func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 		}
 		params.CategoryID = &id
 	}
-	// 原字串留著給 similarity() 與熱門榜用：那兩條路不吃 LIKE 的萬用字元，
-	// escape 過的反斜線反而會變成要比對的內容。
+	// 兩份都要傳：ILIKE 吃 escape 過的，similarity() 與熱門榜吃原字串 ——
+	// 後兩者不認 LIKE 的萬用字元，escape 過的反斜線反而會變成要比對的內容。
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	if q != "" {
 		escaped := escapeLike(q)
 		params.Search = &escaped
+		params.SearchRaw = &q
 	}
 
 	rows, err := s.store.ListMerchants(r.Context(), params)
@@ -338,7 +366,15 @@ func (s *Server) handleGetMerchant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := s.store.ListActiveCodesForMerchant(ctx, merchant.ID)
+	// 沒登入就沒有封鎖名單，傳 nil 等於不濾。
+	var viewerID *uuid.UUID
+	if id, ok := auth.UserID(ctx); ok {
+		viewerID = &id
+	}
+	rows, err := s.store.ListActiveCodesForMerchant(ctx, dbgen.ListActiveCodesForMerchantParams{
+		MerchantID: merchant.ID,
+		ViewerID:   viewerID,
+	})
 	if err != nil {
 		internalError(w, r, err)
 		return

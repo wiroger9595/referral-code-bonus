@@ -199,6 +199,18 @@ function baseColumns(): DataTableColumns<AdminCodeItem> {
         ]),
     },
     {
+      title: '內容檢舉',
+      key: 'report_objectionable',
+      width: 100,
+      // 有內容檢舉的一定要看得見：這是 UGC 政策要求平台實際處理的那一類，
+      // 混在功能性回報裡會被當成雜訊略過。0 件時淡化，不要跟有事的長一樣。
+      render: (row) =>
+        row.report_objectionable > 0
+          ? h(NTag, { type: 'error', size: 'small', bordered: false },
+              () => `${row.report_objectionable} 件`)
+          : h('span', { style: 'opacity: 0.3' }, '—'),
+    },
+    {
       title: '回報',
       key: 'reports',
       width: 260,

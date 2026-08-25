@@ -122,3 +122,23 @@ WHERE u.status <> 'deleted'
 UPDATE referral_code_bonus.subscriptions
 SET is_active = false, will_renew = false, updated_at = now()
 WHERE user_id = $1 AND is_active;
+
+-- 封鎖上架者。UGC 政策要的「使用者能自己封鎖濫用者」（見 00012_user_blocks.sql）。
+-- 重複封鎖同一個人不是錯誤，當成已經封鎖了。
+-- name: BlockUser :exec
+INSERT INTO referral_code_bonus.user_blocks (blocker_id, blocked_id)
+VALUES ($1, $2)
+ON CONFLICT (blocker_id, blocked_id) DO NOTHING;
+
+-- name: UnblockUser :exec
+DELETE FROM referral_code_bonus.user_blocks
+WHERE blocker_id = $1 AND blocked_id = $2;
+
+-- 帳號頁的「已封鎖的上架者」。封鎖是單向且不通知對方的，所以這份清單
+-- 只有封鎖者自己看得到 —— 沒有這一頁，被誤封的人就永遠救不回來。
+-- name: ListMyBlocks :many
+SELECT b.blocked_id, b.created_at, u.display_name, u.avatar_url
+FROM referral_code_bonus.user_blocks b
+JOIN referral_code_bonus.users u ON u.id = b.blocked_id
+WHERE b.blocker_id = $1
+ORDER BY b.created_at DESC;

@@ -26,6 +26,24 @@ func (q *Queries) AnonymizeUserEvents(ctx context.Context, userID *uuid.UUID) er
 	return err
 }
 
+const blockUser = `-- name: BlockUser :exec
+INSERT INTO referral_code_bonus.user_blocks (blocker_id, blocked_id)
+VALUES ($1, $2)
+ON CONFLICT (blocker_id, blocked_id) DO NOTHING
+`
+
+type BlockUserParams struct {
+	BlockerID uuid.UUID `json:"blocker_id"`
+	BlockedID uuid.UUID `json:"blocked_id"`
+}
+
+// 封鎖上架者。UGC 政策要的「使用者能自己封鎖濫用者」（見 00012_user_blocks.sql）。
+// 重複封鎖同一個人不是錯誤，當成已經封鎖了。
+func (q *Queries) BlockUser(ctx context.Context, arg BlockUserParams) error {
+	_, err := q.db.Exec(ctx, blockUser, arg.BlockerID, arg.BlockedID)
+	return err
+}
+
 const countUsersAdmin = `-- name: CountUsersAdmin :one
 SELECT count(*) FROM referral_code_bonus.users u
 WHERE u.status <> 'deleted'
@@ -318,6 +336,48 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 	return i, err
 }
 
+const listMyBlocks = `-- name: ListMyBlocks :many
+SELECT b.blocked_id, b.created_at, u.display_name, u.avatar_url
+FROM referral_code_bonus.user_blocks b
+JOIN referral_code_bonus.users u ON u.id = b.blocked_id
+WHERE b.blocker_id = $1
+ORDER BY b.created_at DESC
+`
+
+type ListMyBlocksRow struct {
+	BlockedID   uuid.UUID `json:"blocked_id"`
+	CreatedAt   time.Time `json:"created_at"`
+	DisplayName string    `json:"display_name"`
+	AvatarUrl   *string   `json:"avatar_url"`
+}
+
+// 帳號頁的「已封鎖的上架者」。封鎖是單向且不通知對方的，所以這份清單
+// 只有封鎖者自己看得到 —— 沒有這一頁，被誤封的人就永遠救不回來。
+func (q *Queries) ListMyBlocks(ctx context.Context, blockerID uuid.UUID) ([]ListMyBlocksRow, error) {
+	rows, err := q.db.Query(ctx, listMyBlocks, blockerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListMyBlocksRow{}
+	for rows.Next() {
+		var i ListMyBlocksRow
+		if err := rows.Scan(
+			&i.BlockedID,
+			&i.CreatedAt,
+			&i.DisplayName,
+			&i.AvatarUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsersAdmin = `-- name: ListUsersAdmin :many
 SELECT
     u.id, u.email, u.display_name, u.status, u.created_at,
@@ -442,6 +502,21 @@ WHERE family_id = $1 AND revoked_at IS NULL
 // 偵測到舊 token 被重用時整族撤銷：那代表 token 外洩，該裝置全部作廢。
 func (q *Queries) RevokeTokenFamily(ctx context.Context, familyID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, revokeTokenFamily, familyID)
+	return err
+}
+
+const unblockUser = `-- name: UnblockUser :exec
+DELETE FROM referral_code_bonus.user_blocks
+WHERE blocker_id = $1 AND blocked_id = $2
+`
+
+type UnblockUserParams struct {
+	BlockerID uuid.UUID `json:"blocker_id"`
+	BlockedID uuid.UUID `json:"blocked_id"`
+}
+
+func (q *Queries) UnblockUser(ctx context.Context, arg UnblockUserParams) error {
+	_, err := q.db.Exec(ctx, unblockUser, arg.BlockerID, arg.BlockedID)
 	return err
 }
 

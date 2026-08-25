@@ -12,6 +12,7 @@ import {
   gameControllerOutline,
   playCircleOutline,
   schoolOutline,
+  shieldCheckmarkOutline,
   trendingUpOutline,
 } from 'ionicons/icons'
 
@@ -24,11 +25,12 @@ import {
 const CATEGORY_ICONS: { match: RegExp; icon: string }[] = [
   { match: /銀行|信用卡|カード|bank|card/i, icon: cardOutline },
   { match: /券商|投資|証券|invest|broker|stock/i, icon: trendingUpOutline },
+  { match: /保險|保险|保険|insurance/i, icon: shieldCheckmarkOutline },
   { match: /外送|外食|デリバリー|delivery|food/i, icon: fastFoodOutline },
   { match: /影音|串流|動画|音楽|stream|video|music/i, icon: playCircleOutline },
   { match: /電信|通訊|通信|携帯|telecom|mobile/i, icon: cellularOutline },
   { match: /旅遊|訂房|旅行|ホテル|travel|hotel|flight/i, icon: airplaneOutline },
-  { match: /購物|電商|通販|shop|retail|commerce/i, icon: bagHandleOutline },
+  { match: /購物|電商|通販|ショッピング|shop|retail|commerce/i, icon: bagHandleOutline },
   { match: /遊戲|ゲーム|game/i, icon: gameControllerOutline },
   { match: /軟體|訂閱|クラウド|saas|software|cloud/i, icon: cloudOutline },
   { match: /交通|出行|移動|ride|transport/i, icon: carOutline },

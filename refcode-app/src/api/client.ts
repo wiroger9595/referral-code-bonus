@@ -2,6 +2,7 @@ import { Preferences } from '@capacitor/preferences'
 
 import type {
   AuthResponse,
+  BlockedUser,
   Category,
   CodeStats,
   CodeType,
@@ -11,6 +12,7 @@ import type {
   MyCode,
   OAuthProvider,
   PopularTerm,
+  Region,
   ReportResult,
   TokenPair,
   User,
@@ -247,6 +249,25 @@ export const api = {
     const form = new FormData()
     form.append('file', image, 'avatar.jpg')
     return request<User>('/v1/me/avatar', { method: 'POST', body: form })
+  },
+
+  // 不帶 lang：回的是 ISO 代碼，國名在前端用 Intl 產（見 countries.ts）。
+  listRegions() {
+    return request<{ regions: Region[] }>('/v1/regions')
+  },
+
+  // 封鎖這組碼的上架者。用 code id 而不是 user id —— 公開 API 沒有把
+  // 使用者 id 吐出來過，為了封鎖去曝光它不划算。
+  blockCodeOwner(codeId: string) {
+    return request<void>(`/v1/codes/${codeId}/block-owner`, { method: 'POST' })
+  },
+
+  listMyBlocks() {
+    return request<{ blocks: BlockedUser[] }>('/v1/me/blocks')
+  },
+
+  unblockUser(blockedId: string) {
+    return request<void>(`/v1/me/blocks/${blockedId}`, { method: 'DELETE' })
   },
 
   listCategories() {

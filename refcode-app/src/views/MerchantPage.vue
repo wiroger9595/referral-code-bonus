@@ -13,10 +13,13 @@ import {
   IonPage,
   IonTitle,
   IonToolbar,
+  actionSheetController,
+  alertController,
   toastController,
 } from '@ionic/vue'
 import {
   addOutline,
+  ellipsisHorizontal,
   alertCircleOutline,
   checkmarkOutline,
   copyOutline,
@@ -128,6 +131,62 @@ async function sendReport(code: CodeItem, result: ReportResult) {
   }
 }
 
+// UGC 政策要求「檢舉不當內容」與「封鎖濫用者」兩件事都要做得到
+// （見 refcode-api 的 00012_user_blocks.sql）。放在每張卡的「⋯」裡而不是
+// 常駐按鈕：絕大多數人是來拿碼的，檢舉是例外路徑，不該跟複製搶注意力。
+async function moreActions(code: CodeItem) {
+  const sheet = await actionSheetController.create({
+    header: t('merchant.moreHeader', { name: code.owner_name }),
+    buttons: [
+      {
+        text: t('merchant.reportObjectionable'),
+        role: 'destructive',
+        handler: () => void sendReport(code, 'objectionable'),
+      },
+      {
+        text: t('merchant.blockOwner'),
+        role: 'destructive',
+        handler: () => void confirmBlock(code),
+      },
+      { text: t('common.cancel'), role: 'cancel' },
+    ],
+  })
+  await sheet.present()
+}
+
+// 封鎖要先確認：它會讓對方所有的碼從這個人眼前消失，而解除封鎖藏在帳號頁，
+// 誤觸的人不會知道東西去哪了。
+async function confirmBlock(code: CodeItem) {
+  if (!auth.isLoggedIn) {
+    goLoginToReveal()
+    return
+  }
+  const alert = await alertController.create({
+    header: t('merchant.blockConfirmTitle'),
+    message: t('merchant.blockConfirmBody', { name: code.owner_name }),
+    buttons: [
+      { text: t('common.cancel'), role: 'cancel' },
+      {
+        text: t('merchant.blockConfirm'),
+        role: 'destructive',
+        handler: () => void doBlock(code),
+      },
+    ],
+  })
+  await alert.present()
+}
+
+async function doBlock(code: CodeItem) {
+  try {
+    await api.blockCodeOwner(code.id)
+    toast(t('merchant.blockDone', { name: code.owner_name }))
+    // 重載讓對方的碼馬上消失 —— 封鎖之後還看得到他，等於沒封鎖。
+    await load()
+  } catch (e) {
+    toast(apiErrorMessage(e, 'merchant.blockFailed'))
+  }
+}
+
 // 底部的固定操作列拿的是清單第一個碼 —— 後端已經照品質排過，第一個就是最推薦的那組。
 // 捲到第三張卡以後上面的按鈕就看不到了，這條列是那時候唯一的出口。
 const topCode = computed(() => detail.value?.codes[0] ?? null)
@@ -224,6 +283,9 @@ async function shareMerchant() {
                 {{ $t('merchant.workedReports', { count: code.worked_count }, code.worked_count) }}
               </span>
               <span v-else class="pill neutral">{{ $t('merchant.noReports') }}</span>
+              <button class="more" :aria-label="$t('merchant.moreLabel')" @click="moreActions(code)">
+                <IonIcon :icon="ellipsisHorizontal" />
+              </button>
             </div>
 
             <p v-if="code.masked" class="code-text masked">
@@ -412,6 +474,19 @@ async function shareMerchant() {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 14px;
+}
+
+/* 檢舉／封鎖的入口。推到最右邊，跟左邊的品質與回報標籤分開 —— 那些是資訊，
+   這個是動作。做得小而不顯眼：需要的人找得到就好。 */
+.more {
+  margin-left: auto;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: var(--app-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .code-text {

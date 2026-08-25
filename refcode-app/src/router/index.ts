@@ -39,6 +39,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/AddCodePage.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/blocks',
+    component: () => import('../views/BlockedUsersPage.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 const router = createRouter({

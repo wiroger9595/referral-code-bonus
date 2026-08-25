@@ -74,6 +74,7 @@ const (
 	codeCodeNotActive        = "code_not_active"
 	codeEventTypeInvalid     = "event_type_invalid"
 	codeReportResultInvalid  = "report_result_invalid"
+	codeCannotBlockSelf      = "cannot_block_self"
 	codeProRequired          = "pro_required"
 	codeDeleteConfirmation   = "delete_confirmation_mismatch"
 	// 使用者提報希望上架的平台（見 handleCreateMerchantSuggestion）。

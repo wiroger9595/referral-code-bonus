@@ -25,6 +25,7 @@ import {
   languageOutline,
   mailOutline,
   personCircleOutline,
+  personRemoveOutline,
   shieldCheckmarkOutline,
   sparklesOutline,
   trashOutline,
@@ -207,6 +208,13 @@ function initial() {
             <IonItem button router-link="/add-code" :detail="false">
               <IonIcon slot="start" :icon="addCircleOutline" color="primary" />
               <IonLabel>{{ $t('account.addCode') }}</IonLabel>
+              <IonIcon slot="end" :icon="chevronForward" class="chev" />
+            </IonItem>
+            <!-- 解除封鎖的唯一入口。封鎖之後對方的碼就消失了，沒有這條路
+                 誤封的人救不回來（UGC 政策也要求封鎖是可逆的）。 -->
+            <IonItem button router-link="/blocks" :detail="false">
+              <IonIcon slot="start" :icon="personRemoveOutline" color="primary" />
+              <IonLabel>{{ $t('blocks.title') }}</IonLabel>
               <IonIcon slot="end" :icon="chevronForward" class="chev" />
             </IonItem>
             <IonItem :detail="false">
