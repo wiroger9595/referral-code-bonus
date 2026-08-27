@@ -13,11 +13,20 @@ import (
 	"mime/multipart"
 	"net/http"
 	neturl "net/url"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// Cloudinary 那個帳號跟其他 side project 共用，所以這個專案的圖全部掛在這個
+// 資料夾底下 —— 跟 Postgres 用 schema 隔開是同一個道理，散在 root 之後就分不出
+// 哪張圖是誰的。實際路徑會長成 referral_code_bonus/avatars/xxx。
+//
+// 早於這個前綴上傳的圖還在舊路徑（avatars/xxx），但刪除是拿資料庫存的
+// public_id 去打 destroy，不受影響，不用搬。
+const rootFolder = "referral_code_bonus"
 
 type Client struct {
 	cloudName string
@@ -41,15 +50,18 @@ func (c *Client) Enabled() bool {
 	return c.cloudName != "" && c.apiKey != "" && c.apiSecret != ""
 }
 
-// Upload 簽名上傳一張圖到 folder 底下，回傳 Cloudinary 的 https URL 與 public_id。
+// Upload 簽名上傳一張圖到 rootFolder/folder 底下，回傳 Cloudinary 的 https URL
+// 與 public_id。folder 只給用途（avatars / merchants / categories），專案前綴
+// 一律在這裡補上，不要讓呼叫端自己拼 —— 漏掉一處就有圖跑到帳號 root 去。
 //
 // public_id 是之後要刪這張圖的唯一依據 —— 從 URL 反推得出來，但 Cloudinary 的
 // URL 中間可能插入 transformation 或版本號，反推容易錯，寧可存下來。
 func (c *Client) Upload(ctx context.Context, file io.Reader, folder string) (string, string, error) {
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	folder = path.Join(rootFolder, folder)
 
-	// 只有這兩個參數要簽名。folder 是我們自己分的 merchants / categories，
-	// 用來在 Cloudinary 那邊把圖分開放，方便之後找。
+	// 只有這兩個參數要簽名。folder 底下再依用途分 merchants / categories /
+	// avatars，方便之後去後台找特定用途的圖。
 	params := map[string]string{
 		"folder":    folder,
 		"timestamp": timestamp,

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  API 30 以下的備份規則。理由與排除範圍跟 data_extraction_rules.xml 完全相同，
+  改動時兩份要一起改 —— 舊版沒有 cloud-backup / device-transfer 的分段，只有這一層。
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="CapacitorStorage.xml" />
+</full-backup-content>

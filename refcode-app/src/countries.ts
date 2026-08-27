@@ -55,7 +55,6 @@ export function defaultCountry(): string {
 //
 // 用前綴比對而不是列完整時區名：America/Toronto、America/Vancouver、
 // America/Edmonton⋯⋯ 加拿大一國就有六七個，而 IANA 每年都在增修。
-// 比對順序是「長的優先」，否則 Australia/ 這種短前綴會先吃掉 Australia/Perth。
 const TZ_PREFIX_TO_COUNTRY: [string, string][] = [
   ['Asia/Taipei', 'TW'],
   ['Asia/Hong_Kong', 'HK'],
@@ -96,7 +95,12 @@ const TZ_PREFIX_TO_COUNTRY: [string, string][] = [
   ['America/Menominee', 'US'],
   ['America/North_Dakota/', 'US'],
   ['Pacific/Honolulu', 'US'],
-].sort((a, b) => b[0].length - a[0].length)
+]
+
+// 比對順序是「長的優先」，否則 Australia/ 這種短前綴會先吃掉 Australia/Perth。
+// 分成兩行不是排版偏好：接在陣列字面值後面的話，上面那個 [string, string][]
+// 會變成 .sort() 回傳值的標註，字面值自己被推成 string[][]，兩邊對不起來。
+TZ_PREFIX_TO_COUNTRY.sort((a, b) => b[0].length - a[0].length)
 
 // 裝置所在地，用來當目錄地區篩選的初值 —— app 不像官網有 SSR 的包袱，
 // 匿名使用者第一次打開就該看到自己這邊用得到的服務商。

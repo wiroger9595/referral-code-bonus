@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12（API 31）起的雲端備份與裝置直傳規則。API 30 以下走 backup_rules.xml，
+  兩份要一起改，少改一份就是在舊機型上留一個洞。
+
+  @capacitor/preferences 把所有 key 塞在同一個 SharedPreferences 檔
+  （group 預設 "CapacitorStorage"），而備份規則的粒度只到檔案，沒辦法只挑幾個 key
+  排除 —— 所以整份排掉。裡面除了 token 之外還有語系、引導頁旗標、瀏覽紀錄，
+  換機後這些會回到初始狀態，這是為了下面那件事付的代價：
+
+  refcode_refresh_token 一旦跟著備份複製到第二台裝置，兩台會拿同一個 refresh token
+  去換新的。後端有 rotation + family revoke（refcode-api/internal/auth/token.go），
+  先換的那台把 token 標成 rotated，後換的那台就命中「重用已輪替的 token」，
+  整個 family 被撤銷 —— 兩台同時被登出。refcode_device_id 也會變成兩台共用。
+  換機後重新登入一次，比兩台一起壞掉好。
+
+  RevenueCat 與 social-login 各自的 SharedPreferences 不在這裡排除：訂閱的真相在
+  RevenueCat 伺服器，app_user_id 跟著遷移反而是對的。
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="CapacitorStorage.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="CapacitorStorage.xml" />
+    </device-transfer>
+</data-extraction-rules>

@@ -58,18 +58,16 @@ export default defineNuxtConfig({
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       ],
-      // favicon 移進 public/images/ 之後不再有 /favicon.ico 這條路徑，
-      // 瀏覽器預設的隱性請求會 404，所以要明確宣告。
-      // SVG 版擺前面：它靠內嵌的 prefers-color-scheme 在深色分頁列上換色，
-      // ico 是給不吃 SVG favicon 的環境的退路。
-      // 同理，iOS Safari 在沒有宣告的情況下會自己去試 /apple-touch-icon.png
+      // 分頁圖示直接用 app 的圖示（public/images/app-icon-1024.png 就是 iOS
+      // AppIcon 那張），web 與 app 在使用者眼裡是同一個東西，不要兩套視覺。
+      // 1024 當 favicon 太大，先切出 32 與 180 兩個尺寸。
+      // 另外 iOS Safari 在沒有宣告的情況下會自己去試 /apple-touch-icon.png
       // 與 -precomposed 版，兩條都不存在，Nuxt 會把它們當成頁面路徑丟給
-      // Vue Router，於是每次開站都洗出幾行 R0004 警告。指到現成的 app 圖示，
-      // 順便讓「加入主畫面」有正確的圖。
+      // Vue Router，於是每次開站都洗出幾行 R0004 警告，所以要明確宣告。
       link: [
-        { rel: 'icon', type: 'image/svg+xml', href: '/images/favicon.svg' },
-        { rel: 'icon', type: 'image/x-icon', href: '/images/favicon.ico' },
-        { rel: 'apple-touch-icon', href: '/images/app-icon-1024.png' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/images/app-icon-32.png' },
+        { rel: 'icon', type: 'image/png', sizes: '180x180', href: '/images/app-icon-180.png' },
+        { rel: 'apple-touch-icon', href: '/images/app-icon-180.png' },
       ],
     },
   },

@@ -37,7 +37,7 @@ import { useRouter } from 'vue-router'
 
 import EmptyState from '../components/EmptyState.vue'
 import { countryOptions } from '../countries'
-import { toAvatarBlob } from '../images'
+import { thumb, toAvatarBlob } from '../images'
 import { SUPPORTED, apiErrorMessage, setLocale, type LocaleCode } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useSubscriptionStore } from '../stores/subscription'
@@ -172,7 +172,7 @@ function initial() {
             :disabled="avatarUploading"
             @click="pickAvatar"
           >
-            <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" alt="" />
+            <img v-if="auth.user?.avatar_url" :src="thumb(auth.user.avatar_url, 72)" alt="" decoding="async" />
             <span v-else>{{ initial() }}</span>
             <IonIcon :icon="cameraOutline" class="avatar-badge" />
           </button>

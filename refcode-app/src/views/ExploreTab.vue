@@ -33,6 +33,7 @@ import { categoryIcon } from '../categories'
 import EmptyState from '../components/EmptyState.vue'
 import SkeletonList from '../components/SkeletonList.vue'
 import { countryName, regionOptions } from '../countries'
+import { thumb } from '../images'
 import { apiErrorMessage, daysUntilExpiry, expiryLabel, rewardText } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { ALL_REGIONS, useRegionStore } from '../stores/region'
@@ -382,7 +383,13 @@ const sorted = computed(() => {
                 <span v-else class="corner urgent">{{ $t('explore.limited') }}</span>
 
                 <div class="logo sm">
-                  <img v-if="m.logo_url" :src="m.logo_url" :alt="m.name" />
+                  <img
+                    v-if="m.logo_url"
+                    :src="thumb(m.logo_url, 38)"
+                    :alt="m.name"
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <span v-else>{{ initial(m.name) }}</span>
                 </div>
                 <p class="brand">{{ m.name }}</p>
@@ -445,7 +452,13 @@ const sorted = computed(() => {
             @click="$router.push(`/merchant/${m.slug}`)"
           >
             <div class="logo">
-              <img v-if="m.logo_url" :src="m.logo_url" :alt="m.name" />
+              <img
+                v-if="m.logo_url"
+                :src="thumb(m.logo_url, 46)"
+                :alt="m.name"
+                loading="lazy"
+                decoding="async"
+              />
               <span v-else>{{ initial(m.name) }}</span>
             </div>
 

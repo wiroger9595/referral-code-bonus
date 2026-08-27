@@ -38,6 +38,7 @@ import type { CodeItem, MerchantDetail, ReportResult } from '../api/types'
 import EmptyState from '../components/EmptyState.vue'
 import QualityDot from '../components/QualityDot.vue'
 import SkeletonList from '../components/SkeletonList.vue'
+import { thumb } from '../images'
 import { apiErrorMessage, expiryLabel, rewardText } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useRecordStore } from '../stores/record'
@@ -247,7 +248,7 @@ async function shareMerchant() {
             <div class="logo">
               <img
                 v-if="detail.merchant.logo_url"
-                :src="detail.merchant.logo_url"
+                :src="thumb(detail.merchant.logo_url, 54)"
                 :alt="detail.merchant.name"
               />
               <span v-else>{{ detail.merchant.name.trim().charAt(0) }}</span>

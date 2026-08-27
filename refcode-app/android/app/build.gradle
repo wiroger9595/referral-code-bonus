@@ -17,7 +17,7 @@ android {
         applicationId "com.referra.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 9
+        versionCode 10
         versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -39,8 +39,17 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // R8 是 Google Play「程式碼最佳化」門檻直接檢查的項目，關掉等於不及格。
+            // 開了之後所有靠反射或 JS 橋接進來的呼叫都可能被裁掉，keep 規則見
+            // proguard-rules.pro —— 那裡只寫了必要的幾條，其餘由各 plugin 的
+            // consumer rules 提供。改動這段之後一定要用 release 版實機走完
+            // 登入與購買流程，R8 裁錯東西在 build 階段是看不出來的。
+            minifyEnabled true
+            // 一併清掉沒被引用的資源。assets/public（web 產物）不受影響，
+            // 那是 assets 不是 res。
+            shrinkResources true
+            // optimize 版比 proguard-android.txt 多做一輪最佳化，正是門檻要的東西。
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (hasReleaseKeystore) {
                 signingConfig signingConfigs.release
             }
@@ -76,6 +85,3 @@ try {
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
-
-
-https://claude.ai/code/artifact/88cf6981-8531-47a9-904a-cbc5cd37515b

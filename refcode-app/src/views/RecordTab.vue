@@ -17,6 +17,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import EmptyState from '../components/EmptyState.vue'
+import { thumb } from '../images'
 import { daysUntilExpiry, expiryLabel } from '../i18n'
 import type { CopiedCode } from '../stores/record'
 import { useRecordStore } from '../stores/record'
@@ -112,7 +113,13 @@ async function confirmClear(which: 'codes' | 'merchants') {
             <div v-for="c in record.codes" :key="c.codeId" class="app-card card">
               <div class="row" @click="$router.push(`/merchant/${c.merchantSlug}`)">
                 <div class="logo">
-                  <img v-if="c.merchantLogo" :src="c.merchantLogo" :alt="c.merchantName" />
+                  <img
+                    v-if="c.merchantLogo"
+                    :src="thumb(c.merchantLogo, 44)"
+                    :alt="c.merchantName"
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <span v-else>{{ c.merchantName.trim().charAt(0) }}</span>
                 </div>
                 <div class="body">
@@ -159,7 +166,13 @@ async function confirmClear(which: 'codes' | 'merchants') {
               @click="$router.push(`/merchant/${m.slug}`)"
             >
               <div class="logo">
-                <img v-if="m.logo" :src="m.logo" :alt="m.name" />
+                <img
+                  v-if="m.logo"
+                  :src="thumb(m.logo, 44)"
+                  :alt="m.name"
+                  loading="lazy"
+                  decoding="async"
+                />
                 <span v-else>{{ m.name.trim().charAt(0) }}</span>
               </div>
               <div class="body">

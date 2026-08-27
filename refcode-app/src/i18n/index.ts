@@ -2,11 +2,14 @@ import { Preferences } from '@capacitor/preferences'
 import { createI18n } from 'vue-i18n'
 
 import { ApiError, setApiLang } from '../api/client'
-import en from './locales/en.json'
-import ja from './locales/ja.json'
 import zhTW from './locales/zh-TW.json'
 
 const KEY_LANG = 'refcode_lang'
+
+// zh-TW 同時是預設語言與 fallbackLocale，任何情況下都會用到，靜態載入。
+// 其餘語系改成動態 —— 三份全部靜態 import 的話，連目前沒開放的 ja
+// （三份裡最大的一份）都會躺在主 bundle 裡。
+const FALLBACK = 'zh-TW'
 
 // 日文先停用（付費服務還沒做日本市場的功能／文案），翻譯檔留著沒刪，
 // 之後要重開直接把這行加回來就好。
@@ -36,21 +39,41 @@ function isSupported(code: string | null): code is LocaleCode {
 export const i18n = createI18n({
   // Composition API（useI18n）需要 legacy: false。
   legacy: false,
-  locale: 'zh-TW',
-  fallbackLocale: 'zh-TW',
-  messages: { 'zh-TW': zhTW, ja, en },
+  locale: FALLBACK,
+  fallbackLocale: FALLBACK,
+  // createI18n 拿 messages 的 key 當成「這個實例認得哪些語言」，只給一份的話
+  // locale.value = 'en' 會編不過。實際內容是動態補進來的（見 loadMessages），
+  // 型別上先把完整的語系集合宣告出來。FALLBACK 本身要維持字面量，
+  // 下面的 Exclude 靠它算出還缺哪幾份 loader。
+  messages: { [FALLBACK]: zhTW } as Record<LocaleCode, typeof zhTW>,
 })
+
+// SUPPORTED 加語系時這裡沒補對應的 loader 會編不過 —— 少補一份的下場是
+// 那個語言整頁都顯示 key，而且要切過去才看得到。
+const LOADERS: Record<Exclude<LocaleCode, typeof FALLBACK>, () => Promise<unknown>> = {
+  en: () => import('./locales/en.json'),
+}
+
+async function loadMessages(code: LocaleCode) {
+  if (code === FALLBACK || i18n.global.availableLocales.includes(code)) return
+  const loaded = (await LOADERS[code]()) as { default: typeof zhTW }
+  i18n.global.setLocaleMessage(code, loaded.default)
+}
 
 // Preferences 是 async 的，跟 token 一樣要在 mount 之前讀回來，
 // 否則畫面會先用預設語言 render 一次再跳語言。
 export async function initLocale() {
   const saved = await Preferences.get({ key: KEY_LANG })
-  i18n.global.locale.value = isSupported(saved.value) ? saved.value : fromDevice()
-  setApiLang(i18n.global.locale.value)
+  const code = isSupported(saved.value) ? saved.value : fromDevice()
+  await loadMessages(code)
+  i18n.global.locale.value = code
+  setApiLang(code)
 }
 
 // 使用者手動選過語言就記住，之後不再跟著裝置語言跑。
 export async function setLocale(code: LocaleCode) {
+  // 先把語系檔拿到手再切，否則畫面會有一瞬間整頁都是 key。
+  await loadMessages(code)
   i18n.global.locale.value = code
   // 資料欄位的語言跟著切，不然換了介面語言之後分類名還停在上一個語言。
   setApiLang(code)

@@ -26,6 +26,7 @@ import { api } from '../api/client'
 import type { CodeStatus, CodeType, MyCode } from '../api/types'
 import EmptyState from '../components/EmptyState.vue'
 import SkeletonList from '../components/SkeletonList.vue'
+import { thumb } from '../images'
 import { apiErrorMessage } from '../i18n'
 
 const codes = ref<MyCode[]>([])
@@ -272,7 +273,13 @@ function formatDate(iso: string | null) {
             <div class="head">
               <div class="who">
                 <div class="logo">
-                  <img v-if="c.merchant_logo_url" :src="c.merchant_logo_url" :alt="c.merchant_name" />
+                  <img
+                    v-if="c.merchant_logo_url"
+                    :src="thumb(c.merchant_logo_url, 40)"
+                    :alt="c.merchant_name"
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <span v-else>{{ c.merchant_name.trim().charAt(0) }}</span>
                 </div>
                 <div>

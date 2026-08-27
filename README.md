@@ -169,14 +169,20 @@ npx cap open android              # 開 Android Studio
 # Terminal A：dev server（--host 一定要加，見下面第 2 點）
 cd refcode-app && npm run dev -- --host
 
-# Terminal B
-cd refcode-app && npx cap run ios -l --port 5174
+# Terminal B（`--host localhost` 不能省，見下面第 3 點）
+cd refcode-app && npx cap run ios -l --host localhost --port 5174
 
 ```
 
 加了原生平台之後，**實機和模擬器連不到 `localhost:7802`**——那個 localhost 是裝置自己。
 把 `.env` 的 `VITE_API_BASE_URL` 改成電腦的區網 IP（`ipconfig getifaddr en0`），
 並把同一個位址加進後端的 `CORS_ORIGINS`。
+
+`cap run -l` 不給 `--host` 的話，Capacitor 會自己抓區網 IP 當 live reload 位址，
+WebView 的 origin 就變成 `http://<區網IP>:5174`——那個 origin 不在後端的
+`CORS_ORIGINS` 裡，API 全部會被擋掉，但畫面照樣載得出來，看起來像「後端掛了」。
+釘成 `localhost` 就沿用已經放行的 origin。**上面兩個 Terminal 其實不用自己開，
+`./dev.sh ios` 已經是這條指令**（會順便起 vite、跑 `cap sync`、結束時還原原生設定）。
 
 Google / Apple 登入已經接上 `@capgo/capacitor-social-login`，但**還沒有任何 client id**，
 所以那兩顆按鈕預設不會出現。要開啟就填 `.env`（app 端）與 `GOOGLE_CLIENT_IDS` /

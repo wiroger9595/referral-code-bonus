@@ -3,8 +3,12 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [vue()],
-  // 圖片跨 web/app/admin 共用，統一放在 monorepo 根目錄的 public/，不要各自留一份。
-  publicDir: '../public',
+  // web 與 admin 指到 monorepo 根目錄那份共用 public/，app 刻意不跟 ——
+  // 那裡面幾乎都是官網與 Play 商店用的大圖（光背景圖就 6MB、商店宣傳圖也在裡面），
+  // 而 app 一張都沒引用（商家 logo 全是遠端 URL）。Vite 的 publicDir 是整包複製、
+  // 沒有排除機制，指過去等於白白把 10MB 打進 APK，直接踩 Google Play 的
+  // 安裝體積與點陣圖用量門檻。這裡只留 app 真的需要的，目前就一個 favicon。
+  publicDir: 'public',
   // 後端的 CORS_ORIGINS 預設就列了這個 port，改的話兩邊要一起改。
   server: {
     port: 5174,
