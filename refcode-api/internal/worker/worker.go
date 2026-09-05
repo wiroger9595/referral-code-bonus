@@ -6,21 +6,28 @@ import (
 	"log/slog"
 	"time"
 
+	"refcode-api/internal/entitlement"
 	"refcode-api/internal/store"
 	"refcode-api/internal/store/dbgen"
 )
 
 type Worker struct {
 	store *store.Store
+	ent   *entitlement.Syncer
 }
 
-func New(st *store.Store) *Worker { return &Worker{store: st} }
+func New(st *store.Store, freeLimit int) *Worker {
+	return &Worker{store: st, ent: entitlement.New(st, freeLimit)}
+}
 
-// Run 阻塞直到 ctx 取消。兩件事都採「啟動時先跑一次」：
+// Run 阻塞直到 ctx 取消。每件事都採「啟動時先跑一次」：
 // 服務重啟後不必等一整個週期才收斂。
 func (w *Worker) Run(ctx context.Context) {
 	go w.loop(ctx, time.Hour, "expire-codes", w.expireCodes)
 	go w.loop(ctx, 24*time.Hour, "ensure-partitions", w.ensurePartitions)
+	// 訂閱到期是以「天」為單位的事，六小時一輪對使用者體感沒差別，
+	// 但比一天一次能讓 webhook 漏掉的人早一點收斂。
+	go w.loop(ctx, 6*time.Hour, "sync-entitlements", w.syncEntitlements)
 	<-ctx.Done()
 }
 
@@ -65,6 +72,16 @@ func (w *Worker) expireCodes(ctx context.Context) error {
 	}
 	slog.Info("到期下架完成", "count", len(rows))
 	return nil
+}
+
+// syncEntitlements 補 webhook 漏掉的訂閱降級與恢復。細節見 entitlement.Sweep ——
+// 兩個方向都掃，而不是只處理到期。
+func (w *Worker) syncEntitlements(ctx context.Context) error {
+	downgraded, restored, err := w.ent.Sweep(ctx)
+	if downgraded > 0 || restored > 0 {
+		slog.Info("訂閱額度收斂完成", "downgraded_users", downgraded, "restored_users", restored)
+	}
+	return err
 }
 
 // ensurePartitions 補建事件表的月分區。沒有對應分區時 INSERT 會直接失敗，

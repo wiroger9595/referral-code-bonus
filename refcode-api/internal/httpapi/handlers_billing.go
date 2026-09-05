@@ -197,6 +197,20 @@ func (s *Server) handleRevenueCatWebhook(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// 訂閱狀態變了，架上的碼要跟著收斂：Pro 沒了就把超出免費額度的撤下來，
+	// 回來了就把當初被撤的放回去。
+	//
+	// 失敗只記 log 不回 500：事件已經寫進 subscription_events，RevenueCat
+	// 重送會撞 rc_event_id 被當成 duplicate 跳過，永遠不會重跑到這裡，
+	// 回非 2xx 只是讓它白重試一輪。真正的第二次機會在 worker 的排程。
+	if d.IsActive {
+		if _, err := s.ent.Restore(ctx, *userID); err != nil {
+			slog.Error("Pro 恢復後重新上架失敗，等排程補", "user_id", *userID, "err", err)
+		}
+	} else if _, err := s.ent.Downgrade(ctx, *userID); err != nil {
+		slog.Error("Pro 失效後降級失敗，等排程補", "user_id", *userID, "err", err)
+	}
+
 	slog.Info("訂閱狀態已更新",
 		"user_id", *userID, "type", ev.Type, "product", ev.ProductID, "env", ev.Environment)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})

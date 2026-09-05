@@ -24,6 +24,54 @@ func (q *Queries) CountActiveCodesForUser(ctx context.Context, userID uuid.UUID)
 	return count, err
 }
 
+const downgradeExcessCodesForUser = `-- name: DowngradeExcessCodesForUser :many
+WITH ranked AS (
+    SELECT rc.id, row_number() OVER (ORDER BY rc.created_at, rc.id) AS rn
+    FROM referral_code_bonus.referral_codes rc
+    WHERE rc.user_id = $2 AND rc.status IN ('pending', 'active')
+)
+UPDATE referral_code_bonus.referral_codes c
+SET status = 'disabled', updated_at = now()
+FROM ranked
+WHERE c.id = ranked.id AND ranked.rn > $1::int
+RETURNING c.id
+`
+
+type DowngradeExcessCodesForUserParams struct {
+	Keep   int32     `json:"keep"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+// Pro 沒了之後把超出免費額度的碼撤下來，留最舊的 keep 個。
+//
+// 留最舊而不是留分數最高的：撤掉哪一個都會有人不滿意，但「先上架的先留」
+// 是使用者自己推得出來的規則，照分數挑會變成系統替他決定哪個碼比較值得。
+// created_at 相同時（同一批匯入）用 id 決勝，不然每次跑選中的不一樣。
+//
+// pending 也算進去：額度限的是一個帳號佔掉多少曝光，跟 CountActiveCodesForUser
+// 的算法一致，只降 active 的話 pending 一多就永遠收斂不到 keep 個。
+// CTE 裡的欄位一律用 rc. 限定：UPDATE ... FROM ranked 會讓 sqlc 把 CTE 的
+// 範圍跟 UPDATE 目標混在一起，不限定的話 user_id 會被判成 ambiguous。
+func (q *Queries) DowngradeExcessCodesForUser(ctx context.Context, arg DowngradeExcessCodesForUserParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, downgradeExcessCodesForUser, arg.Keep, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getActiveSubscription = `-- name: GetActiveSubscription :one
 SELECT user_id, entitlement, product_id, store, is_active, will_renew, expires_at, rc_app_user_id, updated_at FROM referral_code_bonus.subscriptions
 WHERE user_id = $1
@@ -81,6 +129,136 @@ func (q *Queries) InsertSubscriptionEvent(ctx context.Context, arg InsertSubscri
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const listDowngradedCodesForUser = `-- name: ListDowngradedCodesForUser :many
+SELECT c.id, c.activated_at
+FROM referral_code_bonus.referral_codes c
+LEFT JOIN LATERAL (
+    SELECT r.action
+    FROM referral_code_bonus.code_reviews r
+    WHERE r.code_id = c.id
+    ORDER BY r.created_at DESC
+    LIMIT 1
+) last_review ON true
+WHERE c.user_id = $1
+  AND c.status = 'disabled'
+  AND last_review.action = 'downgrade'
+ORDER BY c.created_at
+`
+
+type ListDowngradedCodesForUserRow struct {
+	ID          uuid.UUID  `json:"id"`
+	ActivatedAt *time.Time `json:"activated_at"`
+}
+
+// 續訂之後要恢復的碼：現在是 disabled、而且最後一筆軌跡是 downgrade。
+//
+// 看「最後一筆」而不是「有沒有 downgrade 過」：降級撤掉之後使用者又自己按了
+// 下架、或被後台以違規下架，那筆就不該因為續訂自動回到架上。
+//
+// activated_at 帶出來決定要恢復成哪個狀態 —— 從沒上架過的（審核中被撤）
+// 要回 pending 而不是直接 active，那等於跳過審核。
+func (q *Queries) ListDowngradedCodesForUser(ctx context.Context, userID uuid.UUID) ([]ListDowngradedCodesForUserRow, error) {
+	rows, err := q.db.Query(ctx, listDowngradedCodesForUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDowngradedCodesForUserRow{}
+	for rows.Next() {
+		var i ListDowngradedCodesForUserRow
+		if err := rows.Scan(&i.ID, &i.ActivatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProUsersWithDowngradedCodes = `-- name: ListProUsersWithDowngradedCodes :many
+SELECT DISTINCT c.user_id
+FROM referral_code_bonus.referral_codes c
+JOIN referral_code_bonus.subscriptions s
+       ON s.user_id = c.user_id
+      AND s.is_active
+      AND (s.expires_at IS NULL OR s.expires_at > now())
+WHERE c.status = 'disabled'
+  AND EXISTS (
+      SELECT 1
+      FROM referral_code_bonus.code_reviews r
+      WHERE r.code_id = c.id AND r.action = 'downgrade'
+  )
+`
+
+// 排程兜底的另一半：Pro 是生效的，但還有被降級撤掉的碼躺在 disabled。
+//
+// 恢復失敗比降級失敗嚴重（使用者付了錢而碼沒回來），而 webhook 那邊的
+// 恢復一旦失敗就沒有第二次機會 —— 事件已經記進 subscription_events，
+// 靠 rc_event_id 去重，RevenueCat 重送只會被當成 duplicate 跳過。
+//
+// 這裡只用 EXISTS 粗篩「曾經被降級過」，不判斷「最後一筆是不是 downgrade」：
+// 真正該恢復哪幾筆由 ListDowngradedCodesForUser 決定，這支只要挑出值得
+// 進去看一眼的使用者就好，條件寫鬆一點反而省事。
+func (q *Queries) ListProUsersWithDowngradedCodes(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listProUsersWithDowngradedCodes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var user_id uuid.UUID
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsersOverFreeLimit = `-- name: ListUsersOverFreeLimit :many
+SELECT c.user_id
+FROM referral_code_bonus.referral_codes c
+LEFT JOIN referral_code_bonus.subscriptions s
+       ON s.user_id = c.user_id
+      AND s.is_active
+      AND (s.expires_at IS NULL OR s.expires_at > now())
+WHERE c.status IN ('pending', 'active')
+  AND s.user_id IS NULL
+GROUP BY c.user_id
+HAVING count(*) > $1::int
+`
+
+// 排程兜底用：沒有生效訂閱、但架上的碼還超過免費額度的使用者。
+//
+// webhook 是主要路徑，這支補它漏掉的 —— RevenueCat 送不到、app_user_id
+// 對不到本地帳號（刪帳號重建）、或我們回了 500 之後它放棄重送。
+// 少了這道，那些人會無限期保留超額曝光。
+func (q *Queries) ListUsersOverFreeLimit(ctx context.Context, freeLimit int32) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listUsersOverFreeLimit, freeLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var user_id uuid.UUID
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const upsertSubscription = `-- name: UpsertSubscription :one

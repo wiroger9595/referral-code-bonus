@@ -11,6 +11,7 @@ import (
 	"refcode-api/internal/auth"
 	"refcode-api/internal/cloudinary"
 	"refcode-api/internal/config"
+	"refcode-api/internal/entitlement"
 	"refcode-api/internal/mailer"
 	"refcode-api/internal/ranking"
 	"refcode-api/internal/store"
@@ -25,6 +26,9 @@ type Server struct {
 	mailer   mailer.Mailer
 	images   *cloudinary.Client
 	rankOpts ranking.Params
+	// 訂閱狀態變動後把架上的碼收斂回該有的張數。跟 worker 用的是同一份邏輯，
+	// 只是各自持有一個 —— Syncer 沒有狀態，不值得為它多拉一條建構參數。
+	ent *entitlement.Syncer
 }
 
 func NewServer(
@@ -45,6 +49,7 @@ func NewServer(
 		mailer:   mail,
 		images:   images,
 		rankOpts: cfg.Ranking,
+		ent:      entitlement.New(st, cfg.FreeActiveCodeLimit),
 	}
 }
 

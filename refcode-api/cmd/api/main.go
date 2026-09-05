@@ -94,7 +94,7 @@ func run() error {
 		slog.Warn("CLOUDINARY_* 未設定，後台圖片上傳暫時停用")
 	}
 
-	go worker.New(st).Run(ctx)
+	go worker.New(st, cfg.FreeActiveCodeLimit).Run(ctx)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
