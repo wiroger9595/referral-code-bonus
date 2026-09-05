@@ -4,6 +4,8 @@
 
 需要 `refcode-api` 跑在 `http://localhost:7802`。
 
+平常用工作區根目錄的 `./dev.sh admin`。要在這個目錄裡單獨開發：
+
 ```bash
 cp .env.example .env
 npm install
@@ -54,4 +56,4 @@ cd ../refcode-api && make seed EMAIL=admin@local.test PASSWORD=admin12345
 ## 型別
 
 `src/api/types.ts` 是手寫的，對應後端的回傳。後端補上 OpenAPI spec 之後應該改成
-從 spec 產生（`openapi-typescript`），否則兩邊遲早分岔 —— 這是四個 repo 分開最容易爛掉的地方。
+從 spec 產生（`openapi-typescript`），否則兩邊遲早分岔 —— 這是四個模組分開最容易爛掉的地方。

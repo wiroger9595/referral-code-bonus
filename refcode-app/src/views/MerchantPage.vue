@@ -29,7 +29,7 @@ import {
   shieldCheckmarkOutline,
   ticketOutline,
 } from 'ionicons/icons'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -72,15 +72,23 @@ async function load() {
   }
 }
 
-onMounted(load)
-
-// 跟探索頁同一個道理：獎勵說明與分類名是後端依 ?lang= 回的，而 Ionic 會把
-// 這一頁留在導覽堆疊裡，換語言之後再走回來不會重跑 onMounted。
-watch(locale, load)
-
-// masked 是後端依登入狀態算的：從這頁跳去登入、登入完 redirect 回來時，
-// Ionic 一樣沒有重新 mount 這頁，不重抓的話碼會一直停在登入前的遮碼狀態。
-watch(() => auth.isLoggedIn, load)
+// 這三個任一個變了都要重抓，而且 Ionic 會把這頁留在導覽堆疊裡，走回來時
+// 不會重跑 onMounted，所以一律靠 watch 而不是掛在 mount 上：
+//   slug        —— 換一家服務商時這頁是被重用的，不是重新 mount。
+//   locale      —— 獎勵說明與分類名是後端依 ?lang= 回的。
+//   isLoggedIn  —— masked 是後端依登入狀態算的，登入完 redirect 回來要重抓。
+//
+// slug 的守衛不能省。從這頁跳去登入時，isLoggedIn 會在 router.replace 把路由
+// 換回來之前就先變成 true，那個當下 route 還停在 /login，params.slug 是
+// undefined —— 沒擋的話就會去打 /v1/merchants/undefined 拿一個 404，然後整頁
+// 停在「找不到這個服務商」，而使用者剛剛才為了看這一頁的碼去登入。
+watch(
+  [() => route.params.slug, locale, () => auth.isLoggedIn],
+  () => {
+    if (route.params.slug) load()
+  },
+  { immediate: true },
+)
 
 async function toast(message: string) {
   const t = await toastController.create({ message, duration: 1800, position: 'bottom' })
@@ -89,7 +97,16 @@ async function toast(message: string) {
 
 async function copyCode(code: CodeItem) {
   if (code.masked || code.code === null) return // 按鈕在遮碼狀態下不會出現，這只是保險
-  await Clipboard.write({ string: code.code })
+
+  // 寫剪貼簿會失敗（權限被拒、非 secure context 的 WebView）。不擋的話這行一拋，
+  // 下面的紀錄與 toast 全部不會跑 —— 使用者按了複製，畫面上什麼都沒發生。
+  try {
+    await Clipboard.write({ string: code.code })
+  } catch {
+    toast(t('merchant.copyFailed'))
+    return
+  }
+
   copiedId.value = code.id
   api.track(code.id, 'copy').catch(() => {})
 
@@ -119,7 +136,13 @@ function goLoginToReveal() {
 async function openSignup(code: CodeItem) {
   if (!detail.value) return
   api.track(code.id, 'click').catch(() => {})
-  await Browser.open({ url: detail.value.merchant.signup_url })
+  try {
+    await Browser.open({ url: detail.value.merchant.signup_url })
+  } catch {
+    // 開不起來（網址壞掉、系統沒有可以處理的瀏覽器）時至少講一句，
+    // 不然按鈕看起來就是壞的。
+    toast(t('merchant.openFailed'))
+  }
 }
 
 async function sendReport(code: CodeItem, result: ReportResult) {
@@ -200,11 +223,18 @@ const addCodeLink = computed(() =>
 
 async function shareMerchant() {
   if (!detail.value) return
-  await Share.share({
-    title: t('merchant.titleSuffix', { name: detail.value.merchant.name }),
-    text: rewardText(detail.value.merchant.reward_desc),
-    url: detail.value.merchant.signup_url,
-  })
+  // 使用者在分享面板上按取消時這支會 reject，那不是錯誤，不能讓它變成
+  // unhandled rejection。桌面瀏覽器沒有 Web Share API 時也是走這裡。
+  try {
+    await Share.share({
+      title: t('merchant.titleSuffix', { name: detail.value.merchant.name }),
+      text: rewardText(detail.value.merchant.reward_desc),
+      url: detail.value.merchant.signup_url,
+    })
+  } catch {
+    // 取消跟「這個環境不支援」在 plugin 這層分不出來，兩種都安靜收掉：
+    // 前者本來就不該有提示，後者跳一句錯誤也幫不上他。
+  }
 }
 </script>
 

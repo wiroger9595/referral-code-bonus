@@ -202,7 +202,7 @@
     "avatarUploading": "Uploading…",
     "avatarHint": "Tap your photo to replace it. Images are resized before upload.",
     "otherTitle": "Other settings",
-    "otherBody": "Your display name and country can only be changed in the mobile app for now.",
+    "otherBody": "Your country can be changed in the mobile app. Your display name can't be changed anywhere yet.",
     "deleteLink": "Delete my account"
   },
   "errors": {
@@ -252,6 +252,14 @@
     "suggestion_duplicate": "You've already suggested this one — it's under review",
     "suggestion_merchant_exists": "This platform is already in the directory, try searching for it",
     "suggestion_limit_reached": "You still have suggestions under review. Wait for those before sending more."
+  },
+  "errorPage": {
+    "notFoundTitle": "We couldn't find that page",
+    "notFoundBody": "The address may be mistyped, or that merchant has been removed from the directory.",
+    "genericTitle": "Something went wrong on this page",
+    "genericBody": "Reloading usually fixes it. If it doesn't, head back to the home page and try again.",
+    "searchHint": "Search for the merchant you're after:",
+    "backHome": "Back to home"
   },
   "deleteAccount": {
     "title": "Delete your account",

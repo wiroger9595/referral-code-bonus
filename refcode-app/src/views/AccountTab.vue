@@ -234,7 +234,11 @@ function initial() {
             <IonItem v-if="countryError" :detail="false">
               <IonLabel color="danger" class="ion-text-wrap">{{ countryError }}</IonLabel>
             </IonItem>
-            <IonItem v-if="supportEmail" button :href="`mailto:${supportEmail}`" target="_blank" :detail="false">
+            <!-- mailto 這列不能加 target="_blank"：那會走 WebView 的「開新視窗」路徑，
+                 Capacitor 在那條路徑上只認得 http(s)（交給 SFSafariViewController），
+                 mailto 被整個丟掉，點下去完全沒有反應。不帶 target 走的是同一個 frame
+                 的導航，原生層才會攔下非 http 的 scheme 轉交系統郵件 app。 -->
+            <IonItem v-if="supportEmail" button :href="`mailto:${supportEmail}`" :detail="false">
               <IonIcon slot="start" :icon="mailOutline" color="primary" />
               <IonLabel>
                 <h3>{{ $t('account.contact') }}</h3>

@@ -42,7 +42,20 @@ function formatDate(iso: string) {
 const justCopied = ref('')
 
 async function recopy(c: CopiedCode) {
-  await Clipboard.write({ string: c.code })
+  // 同 MerchantPage 的 copyCode：寫剪貼簿失敗時不能整段拋掉，
+  // 那會讓按鈕看起來沒反應。
+  try {
+    await Clipboard.write({ string: c.code })
+  } catch {
+    const failed = await toastController.create({
+      message: t('merchant.copyFailed'),
+      duration: 2200,
+      position: 'bottom',
+    })
+    await failed.present()
+    return
+  }
+
   justCopied.value = c.codeId
   const toast = await toastController.create({
     message: t('record.copiedToast'),

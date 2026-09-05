@@ -10,26 +10,37 @@ import {
   IonInput,
   IonItem,
   IonList,
+  IonLabel,
   IonModal,
   IonPage,
+  IonSearchbar,
   IonSegment,
   IonSegmentButton,
-  IonSelect,
-  IonSelectOption,
   IonTitle,
   IonToggle,
   IonToolbar,
   onIonViewWillEnter,
   toastController,
 } from '@ionic/vue'
-import { addCircleOutline, alertCircle, giftOutline, shieldCheckmarkOutline } from 'ionicons/icons'
+import {
+  addCircleOutline,
+  alertCircle,
+  alertCircleOutline,
+  checkmarkOutline,
+  chevronDown,
+  giftOutline,
+  shieldCheckmarkOutline,
+} from 'ionicons/icons'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError, api } from '../api/client'
 import type { CodeType, MerchantSummary } from '../api/types'
+import EmptyState from '../components/EmptyState.vue'
+import SkeletonList from '../components/SkeletonList.vue'
 import { apiErrorMessage } from '../i18n'
+import { ALL_REGIONS } from '../stores/region'
 
 const router = useRouter()
 const route = useRoute()
@@ -78,14 +89,67 @@ onIonViewWillEnter(async () => {
   if (merchants.value.length > 0) {
     return
   }
-  try {
-    merchants.value = (await api.listMerchants()).merchants
-  } catch (e) {
-    errorMessage.value = apiErrorMessage(e, 'addCode.loadMerchantsFailed')
-  }
+  await loadMerchants()
 })
 
+// 清單自己的載入狀態，跟表單的 errorMessage 分成兩個 ——
+// picker 打開時整個主頁面被 modal 蓋住，表單那行紅字在底下看不到，
+// 而 modal 裡要講的是「清單怎麼了」，不是「你哪一格沒填」。
+const merchantsLoading = ref(false)
+const merchantsError = ref('')
+
+// 抽成函式是為了讓載入失敗時有東西可以重試 —— 使用者停在這一頁不會再
+// 觸發 onIonViewWillEnter，沒有重試入口就只能退出去再進來一次。
+async function loadMerchants() {
+  merchantsLoading.value = true
+  merchantsError.value = ''
+  try {
+    merchants.value = await fetchAllMerchants()
+  } catch (e) {
+    merchantsError.value = apiErrorMessage(e, 'addCode.loadMerchantsFailed')
+  } finally {
+    merchantsLoading.value = false
+  }
+}
+
+// 後端單頁最多給 100 家（paginate 的上限），目錄已經兩百多家 —— 只抓第一頁的話
+// 排在後面的字母整段選不到，而使用者手上的碼偏偏可能就是那幾家的。
+const PAGE = 100
+
+// 一律要完整目錄，不跟著地區偏好走。手上的碼可能是任何一家平台發的，
+// 而這頁沒有地區切換的按鈕（探索頁、分類頁才有）—— 被篩掉就是死路，
+// 使用者只會轉頭去按下面那個「找不到你的平台」，提報一家早就在目錄裡的。
+//
+// 不帶 region 不等於不篩：後端會退回帳號填的所在地（見 resolveRegion），
+// 那個國家一家服務商都沒有時選單會整個空掉，只剩一個 Cancel。
+async function fetchAllMerchants() {
+  const first = await api.listMerchants({ region: ALL_REGIONS, limit: PAGE })
+  const all = [...first.merchants]
+
+  // 結束條件用 total（套用 limit 之前的總數），不要用「這頁拿回來的比 limit 少」
+  // —— 剛好整除時那個判斷會多打一次空的請求。
+  while (all.length < first.total) {
+    const next = await api.listMerchants({
+      region: ALL_REGIONS,
+      limit: PAGE,
+      offset: all.length,
+    })
+    // 分頁之間目錄被改動（審核通過、停用）時 offset 會漂掉，拿到空頁就收手，
+    // 不然這裡會轉不出去。
+    if (next.merchants.length === 0) break
+    all.push(...next.merchants)
+  }
+
+  return all
+}
+
 const selected = computed(() => merchants.value.find((m) => m.id === merchantId.value))
+
+// 使用者一動手修正就把上一則錯誤收掉。選完服務商之後畫面上還掛著
+// 「請選擇服務商」，會讓人以為剛剛那次選擇沒有生效。
+watch(merchantId, () => {
+  errorMessage.value = ''
+})
 
 // 「我要上架的是哪一種」是使用者一進來就想做的選擇，不能等到選完服務商才出現
 // —— 藏在後面等於整個折扣碼功能看不見。還沒選服務商時兩種都給點，
@@ -109,6 +173,31 @@ const isDiscount = computed(() => codeType.value === 'discount')
 // 「Klook - 全球旅遊＆玩樂體驗預訂平台」，選單裡只需要品牌名那一段。
 function shortName(name: string) {
   return name.split(/\s*[-|｜]\s*/)[0]
+}
+
+// 服務商選單自己做，不用 IonSelect 的 action-sheet：兩百多家攤成一份沒有搜尋的
+// 清單，要找的那家往往在第一百多個，滑到手痠 —— 使用者進這頁時心裡已經有
+// 特定的一家了，能打字比能滑更重要。
+const pickerOpen = ref(false)
+const merchantQuery = ref('')
+
+const filteredMerchants = computed(() => {
+  const q = merchantQuery.value.trim().toLowerCase()
+  if (!q) return merchants.value
+  // 比對完整名稱而不是 shortName：使用者可能打的是被截掉的那半段
+  //（「玩樂體驗」之於「Klook - 全球旅遊＆玩樂體驗預訂平台」）。
+  return merchants.value.filter((m) => m.name.toLowerCase().includes(q))
+})
+
+function openPicker() {
+  // 每次重新打開都從完整清單開始 —— 留著上次的關鍵字，使用者會以為目錄只有那幾家。
+  merchantQuery.value = ''
+  pickerOpen.value = true
+}
+
+function pickMerchant(id: string) {
+  merchantId.value = id
+  pickerOpen.value = false
 }
 
 // 目錄裡沒有那一家的時候的出口。沒有這個，手上有碼但服務商還沒上架的人
@@ -235,18 +324,14 @@ async function submit() {
         <section>
           <h2 class="label">{{ $t('addCode.sectionCode') }}</h2>
           <IonList class="app-form" lines="full">
-            <IonItem>
-              <IonSelect
-                v-model="merchantId"
-                :label="$t('addCode.merchant')"
-                label-placement="stacked"
-                :placeholder="$t('addCode.merchantPlaceholder')"
-                interface="action-sheet"
-              >
-                <IonSelectOption v-for="m in merchants" :key="m.id" :value="m.id">
-                  {{ shortName(m.name) }}
-                </IonSelectOption>
-              </IonSelect>
+            <IonItem button :detail="false" @click="openPicker">
+              <IonLabel>
+                <span class="picker-label">{{ $t('addCode.merchant') }}</span>
+                <span class="picker-value" :class="{ empty: !selected }">
+                  {{ selected ? shortName(selected.name) : $t('addCode.merchantPlaceholder') }}
+                </span>
+              </IonLabel>
+              <IonIcon slot="end" :icon="chevronDown" class="picker-chev" />
             </IonItem>
 
             <!-- 選單裡找不到的那些人在這裡才會發現，出口就要放在選單旁邊。 -->
@@ -320,9 +405,11 @@ async function submit() {
           </div>
         </section>
 
-        <div v-if="errorMessage" class="error">
+        <!-- 表單的錯誤優先：那是使用者剛按下送出換來的回應，清單載不到是
+             更早就發生、而且 picker 裡已經講過一次的事。 -->
+        <div v-if="errorMessage || merchantsError" class="error">
           <IonIcon :icon="alertCircle" />
-          <span>{{ errorMessage }}</span>
+          <span>{{ errorMessage || merchantsError }}</span>
         </div>
 
         <div class="callout muted">
@@ -332,6 +419,66 @@ async function submit() {
 
         <IonButton expand="block" class="wide" :disabled="loading" @click="submit">{{ $t('addCode.submit') }}</IonButton>
       </div>
+
+      <IonModal :is-open="pickerOpen" @did-dismiss="pickerOpen = false">
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>{{ $t('addCode.merchantPickTitle') }}</IonTitle>
+            <IonButtons slot="end">
+              <IonButton @click="pickerOpen = false">{{ $t('common.cancel') }}</IonButton>
+            </IonButtons>
+          </IonToolbar>
+          <IonToolbar>
+            <IonSearchbar
+              v-model="merchantQuery"
+              class="app-search"
+              :placeholder="$t('addCode.merchantSearchPlaceholder')"
+              :debounce="150"
+            />
+          </IonToolbar>
+        </IonHeader>
+
+        <IonContent>
+          <!-- 「清單是空的」有三種原因，要分開講：還在抓（兩百多家分三頁）、
+               抓失敗、真的沒有符合的。混成同一句「找不到符合的」，使用者會
+               以為目錄裡沒有那一家，轉頭去提報一家早就在目錄裡的平台。 -->
+          <SkeletonList v-if="merchantsLoading" :count="8" :lines="1" />
+
+          <EmptyState
+            v-else-if="merchantsError"
+            :icon="alertCircleOutline"
+            tone="danger"
+            :title="$t('common.loadFailed')"
+            :description="merchantsError"
+          >
+            <IonButton fill="clear" @click="loadMerchants">{{ $t('common.retry') }}</IonButton>
+          </EmptyState>
+
+          <template v-else>
+            <IonList lines="full">
+              <IonItem
+                v-for="m in filteredMerchants"
+                :key="m.id"
+                button
+                :detail="false"
+                @click="pickMerchant(m.id)"
+              >
+                <IonLabel>{{ shortName(m.name) }}</IonLabel>
+                <IonIcon
+                  v-if="m.id === merchantId"
+                  slot="end"
+                  :icon="checkmarkOutline"
+                  color="primary"
+                />
+              </IonItem>
+            </IonList>
+
+            <p v-if="filteredMerchants.length === 0" class="page-pad tiny muted">
+              {{ $t('addCode.merchantNoMatch') }}
+            </p>
+          </template>
+        </IonContent>
+      </IonModal>
 
       <IonModal :is-open="suggestOpen" @did-dismiss="suggestOpen = false">
         <IonHeader>
@@ -437,6 +584,29 @@ async function submit() {
   font-size: 18px;
   color: var(--ion-color-primary);
   margin-inline-end: 8px;
+}
+
+/* 自己做的選單那一列，視覺上要跟旁邊 IonInput 的 stacked label 對齊，
+   不然這一列會像是另一種東西。 */
+.picker-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--app-muted);
+}
+
+.picker-value {
+  display: block;
+  font-size: 16px;
+}
+
+.picker-value.empty {
+  color: var(--app-muted);
+}
+
+.picker-chev {
+  font-size: 14px;
+  color: var(--app-muted);
 }
 
 .type-picker {

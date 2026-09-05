@@ -18,7 +18,13 @@ const { data: category, error } = await useFetch<Category>(() => `/v1/categories
 
 // 分類不存在時回 404 而不是顯示空列表，免得產生一堆內容重複的可索引頁面。
 if (error.value) {
-  throw createError({ statusCode: 404, statusMessage: t('category.notFound'), fatal: true })
+  // data.localized 是給 error.vue 看的（同 referral/[slug].vue 的理由）。
+  throw createError({
+    statusCode: 404,
+    statusMessage: t('category.notFound'),
+    data: { localized: true },
+    fatal: true,
+  })
 }
 
 // 整份分類清單是為了頁尾的磁磚 —— 逛完一個分類的人接下來多半是換一個分類看，

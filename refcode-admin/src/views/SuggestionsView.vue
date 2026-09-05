@@ -7,22 +7,26 @@ import {
   NFormItem,
   NInput,
   NModal,
+  NPagination,
   NSelect,
   NSpace,
   NSpin,
   NText,
   useMessage,
 } from 'naive-ui'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import { ApiError, api } from '../api/client'
 import type { Category, MerchantSuggestion } from '../api/types'
 
 const message = useMessage()
 
+const PAGE_SIZE = 50
+
 const suggestions = ref<MerchantSuggestion[]>([])
 const categories = ref<Category[]>([])
 const total = ref(0)
+const page = ref(1)
 const loading = ref(false)
 const loadError = ref('')
 
@@ -40,7 +44,10 @@ async function load() {
   loadError.value = ''
   try {
     // 分類是通過時的必填欄位，跟清單一起拿，不要等 modal 開了才去撈。
-    const [res, cats] = await Promise.all([api.listMerchantSuggestions(), api.listCategories()])
+    const [res, cats] = await Promise.all([
+      api.listMerchantSuggestions(PAGE_SIZE, (page.value - 1) * PAGE_SIZE),
+      api.listCategories(),
+    ])
     suggestions.value = res.suggestions
     total.value = res.total
     categories.value = cats.categories
@@ -51,6 +58,7 @@ async function load() {
   }
 }
 
+watch(page, load)
 onMounted(load)
 
 const categoryOptions = () => categories.value.map((c) => ({ label: c.name, value: c.id }))
@@ -74,9 +82,20 @@ function closeApprove(show: boolean) {
   if (!show) approving.value = null
 }
 
-function remove(id: string) {
+// 審過的建議會離開佇列，所以 offset 分頁一定會漂（同 ReviewQueueView）。
+// 只有這一頁被審空時才補抓，還有東西可審就不要打斷節奏。
+async function remove(id: string) {
   suggestions.value = suggestions.value.filter((s) => s.id !== id)
   total.value -= 1
+
+  if (suggestions.value.length > 0 || total.value === 0) return
+
+  // 整頁都沒了就退回前一頁，停在空白的第 N 頁會讓人以為佇列清空了。
+  if (page.value > 1 && (page.value - 1) * PAGE_SIZE >= total.value) {
+    page.value -= 1 // watch(page) 會接著 load
+    return
+  }
+  await load()
 }
 
 // 回傳 false 讓 NModal 保持開啟——欄位沒填或送出失敗時不該把輸入清掉。
@@ -99,7 +118,7 @@ async function confirmApprove() {
       slug: approveSlug.value.trim(),
       category_id: approveCategory.value,
     })
-    remove(s.id)
+    await remove(s.id)
     // 建出來的是停用的草稿，不講清楚會以為按完就上架了。
     message.success(`已建立 ${s.name}，請到「服務商」補獎勵說明後啟用`)
     approving.value = null
@@ -133,7 +152,7 @@ async function confirmReject() {
       action: 'reject',
       reason: rejectReason.value.trim(),
     })
-    remove(s.id)
+    await remove(s.id)
     message.success(`已拒絕 ${s.name}`)
     rejecting.value = null
     rejectReason.value = ''
@@ -198,6 +217,14 @@ const isEmpty = computed(() => !loading.value && suggestions.value.length === 0)
           </NSpace>
         </NCard>
       </NSpace>
+
+      <NPagination
+        v-if="total > PAGE_SIZE"
+        v-model:page="page"
+        :page-size="PAGE_SIZE"
+        :item-count="total"
+        style="margin-top: 16px; justify-content: flex-end"
+      />
     </NSpin>
 
     <NModal

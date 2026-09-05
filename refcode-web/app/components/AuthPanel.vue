@@ -75,7 +75,9 @@ const {
       {{ isRegister ? $t('auth.registerLead') : $t('auth.loginLead') }}
     </p>
 
-    <p v-if="error" class="mt-6 rounded-card bg-alert-soft p-3 text-sm text-alert-ink">
+    <!-- role="alert" 不能省：這段是送出失敗後才插進 DOM 的，沒有它螢幕閱讀器
+         不會唸出來，使用者只會覺得按了送出沒有任何反應。 -->
+    <p v-if="error" role="alert" class="mt-6 rounded-card bg-alert-soft p-3 text-sm text-alert-ink">
       {{ error }}
     </p>
 

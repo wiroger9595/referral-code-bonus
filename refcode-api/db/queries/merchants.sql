@@ -161,6 +161,17 @@ SELECT m.slug, m.name
 FROM referral_code_bonus.merchants m
 WHERE m.is_active
   AND extensions.similarity(m.name, sqlc.arg(search)::text) >= 0.15
+-- 地區過濾必須跟 ListMerchants 用同一套規則。少了這段，主查詢把一家服務商
+-- 篩掉之後建議卻還把它推出來 —— 畫面上就是「找不到 chatgpt」的下一行寫著
+-- 「你是不是要找 ChatGPT」，使用者只會覺得搜尋壞了。
+--
+-- narg 是 NULL 就不篩，理由跟 ListMerchants 那條一樣：匿名訪客、沒填所在地、
+-- 或自己選了「所有地區」都走這條。countries 是空陣列代表不分地區，要放行。
+  AND (
+    sqlc.narg(region)::text IS NULL
+    OR cardinality(m.countries) = 0
+    OR m.countries @> ARRAY[sqlc.narg(region)::text]
+  )
 ORDER BY extensions.similarity(m.name, sqlc.arg(search)::text) DESC, m.name
 LIMIT sqlc.arg(max_results)::int;
 

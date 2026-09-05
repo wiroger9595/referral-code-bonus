@@ -105,6 +105,13 @@ watch(q, (v) => {
         <h1 class="text-xl font-bold tracking-tight">{{ $t('search.emptyTitle', { q }) }}</h1>
         <p class="mt-2 text-sm text-muted">{{ $t('search.emptyHint') }}</p>
 
+        <!-- 搜不到的另一個常見原因是結果被所在地篩掉了。這顆開關原本只放在
+             「有結果」那一段，但被篩到 0 筆的時候它才最需要出現 —— 使用者在
+             這一刻沒有任何線索知道東西是被濾掉的，也就切不回去。 -->
+        <div class="mt-3">
+          <RegionToggle />
+        </div>
+
         <!-- 打錯字時的救援。後端拿名稱相似度找的，找不到就整段不出現。 -->
         <section v-if="suggestions.length" class="mt-8">
           <h2 class="mb-3 text-sm font-bold">{{ $t('search.suggestionsTitle') }}</h2>

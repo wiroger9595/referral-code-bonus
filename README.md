@@ -1,6 +1,7 @@
 # 推薦碼媒合平台 — 工作區
 
-這層是工作區，不是單一 repo。底下四個模組**各自是獨立的 git repo**：
+這層是工作區，不是單一專案。底下四個模組在**同一個 git repo** 底下
+（不是 submodule，根目錄的 git 全部追蹤）：
 
 | 目錄 | 技術 | port | 說明 |
 |---|---|---|---|
@@ -44,7 +45,6 @@ goose 和 sqlc **不是 `go mod` 的相依**（是獨立的 CLI），所以 `go 
 cd refcode-api && psql "$(grep -E '^DATABASE_URL=' .env | cut -d= -f2-)" -c '\dt referral_code_bonus.*'
 ```
 
-###### app 啟動一律 會自動重啟
 ## 啟動一律用 ./dev.sh
 
 ```bash
@@ -53,6 +53,9 @@ cd refcode-api && psql "$(grep -E '^DATABASE_URL=' .env | cut -d= -f2-)" -c '\dt
 ./dev.sh all                    # 四個背景啟動，log 寫進 .logs/
 ./dev.sh stop [模組...]         # 不給模組就四個全停
 ./dev.sh logs <模組>            # 跟蹤 log
+./dev.sh ios [裝置關鍵字]       # 在 iOS 模擬器上跑 app（含 live reload），Ctrl-C 結束
+./dev.sh ios-log                # 跟蹤模擬器裡 app 的 console log，另開一個 terminal 跑
+./dev.sh android-reverse        # 把 Android 實機的 localhost 轉回這台電腦（實機連本機 API 用）
 ```
 
 `.env` 缺了會自動從 `.env.example` 複製，`node_modules` 缺了會自動裝。
@@ -66,7 +69,7 @@ make seed EMAIL=admin@local.test PASSWORD=admin12345   # 建 admin + demo 服務
 
 ## 各模組單獨啟動
 
-平常用 `./dev.sh` 就好，下面是腳本背後實際做的事——要在某個 repo 裡單獨開發、或腳本壞掉時用。
+平常用 `./dev.sh` 就好，下面是腳本背後實際做的事——要在某個模組裡單獨開發、或腳本壞掉時用。
 四個都預設連 `http://localhost:7802` 的 API，前端的 port 寫死在各自的設定檔裡（改了要同步
 `refcode-api/.env` 的 `CORS_ORIGINS`）。
 
@@ -151,7 +154,9 @@ cp .env.example .env  # VITE_API_BASE_URL，預設 http://localhost:7802
 npm install
 npm run dev           # http://localhost:5174，瀏覽器就能開發
 npm run build         # vue-tsc 型別檢查 + vite build，輸出 dist/
-npm run preview       # 用 build 產物起一台本機 server
+                      # 注意：這個 script 在指令裡硬寫了正式站的 VITE_API_BASE_URL，
+                      # 會蓋掉 .env 那份，產物一律連正式 API
+npm run preview       # 用 build 產物起一台本機 server（一樣是連正式 API，不是 localhost:7802）
 ```
 
 port 寫在 `vite.config.ts`，改了一樣要同步後端的 `CORS_ORIGINS`。
@@ -164,29 +169,45 @@ port 寫在 `vite.config.ts`，改了一樣要同步後端的 `CORS_ORIGINS`。
 npm run build && npx cap sync     # 每次改完前端都要 sync 一次
 npx cap open ios                  # 開 Xcode
 npx cap open android              # 開 Android Studio
-
-要做成 hot reload
-# Terminal A：dev server（--host 一定要加，見下面第 2 點）
-cd refcode-app && npm run dev -- --host
-
-# Terminal B（`--host localhost` 不能省，見下面第 3 點）
-cd refcode-app && npx cap run ios -l --host localhost --port 5174
-
 ```
 
-加了原生平台之後，**實機和模擬器連不到 `localhost:7802`**——那個 localhost 是裝置自己。
-把 `.env` 的 `VITE_API_BASE_URL` 改成電腦的區網 IP（`ipconfig getifaddr en0`），
-並把同一個位址加進後端的 `CORS_ORIGINS`。
+要在模擬器上邊改邊看，**用 `./dev.sh ios`，不要自己拼指令**：
 
-`cap run -l` 不給 `--host` 的話，Capacitor 會自己抓區網 IP 當 live reload 位址，
-WebView 的 origin 就變成 `http://<區網IP>:5174`——那個 origin 不在後端的
-`CORS_ORIGINS` 裡，API 全部會被擋掉，但畫面照樣載得出來，看起來像「後端掛了」。
-釘成 `localhost` 就沿用已經放行的 origin。**上面兩個 Terminal 其實不用自己開，
-`./dev.sh ios` 已經是這條指令**（會順便起 vite、跑 `cap sync`、結束時還原原生設定）。
+```bash
+./dev.sh ios          # 起 vite → cap sync ios → cap run ios -l，Ctrl-C 結束
+./dev.sh ios 17e      # 指定模擬器（拿關鍵字去比對 xcrun simctl 的清單）
+```
 
-Google / Apple 登入已經接上 `@capgo/capacitor-social-login`，但**還沒有任何 client id**，
-所以那兩顆按鈕預設不會出現。要開啟就填 `.env`（app 端）與 `GOOGLE_CLIENT_IDS` /
-`APPLE_CLIENT_IDS`（後端），兩邊必須是同一組。
+`npx cap run ios -l` **只把 WebView 指到那個網址，不會幫你啟動 dev server** ——
+自己下這條指令而 5174 沒人在聽的話，模擬器裡就是一片白。**而且一定要用 Ctrl-C 結束**，
+它才會把暫時寫進 `ios/App/App/capacitor.config.json` 的 `server.url` 還原；硬殺掉的話
+那行會留著，之後不帶 `-l` build 出來的 app 也一樣會去連 5174。
+
+`./dev.sh ios` 帶的是 `--host localhost`。不給 `--host` 的話 Capacitor 會自己抓區網 IP，
+WebView 的 origin 就變成 `http://<區網IP>:5174`——那個 origin 不在後端的 `CORS_ORIGINS` 裡，
+API 全部會被擋掉，但畫面照樣載得出來，看起來像「後端掛了」。釘成 `localhost`
+就沿用已經放行的 origin。
+
+**iOS 模擬器的 `localhost` 就是這台 Mac**（跟 Mac 共用網路），所以模擬器連得到
+`localhost:7802`。但 **Android 的模擬器／實機、以及 iOS 實機不行** —— 那個 localhost
+是裝置自己。
+
+Android 有接 USB 的話跑 `./dev.sh android-reverse` —— `adb reverse` 會把裝置上的
+`localhost:7802`（連 vite 的 5174 一起）從 USB 那條線轉回這台電腦。位址永遠是
+`localhost`，所以換 WiFi、換網段都不必動任何檔案，origin 也還是 `CORS_ORIGINS` 早就
+放行的那幾個，不用每換一次 IP 就回頭補後端設定。代價是轉發規則存在 adb daemon 裡、
+**手機重開、拔插 USB、adb server 重啟就會消失**，重跑一次就好。
+
+模擬器也是 adb device，同一招適用；無線偵錯配對過的機器也算，不限 USB。
+
+**iOS 實機沒有 `adb reverse` 的等價物**，要連本機 API 只能自己帶區網 IP build
+（`VITE_API_BASE_URL=http://<區網IP>:7802 npx vite build`），並把那個位址加進後端的
+`CORS_ORIGINS`。Android 不需要這樣做。
+
+Google / Apple 登入已經接上 `@capgo/capacitor-social-login`。**Google 的三組 client id
+（web / iOS / Android）已經填在 `refcode-app/.env`，Apple 還沒有** —— 沒填 client id 的
+provider 不會出現在登入頁。同一組 id 也要列進後端的 `GOOGLE_CLIENT_IDS` /
+`APPLE_CLIENT_IDS`，兩邊沒對上會登入失敗。
 
 上架 App Store / Play Store 要用的文件全部在 `refcode-app/store/`，
 **目前還有阻斷項沒解決**（帳號刪除功能、政策網址、UGC 要件），先讀 `refcode-app/store/README.md`。
@@ -259,8 +280,8 @@ sitemap 會跟著產出錯的網址。
   所有 SQL 明確寫 `referral_code_bonus.xxx`，不要依賴連線的 `search_path`。
 - **migration 套用前自己看過。** `refcode-api/db/migrations/` 是純 SQL。
 - **改完 `db/queries/*.sql` 要跑 `make sqlc`**，`internal/store/dbgen/` 是產生出來的，不要手改。
-- **四個 repo 之間唯一的耦合是 API 契約。** 三個前端各有一份手寫的 `types.ts`，
-  後端補上 OpenAPI spec 之後應該全部改成從 spec 產生 —— 這是分開 repo 最容易爛掉的地方。
+- **四個模組之間唯一的耦合是 API 契約。** 三個前端各有一份手寫的 `types.ts`，
+  後端補上 OpenAPI spec 之後應該全部改成從 spec 產生 —— 這是四個模組分開最容易爛掉的地方。
 - 規則只寫一個地方：排序權重在 `refcode-api/internal/ranking/ranking.go`、
   品質分數與自動下架在 `ranking/quality.go`、審核動作對應狀態在 `handlers_admin.go`。
   要改行為先找那一處，不要在呼叫端各自判斷。
@@ -277,15 +298,36 @@ Phase 1（目錄、上架、審核、排序）與 Phase 2（回報、自動下�
 - email 驗證信（註冊當下那封；`email_verified_at` 目前只有重設密碼會標）
 - 使用者自己下架 / 刪除已上架的推薦碼
 - 封鎖 / 檢舉上架者（Apple 1.2 的 UGC 要件，最後一項沒補的）
-- 各平台的 OAuth client id 與 RevenueCat 的 API key（程式碼都接好了，缺設定）
+- Apple 登入的 client id、RevenueCat 的 iOS key（Google 三組與 RevenueCat 的 Android key
+  已經填在 `refcode-app/.env`，程式碼都接好了）
 - Phase 3 全部：CPC 競價、廣告主錢包、金流、點擊計費防作弊
-# referral-code-bonus
 
+## 測試用的後台帳號
 
+**這組是 Supabase 上那台真的存在的帳號**，不是 `make seed` 建的
+`admin@local.test` —— 本機連的就是正式那台，用它做的操作都是真的。
 
-測試
-admin 帳密
-- Email：owner@refcode.test
-- 密碼：refcode1234
-- 權限：owner（review、merchants、categories 都能進）
+- Email：`owner@refcode.test`
+- 密碼：`refcode1234`
+- 權限：owner（`/review`、`/merchants`、`/categories` 都進得去）
+
+## 測試
+
+**只有 `refcode-api` 有測試**，三個前端目前沒有任何測試設定（`package.json` 裡
+沒有 test script，也沒裝 vitest / playwright 之類的東西）——不要假設有測試可以跑。
+
+```bash
+cd refcode-api && make test    # 實際跑 go test ./...
+go vet ./...
+```
+
+兩支測試檔都是純邏輯、**不碰資料庫**，所以可以安心重跑，不會動到 Supabase 上的資料：
+
+| 套件 | 測什麼 | 覆蓋率 |
+|---|---|---|
+| `internal/ranking` | 排序權重、品質分數、自動下架門檻 | 90.2% |
+| `internal/httpapi` | RevenueCat webhook 的訂閱狀態判定（`DecideSubscription`） | 0.8% |
+
+`internal/httpapi` 那 0.8% 是因為整包 handler 只測了訂閱判定那一支，
+不代表 API 有被測過 —— 路由、權限、審核流程目前都沒有測試。
 

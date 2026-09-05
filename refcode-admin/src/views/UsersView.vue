@@ -6,6 +6,7 @@ import {
   NDatePicker,
   NInput,
   NModal,
+  NPagination,
   NPopconfirm,
   NSpace,
   NTag,
@@ -13,15 +14,18 @@ import {
   useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { h, onMounted, ref } from 'vue'
+import { h, onMounted, ref, watch } from 'vue'
 
 import { ApiError, api } from '../api/client'
 import type { AdminUserItem } from '../api/types'
 
 const message = useMessage()
 
+const PAGE_SIZE = 50
+
 const users = ref<AdminUserItem[]>([])
 const total = ref(0)
+const page = ref(1)
 const loading = ref(false)
 const loadError = ref('')
 const query = ref('')
@@ -34,7 +38,7 @@ async function load() {
   loading.value = true
   loadError.value = ''
   try {
-    const res = await api.listUsers(query.value.trim())
+    const res = await api.listUsers(query.value.trim(), PAGE_SIZE, (page.value - 1) * PAGE_SIZE)
     users.value = res.users
     total.value = res.total
   } catch (e) {
@@ -44,7 +48,18 @@ async function load() {
   }
 }
 
+watch(page, load)
 onMounted(load)
+
+// 換關鍵字一律回到第一頁。停在第 3 頁搜一個新名字，結果不足三頁時畫面會是空的，
+// 看起來就像查無此人 —— 而實際上人就在第一頁。
+function search() {
+  if (page.value !== 1) {
+    page.value = 1 // watch(page) 會接著 load
+    return
+  }
+  load()
+}
 
 function openGrant(u: AdminUserItem) {
   granting.value = u
@@ -167,9 +182,9 @@ const columns: DataTableColumns<AdminUserItem> = [
           placeholder="搜尋 email"
           clearable
           style="width: 240px"
-          @keyup.enter="load"
+          @keyup.enter="search"
         />
-        <NButton size="small" :loading="loading" @click="load">搜尋</NButton>
+        <NButton size="small" :loading="loading" @click="search">搜尋</NButton>
       </NSpace>
     </NSpace>
 
@@ -186,6 +201,16 @@ const columns: DataTableColumns<AdminUserItem> = [
       :loading="loading"
       :row-key="(row: AdminUserItem) => row.id"
       size="small"
+    />
+
+    <!-- 標題那個數字是全站總人數，但清單一次只給 50 筆 —— 沒有這個，
+         第 51 個使用者起就查不到，而畫面上完全看不出少了東西。 -->
+    <NPagination
+      v-if="total > PAGE_SIZE"
+      v-model:page="page"
+      :page-size="PAGE_SIZE"
+      :item-count="total"
+      style="margin-top: 16px; justify-content: flex-end"
     />
 
     <NModal

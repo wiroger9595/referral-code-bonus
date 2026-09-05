@@ -91,7 +91,11 @@ function again() {
     </section>
 
     <template v-else>
-      <p v-if="errorMessage" class="mt-6 rounded-card bg-alert-soft p-3 text-sm text-alert-ink">
+      <p
+        v-if="errorMessage"
+        role="alert"
+        class="mt-6 rounded-card bg-alert-soft p-3 text-sm text-alert-ink"
+      >
         {{ errorMessage }}
       </p>
 

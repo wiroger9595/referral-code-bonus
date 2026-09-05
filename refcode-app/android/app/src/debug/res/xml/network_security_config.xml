@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 只給 debug build：開發時要連本機 API（http://192.168.1.194:7802），
+<!-- 只給 debug build：開發時要連本機 API（http://localhost:7802），
      targetSdk 28+ 預設擋明文流量。只放在 src/debug，release build 不會帶到這份設定。
-     domain 要跟著換——電腦區網 IP 變了記得同步改這裡。 -->
+
+     實機上 localhost 指的是手機自己，是 `./dev.sh android-reverse` 建立的 adb
+     reverse 把它轉回這台電腦的。改成 localhost 之後這份設定就不用再跟著區網 IP
+     改了——以前寫死 IP，換個 WiFi 就會擋掉明文流量，而症狀只是連不上，很難聯想
+     到是這裡。 -->
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">10.0.0.23</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
     </domain-config>
 </network-security-config>

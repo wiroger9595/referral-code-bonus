@@ -295,7 +295,7 @@ func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 	body := map[string]any{"merchants": out, "total": total}
 
 	if q != "" {
-		body["suggestions"] = s.searchSuggestions(r, q, len(rows))
+		body["suggestions"] = s.searchSuggestions(r, q, len(rows), params.Region)
 
 		// commit 代表這是使用者「確定要搜的」（按下 Enter、點了建議或歷史、
 		// 直接開 /search?q=），逐字輸入不帶。少了這個條件，打一次「台新銀行」
@@ -321,13 +321,16 @@ type searchSuggestion struct {
 // searchSuggestions 只在一筆都搜不到時才去查 —— 有結果的時候使用者要的是結果，
 // 多打一次 similarity 查詢只是白花錢。查失敗也不讓整頁失敗：建議是加分，
 // 沒有建議的空結果頁仍然是完整的頁面。
-func (s *Server) searchSuggestions(r *http.Request, q string, found int) []searchSuggestion {
+// region 要跟主查詢用同一個值（呼叫端算好傳進來，不要在這裡重算 —— 兩邊各算
+// 一次就有機會分岔，而分岔的症狀就是建議推薦一家搜尋結果裡看不到的服務商）。
+func (s *Server) searchSuggestions(r *http.Request, q string, found int, region *string) []searchSuggestion {
 	if found > 0 {
 		return []searchSuggestion{}
 	}
 
 	rows, err := s.store.SuggestMerchants(r.Context(), dbgen.SuggestMerchantsParams{
 		Search:     q,
+		Region:     region,
 		MaxResults: suggestLimit,
 	})
 	if err != nil {

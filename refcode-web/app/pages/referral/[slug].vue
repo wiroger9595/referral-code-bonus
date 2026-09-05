@@ -6,6 +6,7 @@ const { public: cfg } = useRuntimeConfig()
 const { track, report } = useTracking()
 const { t } = useI18n()
 const localePath = useLocalePath()
+const { authHeaders } = useAuth()
 const { expiryLabel, isUrgent } = useExpiry()
 const { rewardText } = useReward()
 const lang = useApiLang()
@@ -17,14 +18,25 @@ const slug = computed(() => String(route.params.slug))
 
 // 曝光是由後端在決定顯示哪些碼時記錄的。SSR 階段打 API 的是 server，
 // 不轉發的話後端看到的 UA/IP 全是 node 的 —— 曝光會歸錯，bot 也擋不掉。
+//
+// token 也要一起帶：後端靠它決定碼要不要遮起來（見 refcode-api 的 revealCode）。
+// 少了它，登入過的人在這頁一樣只看得到「登入才能看到完整碼」，而這頁是官網
+// 唯一的取碼入口 —— 等於登入在官網上沒有任何作用。
 const { data, error } = await useFetch<MerchantDetail>(() => `/v1/merchants/${slug.value}`, {
   baseURL: cfg.apiBase,
   query: { lang },
-  headers: useRequestHeaders(['user-agent', 'x-forwarded-for']),
+  headers: { ...useRequestHeaders(['user-agent', 'x-forwarded-for']), ...authHeaders() },
 })
 
 if (error.value) {
-  throw createError({ statusCode: 404, statusMessage: t('referral.notFound'), fatal: true })
+  // data.localized 是給 error.vue 看的：它靠這個分辨 statusMessage 是這裡譯好的
+  // 句子，還是 Nuxt 自己塞的「Page not found: /xxx」。
+  throw createError({
+    statusCode: 404,
+    statusMessage: t('referral.notFound'),
+    data: { localized: true },
+    fatal: true,
+  })
 }
 
 const merchant = computed(() => data.value?.merchant)

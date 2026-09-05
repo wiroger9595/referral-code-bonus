@@ -199,7 +199,7 @@
     "avatarUploading": "アップロード中…",
     "avatarHint": "画像をタップすると変更できます。アップロード前に自動で縮小されます。",
     "otherTitle": "その他の設定",
-    "otherBody": "表示名と地域は現在アプリからのみ変更できます。",
+    "otherBody": "地域はアプリから変更できます。表示名は現在どちらからも変更できません。",
     "deleteLink": "アカウントを削除"
   },
   "errors": {
@@ -249,6 +249,14 @@
     "suggestion_duplicate": "このサービスはすでにリクエスト済みです（確認中）",
     "suggestion_merchant_exists": "このサービスはすでに掲載されています。検索してみてください",
     "suggestion_limit_reached": "確認中のリクエストがあります。完了してから追加してください"
+  },
+  "errorPage": {
+    "notFoundTitle": "ページが見つかりません",
+    "notFoundBody": "URL が間違っているか、そのサービスが掲載を終了した可能性があります。",
+    "genericTitle": "このページで問題が発生しました",
+    "genericBody": "再読み込みすると直ることが多いです。それでもだめならホームに戻ってやり直してください。",
+    "searchHint": "探しているサービスを検索：",
+    "backHome": "ホームに戻る"
   },
   "deleteAccount": {
     "title": "アカウントの削除",

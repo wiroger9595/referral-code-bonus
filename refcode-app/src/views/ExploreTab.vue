@@ -175,8 +175,10 @@ const hot = computed(() =>
   showSections.value ? merchants.value.filter((m) => m.active_code_count > 0).slice(0, 10) : [],
 )
 
-// 橫幅上的兩個數字算的是「這一頁列出來的」，不是全站總數 —— API 一次只給 50 筆。
-// 文案也是照這個寫的，別改成「全站共 N 組」。
+// 碼數只能加總已經載入的那幾家 —— API 一次給 50 筆，而回傳裡沒有「全站共幾組碼」
+// 這個欄位。目前不會少報：後端照 active_code_count 由大到小排，有碼的服務商全部
+// 落在第一頁裡。哪天有碼的超過 50 家，這個數字就會開始短少，那時要後端多回一個
+// 總數，不要在前端多抓幾頁來湊（家數用的 total 不受這件事影響）。
 const totalCodes = computed(() => merchants.value.reduce((sum, m) => sum + m.active_code_count, 0))
 
 // 排序在前端做。清單一次就全抓回來了，改排序再打一次 API 只是讓畫面白一下。
@@ -236,7 +238,7 @@ const sorted = computed(() => {
 
           <div class="banner-stats">
             <div>
-              <strong>{{ merchants.length }}</strong>
+              <strong>{{ total }}</strong>
               <span>{{ $t('explore.statMerchants') }}</span>
             </div>
             <div>
@@ -295,7 +297,9 @@ const sorted = computed(() => {
       <!-- 分類做成磁磚而不是橫向 chips：一眼看得完的分類數（個位數）用磁磚
            比較好按，也不用左右撥。點下去換頁到該分類的專屬頁面，
            跟 refcode-web 的 CategoryTiles 是同一個行為。 -->
-      <section v-if="categories.length" class="cats page-pad">
+      <!-- 搜尋時整段收起來：14 個磁磚會把搜尋結果整個推到螢幕外，
+           使用者以為沒搜到東西。熱門／快到期兩區也是同一個 showSections。 -->
+      <section v-if="showSections && categories.length" class="cats page-pad">
         <div class="cat-grid">
           <button
             v-for="(c, i) in categories"
@@ -419,7 +423,7 @@ const sorted = computed(() => {
               {{ $t('explore.resultCount', { count: total }, total) }}
             </template>
             <template v-else>
-              {{ $t('explore.summary', { count: merchants.length }, merchants.length) }}
+              {{ $t('explore.summary', { count: total }, total) }}
             </template>
           </p>
         </div>

@@ -23,10 +23,13 @@
 
 ## A2. 訂閱（RevenueCat）
 
-- [ ] RevenueCat 專案已建立，entitlement `pro` 已建好
+- [ ] RevenueCat 專案已建立，entitlement `refcode_pro` 已建好
 - [ ] App Store Connect 的訂閱群組 `refcode_pro` 與兩個 product 已建立並掛進 RevenueCat
 - [ ] Play Console 的訂閱 `pro` 與兩個基本方案已建立並掛進 RevenueCat
 - [ ] offering 已設為 current，`getOfferings()` 拿得到方案
+- [ ] 兩家商店的 introductory offer（7 天免費試用）已設好 ——
+      paywall 顯示的是商店回傳的 `introPrice`，天數沒有寫死，
+      沒設的話畫面上完全不會出現試用字樣，很容易被誤判成程式沒做
 - [ ] `refcode-app/.env` 的 `VITE_REVENUECAT_IOS_KEY` / `VITE_REVENUECAT_ANDROID_KEY` 已填
 - [x] `refcode-app/.env` 的 `VITE_REVENUECAT_TEST_KEY` **已清空** ——
       Test Store 的 key 會蓋掉平台 key，帶著它送審等於真實購買全部收不到
@@ -112,4 +115,3 @@
 - [ ] build number / versionCode 遞增
 - [ ] What's New 寫具體改了什麼
 - [ ] 如果改動涉及蒐集的資料，回頭更新 `app-privacy.md`、`data-safety.md` 與隱私權政策
-http://localhost:5175/login?redirect=/registerㄌ

@@ -4,6 +4,8 @@
 
 需要 `refcode-api` 跑在 `http://localhost:7802`。
 
+平常用工作區根目錄的 `./dev.sh web`。要在這個目錄裡單獨開發：
+
 ```bash
 cp .env.example .env
 npm install

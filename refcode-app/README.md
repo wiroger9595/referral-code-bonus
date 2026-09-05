@@ -4,11 +4,16 @@
 
 需要 `refcode-api` 跑在 `http://localhost:7802`。
 
+平常用工作區根目錄的 `./dev.sh app`（`.env` 與 `node_modules` 缺了它會自己補）。
+要在這個目錄裡單獨開發：
+
 ```bash
 cp .env.example .env
 npm install
 npm run dev          # http://localhost:5174（瀏覽器就能開發）
 ```
+
+要在 iOS 模擬器上邊改邊看是 `./dev.sh ios`，見下面「原生平台」。
 
 ## 畫面
 
@@ -73,8 +78,8 @@ npm run dev          # http://localhost:5174（瀏覽器就能開發）
 
 **Google / Apple 登入走 `@capgo/capacitor-social-login`。** plugin 只負責拿 provider 簽的
 ID token，驗證在後端（`refcode-api` 的 `internal/auth/oidc.go` 比對 `iss` 與 `aud`）。
-`src/api/social.ts` 讀 `.env` 的 client id，**沒設定的 provider 不會出現在登入頁** ——
-所以在瀏覽器裡開發時預設看不到那兩顆按鈕，那是正常的。
+`src/api/social.ts` 讀 `.env` 的 client id，**沒設定的 provider 不會出現在登入頁**。
+目前 `.env` 只填了 Google 的三組 id，Apple 還沒有，所以登入頁只會出現 Google 那顆。
 同一組 client id 也要列進後端的 `GOOGLE_CLIENT_IDS` / `APPLE_CLIENT_IDS`，兩邊沒對上會登入失敗。
 
 ## 設定 Google 登入
@@ -87,7 +92,7 @@ ID token，驗證在後端（`refcode-api` 的 `internal/auth/oidc.go` 比對 `i
 | Web application | 瀏覽器開發，以及 Android 拿 ID token 用的 server client | `VITE_GOOGLE_WEB_CLIENT_ID` |
 | iOS（要填 bundle id `com.referra.app`） | iOS 原生流程 | `VITE_GOOGLE_IOS_CLIENT_ID` |
 | Android（要填 package name 與簽章的 SHA-1） | Android 原生流程 | 不用填進 `.env`，但 console 上必須存在 |
-./dev.sh
+
 Web client 的 Authorized JavaScript origins 要加 `http://localhost:5174`（app）
 和 `http://localhost:3000`（官網，那邊也用同一個 web client）。
 
@@ -102,7 +107,8 @@ Web client 的 Authorized JavaScript origins 要加 `http://localhost:5174`（ap
 ——購買不經過 App Store / Play，所以**不需要 Play Console 商品、不需要 service account
 credentials、不需要先把 app 上傳到測試軌**。
 
-1. RevenueCat 後台 → Product Catalog 建好 product 與 offering（設為 current），entitlement 掛 `pro`
+1. RevenueCat 後台 → Product Catalog 建好 product 與 offering（設為 current），entitlement 掛
+   `refcode_pro`（要跟 `.env` 的 `VITE_REVENUECAT_ENTITLEMENT` 與後端的 `PRO_ENTITLEMENT` 一致）
 2. Project settings → API keys 拿 Test Store 的 key（`test_` 開頭，也是 public key）
 3. 填進 `.env` 的 `VITE_REVENUECAT_TEST_KEY`
 4. `npm run build && npx cap sync android && npx cap open android`，用實機或模擬器跑
@@ -178,6 +184,44 @@ npx cap open android                 # 開 Android Studio
 npx cap open ios                     # 開 Xcode
 cd android && ./gradlew :app:assembleDebug   # 不開 IDE 直接出 debug APK
 ```
+
+⚠️ **`npm run build` 的 script 裡硬寫了正式站的 `VITE_API_BASE_URL`**（見 `package.json`），
+`import.meta.env` 是 build 時代入的，指令上的環境變數優先權高於 `.env` —— 所以**改 `.env`
+的 `VITE_API_BASE_URL` 對 `npm run build` 出來的產物沒有用**，那個包一律連正式 API。
+這是刻意的護欄：包版一律從 `npm run build` 開始，漏掉的下場是把本機位址送上商店。
+
+**要讓原生包連本機 API 就用 `npm run build:local`** —— 就是不帶那個環境變數的
+`vite build`，所以會讀 `.env` 的 `localhost:7802`。搭配 `./dev.sh android-reverse`：
+
+```bash
+./dev.sh android-reverse     # adb reverse，把實機的 localhost 轉回這台電腦
+npm run build:local          # 讀 .env → localhost:7802
+npx cap sync android
+```
+
+`build:local` 沒有 `vue-tsc -b`：本機來回 build 的時候型別檢查最花時間，那步留給
+`npm run build` 跟編輯器。
+
+### 在模擬器上邊改邊看
+
+```bash
+./dev.sh ios          # 起 vite → cap sync ios → cap run ios -l，Ctrl-C 結束
+./dev.sh ios 17e      # 指定模擬器（拿關鍵字去比對 xcrun simctl 的清單）
+./dev.sh ios-log      # WebView 的 console 不會出現在上面那個 terminal，另開一個跑這支
+```
+
+`npx cap run ios -l` **只把 WebView 指到那個網址，不會幫你啟動 dev server** ——
+自己下這條指令而 5174 沒人在聽的話，模擬器裡就是一片白。**而且一定要用 Ctrl-C 結束**，
+它才會把暫時寫進 `ios/App/App/capacitor.config.json` 的 `server.url` 還原；硬殺掉的話
+那行會留著，之後不帶 `-l` build 出來的 app 也一樣會去連 5174（重跑一次 `npx cap sync ios`
+就會依 `capacitor.config.ts` 蓋回來）。
+
+**iOS 模擬器的 `localhost` 就是這台 Mac**，所以模擬器連得到 `localhost:7802`，
+`./dev.sh ios` 才敢帶 `--host localhost`（順便沿用後端 `CORS_ORIGINS` 已經放行的 origin）。
+**Android 的模擬器／實機與 iOS 實機不行** —— 那個 localhost 是裝置自己。
+Android 跑 `./dev.sh android-reverse`（`adb reverse`，位址永遠是 `localhost`，換網路
+都不用改設定；模擬器與無線偵錯的機器一樣適用）。**iOS 實機沒有對應做法**，得自己帶
+區網 IP build。
 
 **`capacitor.config.ts` 的 `plugins.SocialLogin.providers` 不要打開 facebook / twitter。**
 那個 plugin 預設四家 provider 的原生 SDK 全包，Facebook SDK 會把 `AD_ID` 權限、
@@ -269,7 +313,5 @@ Apple 帳號上申請憑證，而 Distribution 憑證的數量有上限，該由
 `store/checklist.md` 走一遍。**目前還有阻斷項沒解決**，見 `store/README.md`。
 
 ## 還沒做
-加原生平台後，實機連本機 API 要把 `.env` 的 `VITE_API_BASE_URL` 指到電腦的區網 IP
-（模擬器上的 localhost 是裝置自己）。
 
 **推播通知**（追蹤的服務商有新碼時提醒）。

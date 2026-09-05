@@ -36,7 +36,8 @@
     "expiresToday": "expires today",
     "expiresInDays": "expires in {count} day | expires in {count} days",
     "noExpiry": "no expiry",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "retry": "Retry"
   },
   "explore": {
     "title": "Explore",
@@ -47,7 +48,7 @@
     "popularSearches": "Popular searches",
     "didYouMean": "Did you mean",
     "noMatchTitle": "No matching services",
-    "noMatchDesc": "Try a different keyword, or switch the category back to \"All\".",
+    "noMatchDesc": "Try a different keyword, or clear the search to browse by category.",
     "summary": "{count} service・every code is manually reviewed | {count} services・every code is manually reviewed",
     "codeCount": "{count} code | {count} codes",
     "bannerTag": "Human reviewed",
@@ -143,6 +144,8 @@
     "loginToReveal": "Sign in to reveal code",
     "copy": "Copy",
     "copied": "Copied",
+    "copyFailed": "Couldn't copy — select the code manually",
+    "openFailed": "Couldn't open the page, try again later",
     "goSignup": "Go to sign-up",
     "askWorks": "Did this code work?",
     "worked": "It worked",
@@ -167,6 +170,9 @@
     "sectionCode": "The code",
     "merchant": "Service",
     "merchantPlaceholder": "Pick one",
+    "merchantPickTitle": "Pick a service",
+    "merchantSearchPlaceholder": "Search services",
+    "merchantNoMatch": "No matching service — use “Can't find your platform?” below to tell us",
     "code": "Referral code",
     "codePlaceholder": "Case sensitive — enter it exactly",
     "note": "Note",
@@ -218,6 +224,7 @@
     "emailOnlyNotice": "Only email sign-in is available right now. Google / Apple sign-in needs a client id for each platform.",
     "connectionFailed": "Connection failed. Please try again shortly",
     "loginFailed": "Sign-in failed. Please try again shortly",
+    "fieldsRequired": "Enter your email and password",
     "country": "Location",
     "countryUnset": "No preference",
     "forgotPassword": "Forgot your password?"

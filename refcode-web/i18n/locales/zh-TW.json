@@ -202,7 +202,7 @@
     "avatarUploading": "上傳中…",
     "avatarHint": "點頭像就能換一張。上傳前會自動縮小，只有你自己和推薦碼列表上會看到。",
     "otherTitle": "其他設定",
-    "otherBody": "顯示名稱與所在地目前只能在手機 app 裡修改。",
+    "otherBody": "所在地可以在手機 app 裡修改。顯示名稱目前兩邊都還不能改。",
     "deleteLink": "刪除我的帳號"
   },
   "errors": {
@@ -252,6 +252,14 @@
     "suggestion_duplicate": "你已經提報過這個平台了，審核中",
     "suggestion_merchant_exists": "這個平台已經在目錄裡了，搜尋看看",
     "suggestion_limit_reached": "你還有幾筆平台建議在審核中，等審完再提報新的"
+  },
+  "errorPage": {
+    "notFoundTitle": "找不到這個頁面",
+    "notFoundBody": "網址可能打錯了，或那家服務商已經從目錄上下架。",
+    "genericTitle": "這個頁面出了點問題",
+    "genericBody": "重新整理一次通常就好了。還是不行的話，回首頁再試一次。",
+    "searchHint": "直接搜尋你要找的服務商：",
+    "backHome": "回首頁"
   },
   "deleteAccount": {
     "title": "刪除帳號",

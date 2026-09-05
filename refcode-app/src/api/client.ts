@@ -18,9 +18,9 @@ import type {
   User,
 } from './types'
 
-// 預設走 localhost：模擬器與瀏覽器跟這台機器共用網路，換 WiFi、IP 變了都不影響。
-// 只有實機測試連不到 localhost，那時才要把 .env 的 VITE_API_BASE_URL 換成區網 IP
-// （`./dev.sh android-ip` 會自動偵測並寫進去）。不要在這裡寫死某個 IP 當預設 ——
+// 一律走 localhost：瀏覽器與模擬器跟這台機器共用網路，實機則靠
+// `./dev.sh android-reverse` 建立的 adb reverse 把手機的 localhost 轉回這台電腦，
+// 三個環境共用同一個值，換 WiFi、IP 變了都不影響。不要在這裡寫死某個 IP 當預設 ——
 // 換個地方那個值就是死的，而且失效時的症狀是整個 app 連不上，很難一眼看出原因。
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:7802'
 
@@ -283,8 +283,21 @@ export const api = {
   // region 是「只看這一區的服務商」，'all' 代表不篩。不帶的話後端會退回
   // 登入者填的所在地（匿名就是不篩），但 app 一律自己算好再送 ——
   // 匿名使用者也要吃得到裝置地區。
-  listMerchants(params: { category?: string; q?: string; commit?: boolean; region?: string } = {}) {
-    const qs = new URLSearchParams({ limit: '50', lang: apiLang })
+  //
+  // limit 預設 50，瀏覽用的清單一頁就夠。要完整目錄的（上架頁的服務商選單）
+  // 自己帶 limit + offset 分頁抓 —— 後端單頁上限是 100（見 paginate）。
+  listMerchants(
+    params: {
+      category?: string
+      q?: string
+      commit?: boolean
+      region?: string
+      limit?: number
+      offset?: number
+    } = {},
+  ) {
+    const qs = new URLSearchParams({ limit: String(params.limit ?? 50), lang: apiLang })
+    if (params.offset) qs.set('offset', String(params.offset))
     if (params.category) qs.set('category', params.category)
     if (params.q) qs.set('q', params.q)
     if (params.commit) qs.set('commit', '1')

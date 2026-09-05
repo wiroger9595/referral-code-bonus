@@ -6,13 +6,14 @@ import {
   NEmpty,
   NInput,
   NModal,
+  NPagination,
   NSpace,
   NSpin,
   NTag,
   NText,
   useMessage,
 } from 'naive-ui'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import { ApiError, api } from '../api/client'
 import type { PendingCode } from '../api/types'
@@ -20,8 +21,11 @@ import { CODE_TYPE_LABELS } from '../codeType'
 
 const message = useMessage()
 
+const PAGE_SIZE = 50
+
 const codes = ref<PendingCode[]>([])
 const total = ref(0)
+const page = ref(1)
 const loading = ref(false)
 const loadError = ref('')
 
@@ -33,7 +37,7 @@ async function load() {
   loading.value = true
   loadError.value = ''
   try {
-    const res = await api.listPendingCodes()
+    const res = await api.listPendingCodes(PAGE_SIZE, (page.value - 1) * PAGE_SIZE)
     codes.value = res.codes
     total.value = res.total
   } catch (e) {
@@ -43,7 +47,24 @@ async function load() {
   }
 }
 
+watch(page, load)
 onMounted(load)
+
+// 審完一筆之後要不要補抓。審過的碼會離開佇列，所以 offset 分頁一定會漂
+// —— 審掉 5 筆，第二頁的前 5 筆就變成第一頁的尾巴。這裡不追求精準翻頁：
+// 只有在這一頁被審空的時候才補，還有東西可審就不要打斷審核的節奏。
+async function afterReview() {
+  if (codes.value.length > 0) return
+  if (total.value === 0) return
+
+  // 整頁都不存在了（別人也在審、或這本來就是最後一頁）就退回前一頁，
+  // 停在一個空白的第 N 頁只會讓人以為佇列清空了。
+  if (page.value > 1 && (page.value - 1) * PAGE_SIZE >= total.value) {
+    page.value -= 1 // watch(page) 會接著 load
+    return
+  }
+  await load()
+}
 
 // 兩種碼各有各的格式規則，要對到這個碼實際適用的那一條。
 function formatRegexFor(code: PendingCode) {
@@ -73,6 +94,7 @@ async function approve(code: PendingCode) {
     codes.value = codes.value.filter((c) => c.id !== code.id)
     total.value -= 1
     message.success(`已核准 ${code.code}`)
+    await afterReview()
   } catch (e) {
     message.error(e instanceof ApiError ? e.message : '操作失敗')
   } finally {
@@ -104,6 +126,7 @@ async function confirmReject() {
     message.success(`已拒絕 ${code.code}`)
     rejecting.value = null
     rejectReason.value = ''
+    await afterReview()
     return true
   } catch (e) {
     message.error(e instanceof ApiError ? e.message : '操作失敗')
@@ -181,6 +204,16 @@ const isEmpty = computed(() => !loading.value && codes.value.length === 0)
           </NSpace>
         </NCard>
       </NSpace>
+
+      <!-- 佇列積壓時沒有這個就只處理得到前 50 筆，而標題那個數字還照樣顯示總數，
+           看起來像是「審不完」而不是「看不到」。 -->
+      <NPagination
+        v-if="total > PAGE_SIZE"
+        v-model:page="page"
+        :page-size="PAGE_SIZE"
+        :item-count="total"
+        style="margin-top: 16px; justify-content: flex-end"
+      />
     </NSpin>
 
     <NModal

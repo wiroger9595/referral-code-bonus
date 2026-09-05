@@ -750,13 +750,19 @@ SELECT m.slug, m.name
 FROM referral_code_bonus.merchants m
 WHERE m.is_active
   AND extensions.similarity(m.name, $1::text) >= 0.15
+  AND (
+    $2::text IS NULL
+    OR cardinality(m.countries) = 0
+    OR m.countries @> ARRAY[$2::text]
+  )
 ORDER BY extensions.similarity(m.name, $1::text) DESC, m.name
-LIMIT $2::int
+LIMIT $3::int
 `
 
 type SuggestMerchantsParams struct {
-	Search     string `json:"search"`
-	MaxResults int32  `json:"max_results"`
+	Search     string  `json:"search"`
+	Region     *string `json:"region"`
+	MaxResults int32   `json:"max_results"`
 }
 
 type SuggestMerchantsRow struct {
@@ -773,8 +779,14 @@ type SuggestMerchantsRow struct {
 //
 // 中日文的效果本來就比英數字差（三連字元切中文詞切不出幾個組合），
 // 這條路對「rakuen → Rakuten」有效，對「台心 → 台新」幫助有限。
+// 地區過濾必須跟 ListMerchants 用同一套規則。少了這段，主查詢把一家服務商
+// 篩掉之後建議卻還把它推出來 —— 畫面上就是「找不到 chatgpt」的下一行寫著
+// 「你是不是要找 ChatGPT」，使用者只會覺得搜尋壞了。
+//
+// narg 是 NULL 就不篩，理由跟 ListMerchants 那條一樣：匿名訪客、沒填所在地、
+// 或自己選了「所有地區」都走這條。countries 是空陣列代表不分地區，要放行。
 func (q *Queries) SuggestMerchants(ctx context.Context, arg SuggestMerchantsParams) ([]SuggestMerchantsRow, error) {
-	rows, err := q.db.Query(ctx, suggestMerchants, arg.Search, arg.MaxResults)
+	rows, err := q.db.Query(ctx, suggestMerchants, arg.Search, arg.Region, arg.MaxResults)
 	if err != nil {
 		return nil, err
 	}

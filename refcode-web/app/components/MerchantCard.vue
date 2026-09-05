@@ -9,9 +9,13 @@ const { rewardText, rewardTone } = useReward()
 </script>
 
 <template>
+  <!-- min-w-0 是給外層 grid 用的：grid item 預設 min-width 是 auto，會被內容的
+       max-content 撐開，而下面那個 h3 是 truncate（nowrap），最長的一句獎勵說明
+       就足以把整條 grid track 撐得比視窗還寬，整頁在手機上變成可以左右拖。
+       truncate 要真的截斷也得靠這個。 -->
   <NuxtLink
     :to="localePath(`/referral/${merchant.slug}`)"
-    class="app-card app-card-link flex items-center gap-4 p-4"
+    class="app-card app-card-link flex min-w-0 items-center gap-4 p-4"
   >
     <!-- 沒有 logo 的服務商用名稱首字當替代，空白方框比缺圖的破圖好看。 -->
     <span

@@ -9,6 +9,7 @@ CPC 競價與金流是 Phase 3，還沒開始。
 
 **資料庫是 Supabase，本機開發也連同一台**，不用裝 local Postgres、也沒有 `createdb` 這一步。
 連線字串在 Dashboard → Project Settings → Database → Connection string → Session pooler。
+（唯一例外是連資料庫的那組測試，它跑在本機一次性的庫上，見下面「測試」。）
 
 **下面前三行都只有第一次要跑**，已經設定過的機器直接跳到 `go run ./cmd/api`。
 
@@ -34,8 +35,48 @@ go run ./cmd/api
 日常開發用 go 原生指令就好：`go run ./cmd/api`、`go build -o bin/api ./cmd/api`、`go test ./...`、
 `go vet ./...`、`gofmt -w .`。`Makefile` 對這幾個只是包一層（`run` `build` `test` `vet` `fmt`）。
 
-`sqlc` `migrate-up` `migrate-down` `migrate-status` `seed` 沒有等價的 go 指令，走 make——
+`sqlc` `migrate-up` `migrate-down` `migrate-status` `seed` `test-db` 沒有等價的 go 指令，走 make——
 goose 不讀 `.env`，Makefile 會自己從 `.env` 撈 `DATABASE_URL`，連線字串才只維護一份。
+（`test-db` 是例外中的例外：它**不**讀 `.env`，理由見「測試」。）
+
+## 測試
+
+兩組，分開跑：
+
+```bash
+make test        # 純邏輯，不連任何東西
+make test-db     # 上面那些 + 連資料庫的那組
+```
+
+`make test` 就是 `go test ./...`。連資料庫的測試在沒有 `TEST_DATABASE_URL` 時會自己 skip，
+所以這行永遠離線可跑，不需要準備任何東西。
+
+`make test-db` 用**本機一次性的 database `refcode_test`**，不是 Supabase 那台——
+那組測試每個 case 開場都會清表，指到正式庫就是清掉真資料。所以連線字串寫死在 Makefile 裡、
+刻意不從 `.env` 撈，就是不給它連錯地方的機會。
+
+這是整個專案唯一需要 local Postgres 的地方，`createdb` 與 `psql` 要在 PATH 上。
+其餘步驟 target 自己處理：建庫 → 開兩個 schema → 套 migration → 跑測試，重跑安全，已存在就跳過。
+
+那兩個 schema 要在 migration 之前手動開，因為：
+
+- **`referral_code_bonus` 是 `00001` 才建的**，但 goose 的版本表（`GOOSE_TABLE`）要放在裡面，
+  順序反了，goose 會在建版本表那一步就失敗
+- **`extensions` 是 Supabase 特有的擺放慣例**——`00011_search.sql` 把 `pg_trgm` 指定裝在那個
+  schema，乾淨的 Postgres 沒有它，migration 會停在 00011 報 `schema "extensions" does not exist`
+
+表結構跟測試對不起來時（動了既有 migration、goose 版本表歪掉）整個重建：
+
+```bash
+make test-db-reset      # dropdb 之後重跑一次 test-db
+```
+
+目前有測試的是 `internal/ranking`、`internal/httpapi`、`internal/entitlement`。
+三個前端都沒有測試設定，不要假裝有測試可以跑。
+
+連資料庫的那組集中在 `internal/entitlement`：訂閱降級「留最舊的幾個」寫在 SQL 的
+`row_number()` 裡，恢復時「撞唯一索引只跳過單筆」也只有真的撞了才會發生——
+兩者都沒辦法用假物件驗證，而錯了是使用者的碼默默消失或默默重複上架。
 
 ## 硬規則
 
@@ -58,8 +99,9 @@ internal/
   store        pgxpool + sqlc 產出
   auth         JWT、bcrypt、Google/Apple OIDC 驗證
   ranking      排序權重與品質分數
+  entitlement  訂閱失效/恢復後把架上的碼收斂回該有的張數
   httpapi      路由、middleware、handler
-  worker       到期下架、事件表分區補建
+  worker       到期下架、事件表分區補建、訂閱額度收斂
 db/
   migrations   goose
   queries      sqlc 來源
@@ -208,4 +250,4 @@ POST /v1/auth/password/reset   {email, code, password}  → user + tokens
 - email 驗證信（註冊當下的那封；`users.email_verified_at` 目前只有重設密碼會標）
 - 推播通知
 - Phase 3 的競價、錢包、金流、點擊計費防作弊
-- OpenAPI spec 輸出（四個 repo 分開，前端要從 spec 產型別，這個要補）
+- OpenAPI spec 輸出（四個模組分開，前端要從 spec 產型別，這個要補）

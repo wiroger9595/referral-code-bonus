@@ -17,7 +17,8 @@ import {
   IonToolbar,
 } from '@ionic/vue'
 import { alertCircle, logoApple, logoGoogle, ticketOutline } from 'ionicons/icons'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
 import { SocialLoginCancelled, availableProviders } from '../api/social'
@@ -29,6 +30,7 @@ import { useAuthStore } from '../stores/auth'
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const mode = ref<'login' | 'register'>('login')
 const email = ref('')
@@ -47,6 +49,12 @@ const providerLabels: Record<OAuthProvider, { key: string; icon: string }> = {
   apple: { key: 'login.appleContinue', icon: logoApple },
 }
 
+// 切分頁時把上一則錯誤收掉。登入失敗的「email 或密碼錯誤」留在註冊表單上方，
+// 看起來像是註冊這邊填錯了 —— 而他還一個字都沒填。
+watch(mode, () => {
+  errorMessage.value = ''
+})
+
 function goNext() {
   const redirect = route.query.redirect
   router.replace(typeof redirect === 'string' ? redirect : '/tabs/my-codes')
@@ -59,6 +67,13 @@ function goForgot() {
 
 async function submit() {
   errorMessage.value = ''
+
+  // 空欄位在前端擋掉。讓它送出去的話後端回的是「email 或密碼錯誤」——
+  // 那句話會讓人以為自己填錯了，而其實他根本沒填。
+  if (!email.value.trim() || !password.value) {
+    errorMessage.value = t('login.fieldsRequired')
+    return
+  }
   loading.value = true
   try {
     if (mode.value === 'login') {

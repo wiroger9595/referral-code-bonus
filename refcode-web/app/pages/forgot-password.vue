@@ -93,6 +93,7 @@ function submit() {
 
     <p
       v-if="error"
+      role="alert"
       class="mt-6 rounded-card bg-alert-soft p-3 text-sm text-alert-ink"
     >
       {{ error }}

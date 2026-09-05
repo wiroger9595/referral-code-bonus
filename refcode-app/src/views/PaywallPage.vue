@@ -42,6 +42,12 @@ const selected = ref<string | null>(null)
 const buying = ref(false)
 const errorMessage = ref('')
 
+// 免費方案的同時上架上限。真正在擋的是後端（見 refcode-api 的
+// FREE_ACTIVE_CODE_LIMIT，預設 3），這裡純粹是把數字填進賣點文案 ——
+// API 沒有把這個值吐給前端，所以改後端那個環境變數時要記得跟著改這裡，
+// 否則付費頁會說一個跟實際不符的數字。
+const FREE_ACTIVE_CODE_LIMIT = 3
+
 const perks = [
   { icon: infiniteOutline, key: 'unlimited' },
   { icon: timeOutline, key: 'ranking' },
@@ -169,7 +175,9 @@ async function restore() {
             <IonIcon :icon="p.icon" />
             <div>
               <h3>{{ $t(`pro.perks.${p.key}.title`) }}</h3>
-              <p class="tiny muted">{{ $t(`pro.perks.${p.key}.desc`) }}</p>
+              <p class="tiny muted">
+                {{ $t(`pro.perks.${p.key}.desc`, { limit: FREE_ACTIVE_CODE_LIMIT }) }}
+              </p>
             </div>
           </div>
         </div>

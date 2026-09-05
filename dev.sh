@@ -36,8 +36,8 @@ usage() {
   logs <模組>         跟蹤某個模組的 log
   ios [裝置關鍵字]    在 iOS 模擬器上跑 app，改前端會自動更新（Ctrl-C 結束）
   ios-log             跟蹤模擬器裡 app 的 console log，跟 ios 分開開一個 terminal 跑
-  android-ip          偵測目前區網 IP，同步寫進 app 的 .env 跟 network_security_config
-                       （換 WiFi、IP 變了就重跑這個，跑完記得重新 build + cap sync android）
+  android-reverse     把手機的 localhost 轉回這台電腦（adb reverse），實機連本機 API 用
+                       （手機重開、拔插 USB、adb server 重啟之後要重跑）
 EOF
 }
 
@@ -215,48 +215,47 @@ cmd_ios_log() {
   xcrun simctl spawn booted log stream --level debug --predicate 'process == "App"'
 }
 
-# 抓目前這台機器連出去用的那張網卡的 IP —— 不直接寫死 en0，因為接了有線網路
-# 或用其他介面上網時 en0 可能是空的。用預設路由查真正在用的介面最準。
-detect_lan_ip() {
-  iface=$(route get 1.1.1.1 2>/dev/null | awk '/interface: /{print $2}')
-  [ -n "$iface" ] && ipconfig getifaddr "$iface" 2>/dev/null
-}
 
-# 實機測 app 連本機 API 靠的是這台電腦的區網 IP，換 WiFi 就會變。要同步改兩個
-# 地方：app 的 .env（VITE_API_BASE_URL，build time 就烤進 JS，改完要重 build）、
-# 還有 Android 的 network_security_config（白名單裡的 domain 沒對到現在的 IP，
-# 明文流量一樣會被擋）。iOS 不用管，cap run ios -l 每次都是用參數帶 host，
-# 不會寫死在檔案裡。
-cmd_android_ip() {
-  ip=$(detect_lan_ip)
-  if [ -z "$ip" ]; then
-    echo "偵測不到區網 IP，確認一下有沒有連 WiFi/網路"
+# 手機上的 localhost 指的是手機自己，adb reverse 把它從 USB 那條線轉回這台電腦。
+# 這樣 .env 與 network_security_config 都固定寫 localhost，換 WiFi、換網段都不用再
+# 動任何檔案 —— 以前那兩個地方寫死區網 IP，IP 一變就是整個 app 連不上，而且症狀
+# 看不出跟 IP 有關。轉發規則存在 adb daemon 裡、不是永久的：手機重開、拔插 USB、
+# adb server 重啟就沒了，重跑這個指令即可。
+cmd_android_reverse() {
+  adb=$(command -v adb 2>/dev/null || echo "$HOME/Library/Android/sdk/platform-tools/adb")
+  if [ ! -x "$adb" ]; then
+    echo "找不到 adb。裝過 Android Studio 的話它在 ~/Library/Android/sdk/platform-tools/"
     exit 1
   fi
 
-  env_file="$ROOT/refcode-app/.env"
-  xml_file="$ROOT/refcode-app/android/app/src/debug/res/xml/network_security_config.xml"
-
-  if [ ! -f "$env_file" ]; then
-    echo "找不到 $env_file，先跑一次 ./dev.sh app 讓它從 .env.example 建起來"
+  count=$("$adb" devices | awk '$2 == "device" { n++ } END { print n + 0 }')
+  if [ "$count" = "0" ]; then
+    echo "沒有連著的裝置。USB 接上（或先用無線偵錯配對），手機上的偵錯授權要允許這台電腦。"
     exit 1
   fi
-  if [ ! -f "$xml_file" ]; then
-    echo "找不到 $xml_file"
+  # 多台裝置時 adb reverse 不會自己挑，會直接失敗（要帶 -s）。與其猜一台，
+  # 不如停在這裡讓使用者決定 —— 設錯機器的症狀跟沒設一樣難查。
+  if [ "$count" != "1" ]; then
+    echo "接了 ${count} 台裝置，adb reverse 不知道要設哪一台。拔到只剩一台再跑："
+    "$adb" devices
     exit 1
   fi
 
-  sed -i '' -E "s#^VITE_API_BASE_URL=.*#VITE_API_BASE_URL=http://${ip}:7802#" "$env_file"
-  sed -i '' -E "s#(<domain includeSubdomains=\"false\">)[^<]*(</domain>)#\\1${ip}\\2#" "$xml_file"
+  # vite 也一起轉：live reload 就能用 --host localhost，不必再讓手機去找區網 IP。
+  for port in $(port_of api) $(port_of app); do
+    "$adb" reverse "tcp:${port}" "tcp:${port}" >/dev/null || exit 1
+  done
 
-  echo "區網 IP：$ip"
-  echo "已更新："
-  echo "  refcode-app/.env（VITE_API_BASE_URL）"
-  echo "  refcode-app/android/app/src/debug/res/xml/network_security_config.xml"
+  echo "已把手機的 localhost 轉回這台電腦："
+  "$adb" reverse --list
   echo
-  echo "vite dev server 開著的話要重啟才會讀到新的 .env；已經裝在手機上的 app"
-  echo "要重新 npm run build && npx cap sync android 再重裝，光改檔案不會生效。"
+  echo "API（$(port_of api)）與 vite（$(port_of app)）都通了。"
+  echo
+  echo "要裝到實機測本機 API：npm run build:local（不帶環境變數的 vite build，會讀 .env"
+  echo "的 localhost:7802）→ npx cap sync android → 重裝。不要用 npm run build ——"
+  echo "那支把正式站的 API URL 寫死在指令裡，出來的包一律連正式環境（那是包版用的）。"
 }
+
 
 cmd_status() {
   for mod in $ORDER; do
@@ -313,7 +312,7 @@ case "${1:-}" in
   logs)   tail -f "$LOGS/${2:-api}.log" ;;
   ios)    shift; cmd_ios "${1:-}" ;;
   ios-log) cmd_ios_log ;;
-  android-ip) cmd_android_ip ;;
+  android-reverse) cmd_android_reverse ;;
   api|admin|web|app) start_fg "$1" ;;
   *)      usage; exit 1 ;;
 esac

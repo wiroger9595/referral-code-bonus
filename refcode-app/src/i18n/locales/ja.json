@@ -36,7 +36,8 @@
     "expiresToday": "本日期限切れ",
     "expiresInDays": "あと{count}日で期限切れ",
     "noExpiry": "期限なし",
-    "cancel": "キャンセル"
+    "cancel": "キャンセル",
+    "retry": "再試行"
   },
   "explore": {
     "title": "さがす",
@@ -47,7 +48,7 @@
     "popularSearches": "よく検索されている",
     "didYouMean": "もしかして",
     "noMatchTitle": "該当するサービスが見つかりません",
-    "noMatchDesc": "キーワードを変えるか、カテゴリを「すべて」に戻してみてください。",
+    "noMatchDesc": "キーワードを変えるか、検索をクリアしてカテゴリから探してください。",
     "summary": "{count}件のサービス・すべての紹介コードは審査済み",
     "codeCount": "{count}件",
     "bannerTag": "人による審査",
@@ -143,6 +144,8 @@
     "loginToReveal": "ログインしてコードを見る",
     "copy": "コピー",
     "copied": "コピー済み",
+    "copyFailed": "コピーできませんでした。コードを手動で選択してください",
+    "openFailed": "ページを開けませんでした。後でもう一度お試しください",
     "goSignup": "登録ページへ",
     "askWorks": "このコードは使えましたか？",
     "worked": "使えた",
@@ -167,6 +170,9 @@
     "sectionCode": "コード",
     "merchant": "サービス",
     "merchantPlaceholder": "選択してください",
+    "merchantPickTitle": "サービスを選ぶ",
+    "merchantSearchPlaceholder": "サービスを検索",
+    "merchantNoMatch": "該当するサービスがありません。下の「サービスが見つかりませんか？」からお知らせください",
     "code": "紹介コード",
     "codePlaceholder": "大文字と小文字を区別します。そのまま入力してください",
     "note": "メモ",
@@ -218,6 +224,7 @@
     "emailOnlyNotice": "現在はメールアドレスでのログインのみです。Google / Appleログインは各プラットフォームのclient id設定後に利用できます。",
     "connectionFailed": "接続に失敗しました。しばらくしてからもう一度お試しください",
     "loginFailed": "ログインに失敗しました。しばらくしてからもう一度お試しください",
+    "fieldsRequired": "メールアドレスとパスワードを入力してください",
     "country": "お住まいの地域",
     "countryUnset": "指定しない",
     "forgotPassword": "パスワードをお忘れですか？"

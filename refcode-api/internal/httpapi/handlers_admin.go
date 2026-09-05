@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -713,6 +714,18 @@ func (s *Server) handleAdminGrantPro(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r, err)
 		return
 	}
+
+	// 當初因為降級被撤掉的碼要跟著回架上，不要讓客服補發完還得等排程那一輪。
+	// 到期日填在過去的話這筆補發根本不生效，就別動架上的碼。
+	//
+	// 失敗只記 log 不回 500：訂閱已經寫進去了，回錯誤會讓客服以為沒補發成功而
+	// 重按一次，而 worker 的 sync-entitlements 本來就會補這一段。
+	if sub.ExpiresAt == nil || sub.ExpiresAt.After(time.Now()) {
+		if _, err := s.ent.Restore(ctx, userID); err != nil {
+			slog.Error("補發 Pro 後重新上架失敗，等排程補", "user_id", userID, "err", err)
+		}
+	}
+
 	writeJSON(w, http.StatusOK, sub)
 }
 
@@ -739,5 +752,13 @@ func (s *Server) handleAdminRevokePro(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r, err)
 		return
 	}
+
+	// 超出免費額度的碼立刻收斂。退款爭議、誤發這種情境，讓超額曝光再多留
+	// 六小時（排程的一輪）沒有道理 —— 客服按下撤銷就是希望它現在生效。
+	// 失敗只記 log 的理由同 handleAdminGrantPro。
+	if _, err := s.ent.Downgrade(ctx, userID); err != nil {
+		slog.Error("撤銷 Pro 後降級失敗，等排程補", "user_id", userID, "err", err)
+	}
+
 	writeJSON(w, http.StatusNoContent, nil)
 }
