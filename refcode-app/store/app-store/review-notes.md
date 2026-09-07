@@ -7,6 +7,21 @@ App Store Connect → 版本資訊 → 「審核備註（Notes for Review）」�
 
 備註欄只吃純文字，貼下面方框裡的內容（英文，審核員多半不讀中文）。
 
+⚠️ **這份備註只寫 app 真的做得到的事。** 寫了但功能不存在會被當成不實陳述，
+比單純缺功能更嚴重（下面的送審前確認也列了這一條）。目前刻意**沒有**寫
+Sign in with Apple —— 那個還沒有 client id、登入頁上不會出現（見 `../README.md` 第 4 節）。
+Apple 登入能用之後，把這段加回備註：
+
+```
+SIGN IN WITH APPLE (Guideline 4.8)
+
+Sign in with Apple is offered alongside Google Sign-In and email. Apple's Hide My Email
+relay addresses are fully supported — we do not filter by email domain.
+```
+
+但要注意順序：**Guideline 4.8 規定「提供了其他第三方登入就必須同時提供 Apple 登入」**，
+所以這不是「加回一段文字」而已，是 Apple 登入必須先真的能用才送得出去。
+
 ---
 
 ## 測試帳號
@@ -64,7 +79,9 @@ Referral codes and their notes are user-generated. Our moderation stack:
   invalid, or merchant-discontinued.
 - Automatic delisting: a code whose recent reports exceed our failure threshold is taken
   down automatically without waiting for a moderator.
-- Mandatory expiry: every code must carry an expiry date and is delisted when it passes.
+- Expiry dates: publishers may set an expiry date, and a code is delisted automatically
+  once it passes. Codes published without one stay listed until reports or a moderator
+  take them down.
 - Contact: robertsmart1989@gmail.com, also reachable from the Account tab in the app. We act on
   reports of objectionable content within 24 hours.
 - Terms of use with a zero-tolerance policy for objectionable content and abusive users:
@@ -74,8 +91,8 @@ WHY THIS IS NOT JUST A LIST OF LINKS (Guideline 4.2)
 
 The app's substance is the moderation and ranking layer, not the links:
 
-- A curated merchant directory that only our staff can add to — users cannot create
-  merchant entries, which is what keeps the directory from filling with duplicates.
+- A curated merchant directory: users can suggest a merchant, but only a moderator can
+  actually create the entry, which is what keeps the directory from filling with duplicates.
 - A quality score computed per code from real user reports, which drives both ranking
   and automatic delisting.
 - Weighted randomised rotation so that newly published codes get exposure instead of
@@ -89,11 +106,6 @@ ACCOUNT DELETION (Guideline 5.1.1(v))
 Account > Delete account. Deletion is immediate and permanent, and delists any codes the
 account published. The same is available at https://{{官網網域}}/delete-account without
 installing the app.
-
-SIGN IN WITH APPLE (Guideline 4.8)
-
-Sign in with Apple is offered alongside Google Sign-In and email. Apple's Hide My Email
-relay addresses are fully supported — we do not filter by email domain.
 
 SUBSCRIPTION (RefCode Pro)
 
@@ -142,7 +154,7 @@ robertsmart1989@gmail.com
 ## 送審前要先確認
 
 - [ ] 審核帳號在**正式環境**可以登入，而且有 active 的推薦碼
-- [ ] 正式 API 是 HTTPS（iOS 的 ATS 會擋純 HTTP）
+- [x] 正式 API 是 HTTPS（iOS 的 ATS 會擋純 HTTP）—— `npm run build` 寫死正式站位址
 - [ ] 備註裡提到的每個網址都打得開：`/terms`、`/delete-account`、`/privacy`
 - [ ] 備註裡寫的「帳號頁可以刪除帳號」**在 app 裡真的做得到** ——
       這句話寫了但功能不存在，會被當成不實陳述，比單純缺功能更嚴重

@@ -32,6 +32,7 @@ We have not appointed a Data Protection Officer. All privacy requests are handle
 | Device identifier | A random UUID generated on first launch and stored on your device | Prevents the same device from submitting duplicate "did this code work?" reports |
 | Usage data | Which merchants and referral codes you viewed, and when (the code's actual content is only shown once you sign in — see 2.2) | Computes impression counts and quality scores that drive ranking |
 | IP address | Stored as a hash | Abuse detection and de-duplication |
+| Search terms | The keyword you submit in the search box, together with the current interface language. Stored **only as an aggregate count** (how many times a term was searched, never who searched it) | Powers the "popular searches" list and shows us which merchants the directory is still missing |
 
 This UUID is **not** Apple's IDFA and **not** the Android Advertising ID — we do not access either.
 It is meaningful only inside this Service, does not track you across apps or websites, and is

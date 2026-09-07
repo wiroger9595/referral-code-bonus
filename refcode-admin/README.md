@@ -24,8 +24,12 @@ cd ../refcode-api && make seed EMAIL=admin@local.test PASSWORD=admin12345
 |---|---|---|
 | `/login` | — | 後台登入 |
 | `/review` | reviewer | 審核佇列：核准 / 拒絕待審的推薦碼 |
+| `/codes` | reviewer | 已上架的碼與使用者回報，含品質分數自動下架的待複檢 |
+| `/suggestions` | owner | 使用者提報的平台，通過等於建立一家服務商 |
 | `/merchants` | owner | 服務商目錄維護 |
 | `/categories` | owner | 分類：新增／編輯／刪除 |
+| `/users` | owner | 使用者清單，可補發 / 撤銷 Pro |
+| `/jobs` | owner | 排程任務：開關、手動執行、執行紀錄 |
 
 ## 幾個要知道的
 

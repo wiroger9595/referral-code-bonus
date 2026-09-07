@@ -20,16 +20,17 @@
 
 ## 二、系統架構
 
-四個獨立 repo：
+**同一個 git repo 底下的四個模組**（原本規劃成四個獨立 repo，實作時併成一個，
+根目錄的 git 全部追蹤，不是 submodule）：
 
 ```
-refcode-api          Go        REST API + 排序引擎 + 計費
+refcode-api          Go        REST API + 排序引擎 + 訂閱計費
 refcode-app          Vue 3 + Ionic + Capacitor    iOS / Android
 refcode-admin        Vue 3 + Vite (SPA)           內部後台
-refcode-web          Nuxt 3 (SSR)                 官網 / SEO 目錄頁
+refcode-web          Nuxt 4 (SSR)                 官網 / SEO 目錄頁
 ```
 
-四個 repo 之間唯一的耦合是 API 契約，因此**後端要輸出 OpenAPI spec，三個前端從 spec 產型別**（`openapi-typescript`）。獨立 repo 最容易爛掉的地方就是型別漂移，這一步不能省。
+四個模組之間唯一的耦合是 API 契約，因此**後端要輸出 OpenAPI spec，三個前端從 spec 產型別**（`openapi-typescript`）。模組分開最容易爛掉的地方就是型別漂移，這一步不能省。
 
 ### 為什麼 web 用 Nuxt 而不是純 Vue SPA
 
@@ -247,14 +248,15 @@ oauth_identities
 1. **金流商**：台灣的話綠界 / 藍新 / TapPay。若 app 內販售會被 Apple 認定為數位商品而抽 30%——**廣告儲值只在 web 做，app 內不放購買入口**，這點在 Phase 3 前要確定。
 2. **服務商目錄從哪來**：初期要人工建幾十家（銀行信用卡、券商、外送、串流、電商）。這是冷啟動的主要工作量，跟寫 code 無關但更關鍵。
 3. **法遵**：金融業推薦碼的推廣在台灣有廣告揭露規範，Phase 3 上線前要確認。
-4. **`quality_score` 初始值**：新碼沒有回報資料時給多少？建議 60（中間偏上），讓新人有曝光但不壓過已驗證的碼。
+4. ~~**`quality_score` 初始值**~~：已定案為 **60**（中間偏上，讓新碼有曝光但不壓過已驗證的碼），實作時就是這個值。
 
 ---
 
 ## 九、進度
 
-Phase 1 與 Phase 2 的後端與三個前端都做完了，四個 repo 都能跑起來（`./dev.sh all`）。
-細節見根目錄 README 與各 repo 的 README。
+Phase 1 與 Phase 2 的後端與三個前端都做完了，四個模組都能跑起來（`./dev.sh all`）。
+**訂閱計費（RevenueCat webhook、Pro 額度、失效降級與續訂恢復）也完成了** ——
+那原本排在 Phase 3，實際上提前做掉了。細節見根目錄 README 與各模組的 README。
 
 實作過程中偏離本規劃的地方：
 
@@ -265,5 +267,8 @@ Phase 1 與 Phase 2 的後端與三個前端都做完了，四個 repo 都能跑
 - **多做了爬蟲曝光過濾**。官網是 SSR 的，搜尋引擎每爬一次就是一整批曝光，
   會直接稀釋排序用的曝光懲罰 —— 這在原規劃裡沒想到。
 
+規劃外多做的還有：使用者自行下架、封鎖／檢舉上架者（Apple 1.2 的 UGC 要件）、
+使用者提報平台、後台的排程管理頁與手動補發 Pro、App Store 排行榜匯入與 logo 補圖的排程。
+
 下一步建議：先補 **OpenAPI spec 輸出**（三個前端現在各有一份手寫型別，遲早分岔），
-再看是要接 email 驗證信，還是直接進 Phase 3。
+再看是要接 email 驗證信，還是進 Phase 3 剩下的 CPC 競價與點擊計費。

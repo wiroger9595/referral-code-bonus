@@ -104,7 +104,7 @@ RevenueCat 的 entitlement `pro` 要把這兩個基本方案都掛進去，
 過期的推薦碼是這類服務最大的問題。我們用三道機制處理：
 
 1. 人工審核：每個上架的碼都要先通過審核才會公開
-2. 有效期限：上架時必須設定期限，到期自動下架
+2. 有效期限：上架者可以設定期限，到期自動下架
 3. 使用者回報：複製之後可以回報這個碼能不能用，失效比例過高的碼會自動下架
 
 【關於獎勵】
@@ -205,7 +205,7 @@ FOR PEOPLE SHARING A CODE
 
 WHY CODES HERE GO STALE LESS OFTEN
 1. Human review — every submission is approved before it goes public
-2. Expiry dates — required at submission, enforced automatically
+2. Optional expiry dates — enforced automatically once set
 3. User reports — after signing in and copying, you can report whether the code worked; codes with a high failure rate are delisted automatically
 
 ABOUT REWARDS

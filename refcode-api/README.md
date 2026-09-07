@@ -2,8 +2,9 @@
 
 推薦碼媒合平台的後端。Go + Postgres。產品規劃見上一層的 `PLAN.md`。
 
-目前完成 Phase 1（目錄、上架、審核、排序）與 Phase 2 的信任機制（回報、自動下架、到期下架）。
-CPC 競價與金流是 Phase 3，還沒開始。
+目前完成 Phase 1（目錄、上架、審核、排序）、Phase 2 的信任機制（回報、自動下架、到期下架）
+與訂閱計費（RevenueCat webhook、Pro 額度、失效降級與續訂恢復）。
+CPC 競價與點擊計費是 Phase 3，還沒開始。
 
 ## 起手式
 
@@ -92,20 +93,46 @@ make test-db-reset      # dropdb 之後重跑一次 test-db
 ## 架構
 
 ```
-cmd/api        進入點
-cmd/seed       本機 seed
+cmd/api          進入點
+cmd/seed         本機 seed，APP_ENV=production 時拒絕執行
+cmd/appimport    從 App Store 排行榜匯入服務商草稿（有預演模式，排程沒有）
+cmd/logobackfill 幫沒有 logo 的服務商補圖（同上）
 internal/
-  config       env 設定（.env 只當預設值，環境變數優先）
-  store        pgxpool + sqlc 產出
-  auth         JWT、bcrypt、Google/Apple OIDC 驗證
-  ranking      排序權重與品質分數
-  entitlement  訂閱失效/恢復後把架上的碼收斂回該有的張數
-  httpapi      路由、middleware、handler
-  worker       到期下架、事件表分區補建、訂閱額度收斂
+  config         env 設定（.env 只當預設值，環境變數優先）
+  store          pgxpool + sqlc 產出
+  auth           JWT、bcrypt、Google/Apple OIDC 驗證
+  geo            國家代碼正規化成 ISO 3166-1 alpha-2，只驗格式、不維護白名單
+  kv             redis 連線，目前只有忘記密碼在用
+  mailer         寄信，SMTP 或 Resend，呼叫端只認 Mailer 介面
+  cloudinary     圖片簽名上傳
+  ranking        排序權重與品質分數
+  entitlement    訂閱失效／恢復後把架上的碼收斂回該有的張數
+  appimport      匯入邏輯，跟 cmd/appimport 與排程共用同一段
+  logobackfill   補圖邏輯，同上
+  merchantaudit  定期確認服務商還有沒有在發推薦碼
+  httpapi        路由、middleware、handler
+  worker         排程，見下
 db/
-  migrations   goose
-  queries      sqlc 來源
+  migrations     goose
+  queries        sqlc 來源
 ```
+
+## 排程
+
+`internal/worker` 註冊這幾支，開關、間隔、手動執行與紀錄都在後台的 `/jobs`：
+
+| job | 做什麼 |
+|---|---|
+| `expire-codes` | 過了到期日的碼下架 |
+| `ensure-partitions` | 事件表的月分區提前補建，缺分區 INSERT 會直接失敗 |
+| `sync-entitlements` | 補 webhook 漏掉的訂閱降級與恢復，兩個方向都掃 |
+| `audit-merchant-codes` | 去各家平台頁面確認還有沒有在發推薦碼，可疑的標記待人工看 |
+| `app-import` | 從 App Store 排行榜匯入服務商草稿（一律停用狀態） |
+| `logo-backfill` | 幫沒有 logo 的服務商補圖 |
+| `prune-job-runs` | 清掉太舊的執行紀錄 |
+
+`app-import` 沒設要匯哪些國別的話那支 job 不會被註冊。爬蟲類的每支各開一個
+goroutine —— 一支跑半小時不該擋住 `expire-codes`。
 
 ## API
 
@@ -134,11 +161,13 @@ app 與官網的日文／英文介面沒辦法直接顯示，它們拿 code 去�
 ### 瀏覽（匿名可用）
 | Method | Path | 說明 |
 |---|---|---|
+| GET | `/v1/regions` | 有服務商的國家/地區清單，給前端的地區選單 |
 | GET | `/v1/categories` | 分類列表 |
 | GET | `/v1/categories/{id}` | 單一分類，分類頁拿它顯示名稱 |
 | GET | `/v1/merchants` | `?category=&q=&limit=&offset=`，category 是分類 id |
 | GET | `/v1/merchants/{slug}` | 服務商 + 排序後的推薦碼，同時記錄曝光。未登入時 `codes[].code` 是 `null`（見下） |
 | GET | `/v1/merchants/sitemap` | slug + updated_at，給 Nuxt 產 sitemap |
+| GET | `/v1/search/popular` | 熱門搜尋字 |
 | POST | `/v1/events` | `{code_id, event_type: click\|copy}` |
 | POST | `/v1/codes/{id}/reports` | `{result: worked\|failed\|invalid_code\|merchant_closed}` |
 
@@ -152,6 +181,10 @@ app 與官網的日文／英文介面沒辦法直接顯示，它們拿 code 去�
 | POST | `/v1/codes` | 上架，進 `pending` 等審核 |
 | POST | `/v1/codes/{id}/disable` | 自行下架。只有 `active` / `pending` 能撤，其餘回 400 `code_not_active` |
 | GET | `/v1/codes/{id}/stats` | `?days=30`，只有本人看得到 |
+| GET | `/v1/me/blocks` | 我封鎖的上架者 |
+| DELETE | `/v1/me/blocks/{id}` | 解除封鎖 |
+| POST | `/v1/codes/{id}/block-owner` | 封鎖這張碼的上架者，他的碼不再出現在我的目錄 |
+| POST | `/v1/merchant-suggestions` | 提報希望上架的平台，進人工佇列。匿名放行等於開洗版管道，所以要登入 |
 
 ### 後台
 | Method | Path | 權限 |
@@ -163,6 +196,30 @@ app 與官網的日文／英文介面沒辦法直接顯示，它們拿 code 去�
 | DELETE | `/v1/admin/categories/{id}` | owner，還有服務商掛著會回 409 `category_in_use` |
 | POST | `/v1/admin/merchants` | owner，`category_id` 指到不存在的分類回 400 `category_not_found` |
 | PATCH | `/v1/admin/merchants/{id}` | owner，slug 可改（舊網址不轉址），`category_id` 同上 |
+| GET | `/v1/admin/codes` | reviewer，全部已上架的碼 |
+| GET | `/v1/admin/codes/auto-disabled` | reviewer，品質分數自動下架的，待人工複檢 |
+| GET | `/v1/admin/merchants` | owner，含停用的與編輯表單要用的欄位（公開那支會濾掉） |
+| GET | `/v1/admin/merchants/code-audit` | owner，被 audit-merchant-codes 標記可能已停止推薦計畫的 |
+| GET | `/v1/admin/merchant-suggestions` | owner |
+| POST | `/v1/admin/merchant-suggestions/{id}/review` | owner，通過等於建立一家服務商 |
+| POST | `/v1/admin/uploads/image` | owner，服務商 logo 與分類圖，走 Cloudinary |
+| GET | `/v1/admin/users` | owner |
+| POST | `/v1/admin/users/{id}/pro` | owner，手動補發 Pro（`{expires_at}`，null 是永久） |
+| DELETE | `/v1/admin/users/{id}/pro` | owner，撤銷 Pro |
+| GET | `/v1/admin/jobs` | owner，排程清單與上次執行結果 |
+| PATCH | `/v1/admin/jobs/{name}` | owner，開關與間隔 |
+| POST | `/v1/admin/jobs/{name}/run` | owner，手動觸發一次 |
+| GET | `/v1/admin/jobs/{name}/runs` | owner，執行紀錄 |
+
+### Webhook
+| Method | Path | 說明 |
+|---|---|---|
+| POST | `/v1/webhooks/revenuecat` | RevenueCat 的訂閱事件。驗 `Authorization` 標頭（`REVENUECAT_WEBHOOK_AUTH`，原樣比對），沒設就回 404 不收單 |
+
+**回應碼的意義跟其他 endpoint 不一樣。** RevenueCat 收到非 2xx 就會重試，所以
+「處理不了但重送也沒用」的情況（認不得的 `app_user_id`、測試事件、不影響授權的事件型別）
+一律回 200 並只把事件記進 `subscription_events`。真正回非 2xx 的只有我們自己壞掉的時候。
+只有 `environment=PRODUCTION` 的事件會改動訂閱狀態（`ALLOW_SANDBOX_SUBSCRIPTIONS` 可放行 sandbox）。
 
 ## 幾個容易誤解的設計
 
@@ -242,12 +299,14 @@ POST /v1/auth/password/reset   {email, code, password}  → user + tokens
 **信件文案在 `internal/httpapi/mailtext.go`，三種語言。** 錯誤訊息是前端拿 code 查自己的
 語系檔，但信是後端直接寄的，前端沒有機會翻譯，所以 `forgot` 要帶 `locale`。
 
-**`SMTP_HOST` 留空時信不會寄出去，改成印進 log**（驗證碼直接看得到），本機開發不用架 SMTP。
-`APP_ENV=production` 而這欄留空會在 `config.Load` 就擋下來 —— 安靜地不寄信比直接壞掉更糟。
+**`SMTP_HOST` 與 `RESEND_API_KEY` 都留空時信不會寄出去，改成印進 log**（驗證碼直接看得到），
+本機開發不用架 SMTP。`RESEND_API_KEY` 有設就優先走 Resend 的 HTTP API。
+`APP_ENV=production` 而兩個都留空會在 `config.Load` 就擋下來（`SMTP_HOST 或 RESEND_API_KEY
+至少要設一個`）—— 安靜地不寄信比直接壞掉更糟。
 
 ## 還沒做
 
 - email 驗證信（註冊當下的那封；`users.email_verified_at` 目前只有重設密碼會標）
 - 推播通知
-- Phase 3 的競價、錢包、金流、點擊計費防作弊
+- Phase 3 的 CPC 競價、廣告主錢包、點擊計費防作弊
 - OpenAPI spec 輸出（四個模組分開，前端要從 spec 產型別，這個要補）

@@ -64,8 +64,11 @@
 - [x] iOS：`ITSAppUsesNonExemptEncryption` = `false`（已寫進 Info.plist，驗過會進 bundle）
 - [x] iOS：`NSCameraUsageDescription` 已加進 Info.plist ——
       大頭照的 `<input type="file">` 選單有「拍照」，少了它使用者一點就閃退
-- [x] iOS：`PrivacyInfo.xcprivacy` 已加（七類資料，含大頭照的 `PhotosorVideos`，
-      加上 `UserDefaults` 的 `CA92.1`），已加進 target 且驗過會進 bundle
+- [x] iOS：`PrivacyInfo.xcprivacy` 已加（含大頭照的 `PhotosorVideos` 與
+      `UserDefaults` 的 `CA92.1`），已加進 target 且驗過會進 bundle
+- [ ] iOS：`PrivacyInfo.xcprivacy` 補上 **`SearchHistory`** 與 **`OtherDataTypes`** ——
+      目前只有七類，比 App Privacy 標籤少這兩項（搜尋字詞與自選所在地），
+      manifest 少宣告跟多宣告一樣算不一致，見 `app-store/app-privacy.md`
 - [ ] iOS：Deployment Target 設定好，Xcode 的 Signing 用正式的 Distribution 憑證
 - [x] Android：keystore 已產生在 `~/keystores/refcode-app-release.jks`，簽章接進 gradle，release AAB 出得來
       ⚠️ **還沒異地備份 —— 這件事只有你能做**

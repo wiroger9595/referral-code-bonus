@@ -5,7 +5,7 @@
 
 | 目錄 | 技術 | port | 說明 |
 |---|---|---|---|
-| `refcode-api/` | Go + Postgres | 7802 | API、排序引擎、審核、計費（Phase 3） |
+| `refcode-api/` | Go + Postgres | 7802 | API、排序引擎、審核、訂閱計費 |
 | `refcode-admin/` | Vue 3 + Vite + Naive UI | 5173 | 內部後台：審核、服務商目錄 |
 | `refcode-web/` | Nuxt 4（SSR）+ Tailwind | 3000 | 官網，SEO 主力 |
 | `refcode-app/` | Vue 3 + Ionic + Capacitor | 5174 | iOS / Android |
@@ -163,7 +163,7 @@ port 寫在 `vite.config.ts`，改了一樣要同步後端的 `CORS_ORIGINS`。
 
 不用登入就能瀏覽和複製推薦碼，只有「我的推薦碼」和上架需要帳號——直接在 app 裡註冊即可。
 
-**原生平台都加好了**（appId `com.referra.app`），Android 已經驗過能出 debug APK。
+**原生平台都加好了**（appId `com.referra.app`），Android 已經能出簽章過的 release AAB。
 
 ```bash
 npm run build && npx cap sync     # 每次改完前端都要 sync 一次
@@ -210,7 +210,8 @@ provider 不會出現在登入頁。同一組 id 也要列進後端的 `GOOGLE_C
 `APPLE_CLIENT_IDS`，兩邊沒對上會登入失敗。
 
 上架 App Store / Play Store 要用的文件全部在 `refcode-app/store/`，
-**目前還有阻斷項沒解決**（帳號刪除功能、政策網址、UGC 要件），先讀 `refcode-app/store/README.md`。
+**目前還有阻斷項沒解決**（隱私權政策與服務條款還沒掛上正式網域），
+先讀 `refcode-app/store/README.md`。
 
 ### refcode-web
 
@@ -293,23 +294,20 @@ Phase 1（目錄、上架、審核、排序）與 Phase 2（回報、自動下�
 忘記密碼（6 位數驗證碼 + redis + SMTP）後端與 app、官網都完成了，
 細節見 `refcode-api/README.md` 的「忘記密碼」一節。
 
+訂閱（RevenueCat webhook、Pro 額度、失效降級與續訂恢復）後端與 app 都完成了。
+
 還沒做：
 - OpenAPI spec 輸出
 - email 驗證信（註冊當下那封；`email_verified_at` 目前只有重設密碼會標）
-- 使用者自己下架 / 刪除已上架的推薦碼
-- 封鎖 / 檢舉上架者（Apple 1.2 的 UGC 要件，最後一項沒補的）
 - Apple 登入的 client id、RevenueCat 的 iOS key（Google 三組與 RevenueCat 的 Android key
   已經填在 `refcode-app/.env`，程式碼都接好了）
-- Phase 3 全部：CPC 競價、廣告主錢包、金流、點擊計費防作弊
+- Phase 3 的 CPC 競價、廣告主錢包、點擊計費防作弊
 
 ## 測試用的後台帳號
 
-**這組是 Supabase 上那台真的存在的帳號**，不是 `make seed` 建的
-`admin@local.test` —— 本機連的就是正式那台，用它做的操作都是真的。
-
-- Email：`owner@refcode.test`
-- 密碼：`refcode1234`
-- 權限：owner（`/review`、`/merchants`、`/categories` 都進得去）
+有一組 owner 權限的帳號存在 Supabase 上那台，**密碼放在密碼管理器，不寫在這裡** ——
+本機連的就是正式那台，那組帳號改得動服務商、分類，也能補發 Pro，
+密碼進了版控等於公開。要本機自己來一組就用 `make seed` 建 `admin@local.test`。
 
 ## 測試
 
@@ -317,17 +315,39 @@ Phase 1（目錄、上架、審核、排序）與 Phase 2（回報、自動下�
 沒有 test script，也沒裝 vitest / playwright 之類的東西）——不要假設有測試可以跑。
 
 ```bash
-cd refcode-api && make test    # 實際跑 go test ./...
+cd refcode-api && make test     # go test ./...，不連任何東西
+make test-db                    # 加上連資料庫的那組，跑在本機一次性的 refcode_test
 go vet ./...
 ```
-
-兩支測試檔都是純邏輯、**不碰資料庫**，所以可以安心重跑，不會動到 Supabase 上的資料：
 
 | 套件 | 測什麼 | 覆蓋率 |
 |---|---|---|
 | `internal/ranking` | 排序權重、品質分數、自動下架門檻 | 90.2% |
-| `internal/httpapi` | RevenueCat webhook 的訂閱狀態判定（`DecideSubscription`） | 0.8% |
+| `internal/entitlement` | 訂閱失效降級、續訂恢復（**這組會連資料庫**） | 5.4% |
+| `internal/httpapi` | RevenueCat webhook 的訂閱狀態判定（`decideSubscription`） | 0.9% |
 
-`internal/httpapi` 那 0.8% 是因為整包 handler 只測了訂閱判定那一支，
+`make test` 是安全的：連資料庫的那組在沒有 `TEST_DATABASE_URL` 時整組 skip。
+**但 `make test-db` 每個 case 開場都會清表**，它刻意不讀 `.env`、連線字串寫死在
+Makefile 裡指向本機的 `refcode_test`，理由見 `refcode-api/README.md` 的「測試」。
+
+`internal/httpapi` 那 0.9% 是因為整包 handler 只測了訂閱判定那一支，
 不代表 API 有被測過 —— 路由、權限、審核流程目前都沒有測試。
 
+
+## 取得 Android 簽章的 SHA-1 / SHA-256
+
+Google 登入的 Android client 要填簽章指紋，debug 與 release 是兩把不同的金鑰，兩個都要建。
+
+```bash
+# debug（Android Studio 自動產的那把）
+keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android
+
+# release（密碼在 refcode-app/android/keystore.properties）
+keytool -list -v -keystore ~/keystores/refcode-app-release.jks -alias refcode-app
+
+# 一次列出所有 variant
+cd refcode-app/android && ./gradlew signingReport
+
+# 已經 build 出來的產物是用哪把簽的
+keytool -printcert -jarfile refcode-app/android/app/build/outputs/bundle/release/app-release.aab
+```

@@ -24,7 +24,14 @@ npm run dev          # http://localhost:3000
 | `/` | 首頁：分類 + 所有服務商 |
 | `/category/[id]` | 分類頁。網址是分類的 id，分類沒有 slug |
 | `/referral/[slug]` | 服務商頁 —— 這一頁是整個站的重點 |
+| `/search` | 搜尋結果 |
 | `/about` | 平台怎麼運作 |
+| `/suggest` | 提報希望上架的平台（需登入） |
+| `/my-codes` | 我上架的碼（需登入） |
+| `/account` | 我的帳號：換大頭照、刪除帳號入口（需登入） |
+| `/support` | 支援與檢舉聯絡方式 |
+| `/privacy`、`/terms` | 隱私權政策、服務條款。**免登入可直接開**，兩家商店的送審要件 |
+| `/delete-account` | 不必安裝 app 就能走完刪除流程，Play Console 的「資料刪除網址」填這個 |
 | `/login`、`/register` | 登入 / 註冊，`noindex`（見下方） |
 | `/forgot-password` | 忘記密碼，`noindex, nofollow`。驗證碼在信裡，不在網址上 |
 | `/sitemap.xml` | 從 API 動態產生（`server/routes/`） |
@@ -103,7 +110,7 @@ Google 直接在瀏覽器裡回一個簽好的 ID token，丟給後端的 `/v1/a
 **所在地在註冊時選，之後官網改不了。** 選單是常用選項（`useCountries`），
 名稱用 `Intl.DisplayNames` 跟著介面語言產生，不進語系檔。預設值依介面語言猜
 （zh-TW→TW、ja→JP），猜錯使用者自己改 —— 語言不等於所在地，不要拿它直接當所在地存。
-**官網沒有帳號設定頁，要改所在地目前只能在 app 的帳號分頁改。**
+**官網的帳號頁（`/account`）只能換大頭照和刪除帳號，改所在地要去 app 的帳號分頁。**
 
 **目錄列表要帶 `authHeaders()`。** 後端靠 token 才知道這個人的所在地、要不要把在地服務商
 排前面（`/v1/merchants` 是 optionalUser，token 過期只是拿到不分地區的排序，不會整頁失敗）。
@@ -118,4 +125,5 @@ Google 直接在瀏覽器裡回一個簽好的 ID token，丟給後端的 `/v1/a
 
 ## 部署前要改
 
-`public/robots.txt` 和 `.env` 的 `NUXT_PUBLIC_SITE_URL` 都還指著 localhost。
+- `.env` 的 `NUXT_PUBLIC_SITE_URL` 還指著 localhost，sitemap 會跟著產出錯的網址
+- **`public/robots.txt` 還不存在**，要新建一份，並把 sitemap 指到正式網域

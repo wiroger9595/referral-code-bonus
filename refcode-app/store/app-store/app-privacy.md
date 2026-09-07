@@ -136,6 +136,24 @@ RevenueCat 是訂閱計費的服務商（處理者），只拿到訂閱必要的
 > 「分析」這一項要勾。雖然沒有第三方分析 SDK，但我們自己的伺服器確實在做統計，
 > Apple 問的是行為不是工具。
 
+### 搜尋記錄
+
+| | |
+|---|---|
+| 有蒐集嗎 | 是 |
+| 內容 | 在搜尋框**按下送出**的關鍵字與當下的介面語言。逐字輸入不記 |
+| 用途 | **App 功能**（熱門搜尋清單）＋ **分析**（找出目錄裡還缺哪些服務商） |
+| 是否連結到使用者 | **否** |
+| 是否用於追蹤 | 否 |
+
+出處：`internal/httpapi/handlers_search.go` → `UpsertSearchTerm`，存進
+`referral_code_bonus.search_terms`（migration `00011_search.sql`）。
+
+> **「不連結到使用者」這一格是關鍵。** 那張表的主鍵是 `(term, lang)`，欄位只有
+> `hits` 與 `last_searched_at` —— **沒有 user_id、也沒有裝置 ID**，寫入時是
+> `ON CONFLICT DO UPDATE hits + 1`。所以它是彙總計數，不是誰搜了什麼的紀錄。
+> 如果之後為了做個人化而把 user_id 或 `X-Device-ID` 一起寫進去，這一格要改成「是」。
+
 ### 其他資料 → 所在地（國家）
 
 | | |
@@ -156,15 +174,7 @@ RevenueCat 是訂閱計費的服務商（處理者），只拿到訂閱必要的
 
 **財務資訊**（付款方式與卡號全程在 App Store，我們拿不到）、健康與健身、
 位置（精確與概略皆無）、聯絡人、音訊資料、
-瀏覽記錄（指跨網站的瀏覽記錄）、搜尋記錄（app 內搜尋字串目前不上傳，
-只當查詢參數用完即丟）、診斷資料（沒有崩潰回報服務）、敏感資訊。
-
-> 「使用者的照片或影片」**從 2026/8 起改成有蒐集**（大頭照）。這一欄以前是不勾的，
-> 沿用舊版填答會與實際行為不符 —— 那是 Apple 直接下架的項目，不是退件而已。
-
-> ⚠️ `api.listMerchants()` 會把搜尋字串當 query 參數送到後端。
-> 只要後端沒有**儲存**它，就不算蒐集「搜尋記錄」。
-> 如果之後為了做熱門關鍵字而開始存下來，這一欄要改成有蒐集。
+瀏覽記錄（指跨網站的瀏覽記錄）、診斷資料（沒有崩潰回報服務）、敏感資訊。
 
 ---
 
@@ -185,8 +195,16 @@ RevenueCat 是訂閱計費的服務商（處理者），只拿到訂閱必要的
 |---|---|
 | `NSPrivacyTracking` | `false` |
 | `NSPrivacyTrackingDomains` | 空陣列 |
-| `NSPrivacyCollectedDataTypes` | 對應上面蒐集的七類（含購買記錄與大頭照） |
+| `NSPrivacyCollectedDataTypes` | 對應上面「蒐集的資料類型」列出的每一項 |
 | `NSPrivacyAccessedAPITypes` | `NSPrivacyAccessedAPICategoryUserDefaults`，理由代碼 `CA92.1` |
+
+⚠️ **目前檔案裡只有七類，比上面的標籤少兩類**（實測 `ios/App/App/PrivacyInfo.xcprivacy`）：
+
+| 已宣告 | 缺 |
+|---|---|
+| `EmailAddress`、`OtherUserContent`、`PhotosorVideos`、`UserID`、`DeviceID`、`PurchaseHistory`、`ProductInteraction` | **`SearchHistory`**（熱門搜尋開始存字詞之後才需要）、**`OtherDataTypes`**（使用者自選的所在地國家） |
+
+manifest 比商店標籤少宣告，跟多宣告一樣是不一致。上傳前補上這兩類。
 
 **`Info.plist` 還要有 `NSCameraUsageDescription`。** 大頭照走 WebView 的
 `<input type="file">`，系統選單裡有「拍照」，少了用途說明使用者一點就閃退。

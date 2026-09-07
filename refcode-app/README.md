@@ -19,12 +19,19 @@ npm run dev          # http://localhost:5174（瀏覽器就能開發）
 
 | 路由 | 說明 |
 |---|---|
-| `/tabs/explore` | 服務商列表、搜尋、分類篩選 |
+| `/onboarding` | 首次啟動的四頁引導，看過一次就不再出現 |
+| `/tabs/explore` | 服務商列表與搜尋 |
+| `/tabs/category` | 分類瀏覽 |
+| `/tabs/record` | 複製過的碼與看過的服務商，**只存在這台裝置**，沒有備份 |
 | `/tabs/my-codes` | 我上架的碼與狀態（需登入） |
-| `/tabs/account` | 登入 / 登出 |
-| `/forgot-password` | 忘記密碼：寄驗證碼 → 輸入碼與新密碼，兩步同一頁 |
+| `/tabs/account` | 帳號、語言、所在地、訂閱入口、封鎖清單、刪除帳號 |
 | `/merchant/:slug` | 推薦碼列表、複製、回報、前往註冊 |
+| `/category/:id` | 單一分類的服務商 |
+| `/login` | 登入 / 註冊 |
+| `/forgot-password` | 忘記密碼：寄驗證碼 → 輸入碼與新密碼，兩步同一頁 |
 | `/add-code` | 上架推薦碼（需登入） |
+| `/pro` | 訂閱頁。**需登入** —— 未登入時 RevenueCat 用匿名 app_user_id，購買的 webhook 回到後端會對不到帳號 |
+| `/blocks` | 已封鎖的上架者（需登入） |
 
 ## 多語（中／日／英）
 
@@ -254,7 +261,8 @@ Play 的資料安全性表單就必須申報使用廣告 ID，也跟隱私權政
 
 ```bash
 npm run build && npx cap sync android
-cd android && ./gradlew :app:bundleRelease      # 產物：app/build/outputs/bundle/release/app-release.aab
+cd android && ./gradlew :app:bundleRelease
+# 產物：app/build/outputs/bundle/release/app-release.aab
 ```
 
 簽章由 `android/keystore.properties` 帶進來（gitignore 掉，裡面有密碼），keystore 本體
@@ -315,3 +323,4 @@ Apple 帳號上申請憑證，而 Distribution 憑證的數量有上限，該由
 ## 還沒做
 
 **推播通知**（追蹤的服務商有新碼時提醒）。
+/

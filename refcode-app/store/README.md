@@ -27,9 +27,10 @@ App Store 與 Google Play 送審要用的所有文件。
 
 ---
 
-## 先解掉這些，不然一定被打回
+## 送審要件
 
-送審前這幾項是硬阻斷，不是「最好有」。依嚴重程度排：
+原本七項硬阻斷，**現在只剩第 2（政策網域）與第 4（Apple 登入）沒解**。
+已完成的幾節留著，因為當初的判斷理由與踩過的坑值得記住 —— 標題上的 ✅ 就是狀態。
 
 ### 1. 帳號刪除 ✅ 已完成
 
@@ -47,12 +48,13 @@ App Store 與 Google Play 送審要用的所有文件。
 ### 2. 隱私權政策與服務條款沒有公開網址 ⛔
 
 兩家商店都要求一個**公開、免登入、可直接開啟**的隱私權政策網址。
-現在 `refcode-web` 的 `NUXT_PUBLIC_SITE_URL` 還是 localhost，也還沒有 `/privacy`、`/terms` 這兩頁。
+`refcode-web` 的 `/privacy`、`/terms`、`/delete-account` 三頁都做好了，
+卡的是網域：`NUXT_PUBLIC_SITE_URL` 還指著 localhost。
 
-要做的：買網域 → 把 `legal/` 底下的內容做成 `refcode-web` 的頁面 →
-更新 `NUXT_PUBLIC_SITE_URL` 與 `public/robots.txt`。
+要做的：買網域 → 更新 `NUXT_PUBLIC_SITE_URL` → **新建 `refcode-web/public/robots.txt`**
+（那個檔目前不存在），sitemap 指向正式網域。
 
-### 3. UGC 要件還差一項（Apple 1.2） ⚠️
+### 3. UGC 要件 ✅ 已完成（Apple 1.2）
 
 推薦碼與備註是使用者產生的內容，Apple 對 UGC app 有一組固定要求。對照現況：
 
@@ -61,10 +63,10 @@ App Store 與 Google Play 送審要用的所有文件。
 | 內容發布前過濾 | ✅ 全部先進 `pending`，由後台人工審核才會 `active` |
 | 使用者檢舉不當內容的機制 | ✅ 複製後可回報「不能用 / 無效 / 已停辦」 |
 | app 內公開聯絡方式 | ✅ 帳號頁有「聯絡我們 / 檢舉內容」，**但要設 `VITE_SUPPORT_EMAIL` 才會顯示** |
-| 封鎖濫用者的機制 | ❌ 沒有 |
+| 封鎖濫用者的機制 | ✅ 服務商頁的碼上可以檢舉或封鎖上架者，封鎖後他的碼不再出現在你的目錄；app 的 `/blocks` 可解除 |
 
-只剩封鎖濫用者。這個 app 沒有使用者之間的互動，可以用「檢舉這位上架者」＋
-被檢舉後不再看到該上架者的碼來滿足，實作前建議先想清楚要做到多細。
+四項都齊了。封鎖是單向且不通知對方的（`POST /v1/codes/{id}/block-owner`），
+這個 app 沒有使用者之間的互動，不需要更複雜的機制。
 
 ### 4. Apple 登入要真的能用 ⚠️
 
@@ -72,9 +74,14 @@ App Store 與 Google Play 送審要用的所有文件。
 規則是：**只要提供了 Google 登入，就必須同時提供 Apple 登入**。
 兩個都不提供也合規，但那等於放棄社群登入。
 
-要做的：Apple Developer 開 Sign in with Apple capability、建 Services ID（web / Android 用）、
-Google Cloud 建 OAuth client（iOS 與 Web 各一），填進 app 的 `.env` 與後端的
-`GOOGLE_CLIENT_IDS` / `APPLE_CLIENT_IDS`。
+Google 那半已經做完（三組 client id 都填在 `refcode-app/.env`，後端 `GOOGLE_CLIENT_IDS` 也填了）。
+還缺的只有 Apple：開 Sign in with Apple capability、建 Services ID（web / Android 用），
+填進 app 的 `VITE_APPLE_SERVICES_ID` / `VITE_APPLE_REDIRECT_URL`（**目前 `.env` 連這兩個
+變數都沒有**）與後端的 `APPLE_CLIENT_IDS`。
+
+⚠️ **後端的 `APPLE_CLIENT_IDS` 現在是 `tw.refcode.app`，但 app 的 bundle id 是
+`com.referra.app`。** iOS 原生的 Apple 登入，ID token 的 `aud` 就是 bundle id ——
+兩邊對不上的話驗證會直接失敗。填 client id 之前先確認哪一個才是對的。
 
 Apple 的 Hide My Email 會給 `@privaterelay.appleid.com` 的轉寄信箱，**不要做網域白名單**，
 之後要寄信也要走 Apple 的 sender 註冊。
@@ -94,11 +101,13 @@ Android keystore 已產在 `~/keystores/`，**但還沒異地備份 —— 那�
 **email 註冊時的驗證信仍然沒做** —— 那個不是硬性要求，但 `users.email_verified_at`
 還一直是空的，社群登入的帳號合併會因此一律走 409（見 `refcode-api/README.md`）。
 
-### 7. 正式 API 必須是 HTTPS ⚠️
+### 7. 正式 API 是 HTTPS ✅ 已完成
 
-iOS 的 ATS 預設擋純 HTTP，Android 9 以上預設也擋 cleartext。
-`VITE_API_BASE_URL` 上架版本一定要指向 HTTPS 網域，不要為了方便去開 ATS 例外 ——
-那會變成審核時要額外解釋的事。
+`refcode-app` 的 `npm run build` 在指令裡寫死了正式站的 HTTPS 位址，所以包版產物
+一律連 HTTPS，改 `.env` 也蓋不掉（見 `refcode-app/README.md`）。
+
+留著這一節是因為原因值得記住：iOS 的 ATS 預設擋純 HTTP、Android 9 以上預設擋 cleartext，
+所以**不要為了方便去開 ATS 例外或 cleartext 例外** —— 那會變成審核時要額外解釋的事。
 
 ---
 
@@ -120,7 +129,7 @@ iOS 的 ATS 預設擋純 HTTP，Android 9 以上預設也擋 cleartext。
 ## 送審順序
 
 ```
-1. 解掉還沒解的：2（政策網址）、3（封鎖濫用者）、4（Apple 登入 client id）、7（HTTPS）
+1. 解掉還沒解的：2（政策網址）、4（Apple 登入 client id）
 2. 把 legal/ 兩份掛上正式網域
 3. 出 icon、啟動畫面與截圖（assets.md）
 4. Play：內部測試軌道先上，跑完 Data safety 與內容分級問卷
