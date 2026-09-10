@@ -1,8 +1,18 @@
+-- 上架一組碼。
+--
+-- 寫成 INSERT ... SELECT FROM users 而不是 VALUES，是為了讓「停權的人不能上架」
+-- 這件事擋在資料庫這一層：requireUser 只驗 token 的簽章不查資料庫（見
+-- middleware.go 的註解），所以停權之後那張還沒過期的 access token（預設 15 分鐘）
+-- 仍然通得過 middleware。把關寫在這裡才沒有那段可以繼續上架的空窗。
+--
+-- 停權的人送上來會一列都沒有（ErrNoRows），由 handler 轉成 403。
 -- name: CreateCode :one
 INSERT INTO referral_code_bonus.referral_codes (
     user_id, merchant_id, code, note, expires_at, code_type
 )
-VALUES ($1, $2, $3, $4, $5, $6)
+SELECT u.id, @merchant_id, @code, @note, @expires_at, @code_type
+FROM referral_code_bonus.users u
+WHERE u.id = @user_id AND u.status = 'active'
 RETURNING *;
 
 -- name: GetCodeByID :one
@@ -259,3 +269,33 @@ FROM (
     ORDER BY created_at DESC
     LIMIT 10
 ) recent;
+
+-- 停權時把這個人上架中的碼下架，回傳被動到的 id 讓呼叫端補 code_reviews。
+--
+-- 只碰 active：pending 的碼還在審核佇列裡、目錄上本來就看不到，下架它等於把它從
+-- 佇列移走，而解除停權時又得決定「還他 pending 還是 active」—— 後者會讓一個沒審過
+-- 的碼直接上架。留在 pending 由審核的人看到帳號被停權自己決定，狀態不會遺失。
+-- name: DisableCodesForSuspendedUser :many
+UPDATE referral_code_bonus.referral_codes
+SET status = 'disabled', updated_at = now()
+WHERE user_id = @user_id AND status = 'active'
+RETURNING id;
+
+-- 解除停權時把「因為停權才被下架」的碼還給他。
+--
+-- 依據是最後一筆 code_reviews 的 action 是不是 suspend（見 00020）：本來就被個別
+-- 下架（disable）或被檢舉自動下架（auto_disable）的碼不該跟著復活。看最後一筆而不是
+-- 「有沒有出現過 suspend」—— 停權下架之後 admin 又個別處理過的，最新那筆才是現在的決定。
+--
+-- activated_at 不動：這不是一個新上架的碼，排序的新鮮度加成不該重新開始。
+-- name: RestoreCodesSuspendedWithUser :many
+UPDATE referral_code_bonus.referral_codes c
+SET status = 'active', updated_at = now()
+WHERE c.user_id = @user_id AND c.status = 'disabled'
+  AND (
+    SELECT r.action FROM referral_code_bonus.code_reviews r
+    WHERE r.code_id = c.id
+    ORDER BY r.created_at DESC
+    LIMIT 1
+  ) = 'suspend'
+RETURNING c.id;

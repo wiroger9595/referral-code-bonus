@@ -15,6 +15,7 @@ import (
 	"refcode-api/internal/mailer"
 	"refcode-api/internal/ranking"
 	"refcode-api/internal/store"
+	"refcode-api/internal/worker"
 )
 
 type Server struct {
@@ -29,6 +30,10 @@ type Server struct {
 	// 訂閱狀態變動後把架上的碼收斂回該有的張數。跟 worker 用的是同一份邏輯，
 	// 只是各自持有一個 —— Syncer 沒有狀態，不值得為它多拉一條建構參數。
 	ent *entitlement.Syncer
+	// 後台的排程頁要顯示每支 job 的說明，那只有程式碼這邊有（資料庫那張表
+	// 只存開關與間隔）。存的是註冊清單本身，不是 *worker.Worker —— API 不該
+	// 有辦法直接叫排程跑起來，那是 worker 自己輪詢認領的事。
+	jobs []worker.Job
 }
 
 func NewServer(
@@ -39,6 +44,7 @@ func NewServer(
 	reset *auth.ResetService,
 	mail mailer.Mailer,
 	images *cloudinary.Client,
+	jobs []worker.Job,
 ) *Server {
 	return &Server{
 		cfg:      cfg,
@@ -50,6 +56,7 @@ func NewServer(
 		images:   images,
 		rankOpts: cfg.Ranking,
 		ent:      entitlement.New(st, cfg.FreeActiveCodeLimit),
+		jobs:     jobs,
 	}
 }
 
@@ -141,11 +148,24 @@ func (s *Server) Routes() http.Handler {
 					r.Get("/merchant-suggestions", s.handleListMerchantSuggestions)
 					r.Post("/merchant-suggestions/{id}/review", s.handleReviewMerchantSuggestion)
 					r.Get("/merchants", s.handleListMerchantsForAdmin)
+					// 稽核判定連續兩次找不到推薦碼字樣的，等人工複檢。
+					// 靜態路徑要排在 /merchants/{id} 前面。
+					r.Get("/merchants/code-audit", s.handleListMerchantsFlaggedByCodeAudit)
 					r.Post("/merchants", s.handleCreateMerchant)
 					r.Patch("/merchants/{id}", s.handleUpdateMerchant)
 					r.Post("/uploads/image", s.handleUploadImage)
+					// 排程：開關、改間隔、手動觸發、看執行紀錄。放在 owner 這一段
+					// —— 這些按鈕會去打外站、寫目錄資料，不是審核人員該碰的。
+					r.Get("/jobs", s.handleListJobs)
+					r.Patch("/jobs/{name}", s.handleUpdateJob)
+					r.Post("/jobs/{name}/run", s.handleRunJob)
+					r.Get("/jobs/{name}/runs", s.handleListJobRuns)
 					r.Get("/users", s.handleAdminListUsers)
 					r.Post("/users/{id}/pro", s.handleAdminGrantPro)
+					// 停權與解除停權。放在 owner 這一段 —— 這會把一個人的碼
+					// 全部從目錄上撤下來，跟建服務商同一個量級的決定。
+					r.Post("/users/{id}/suspend", s.handleAdminSuspendUser)
+					r.Delete("/users/{id}/suspend", s.handleAdminReinstateUser)
 					r.Delete("/users/{id}/pro", s.handleAdminRevokePro)
 				})
 			})

@@ -5,12 +5,14 @@ import type {
   AdminMerchant,
   AdminUserItem,
   Category,
+  JobRun,
   Merchant,
   MerchantInput,
   MerchantSuggestion,
   PendingCode,
   ReferralCode,
   ReviewAction,
+  ScheduledJob,
 } from './types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:7802'
@@ -197,6 +199,30 @@ export const api = {
   },
 
   // 使用者提報的待審平台。只有 owner 打得動這兩支 —— 通過等於建立服務商。
+  listJobs() {
+    return request<{ jobs: ScheduledJob[] }>('/v1/admin/jobs')
+  },
+
+  updateJob(name: string, patch: { enabled?: boolean; interval_seconds?: number }) {
+    return request<ScheduledJob>(`/v1/admin/jobs/${encodeURIComponent(name)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    })
+  },
+
+  // 202 —— 只是排進去，真正跑起來要等 worker 下一次輪詢。
+  runJob(name: string) {
+    return request<ScheduledJob>(`/v1/admin/jobs/${encodeURIComponent(name)}/run`, {
+      method: 'POST',
+    })
+  },
+
+  listJobRuns(name: string, limit = 20) {
+    return request<{ runs: JobRun[] }>(
+      `/v1/admin/jobs/${encodeURIComponent(name)}/runs?limit=${limit}`,
+    )
+  },
+
   listMerchantSuggestions(limit = 50, offset = 0) {
     return request<{ suggestions: MerchantSuggestion[]; total: number }>(
       `/v1/admin/merchant-suggestions?limit=${limit}&offset=${offset}`,

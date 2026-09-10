@@ -259,6 +259,12 @@ func (s *Server) handleCreateCode(w http.ResponseWriter, r *http.Request) {
 			conflict(w, codeCodeAlreadyListed, "你在這家服務商已經有一個上架中的同類型碼了")
 			return
 		}
+		// CreateCode 的 SQL 帶了 users.status = 'active'（見 codes.sql），停權的人
+		// 送上來會一列都沒有。這是 token 還沒過期時的最後一道關。
+		if store.IsNotFound(err) {
+			forbidden(w, codeAccountSuspended, "帳號已被停權，無法上架新的碼")
+			return
+		}
 		internalError(w, r, err)
 		return
 	}

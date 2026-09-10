@@ -50,6 +50,17 @@ type CodeReview struct {
 	CreatedAt time.Time  `json:"created_at"`
 }
 
+type JobRun struct {
+	ID         uuid.UUID  `json:"id"`
+	JobName    string     `json:"job_name"`
+	StartedAt  time.Time  `json:"started_at"`
+	FinishedAt *time.Time `json:"finished_at"`
+	Status     string     `json:"status"`
+	Summary    string     `json:"summary"`
+	Error      string     `json:"error"`
+	Trigger    string     `json:"trigger"`
+}
+
 type Merchant struct {
 	ID                      uuid.UUID `json:"id"`
 	Slug                    string    `json:"slug"`
@@ -77,6 +88,17 @@ type MerchantCategory struct {
 	ImageUrl  *string   `json:"image_url"`
 	NameEn    *string   `json:"name_en"`
 	NameJa    *string   `json:"name_ja"`
+}
+
+type MerchantCodeAudit struct {
+	ID          uuid.UUID `json:"id"`
+	MerchantID  uuid.UUID `json:"merchant_id"`
+	Result      string    `json:"result"`
+	CheckedUrls []string  `json:"checked_urls"`
+	Matched     []string  `json:"matched"`
+	Note        string    `json:"note"`
+	Deactivated bool      `json:"deactivated"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type MerchantSuggestion struct {
@@ -133,6 +155,17 @@ type RefreshToken struct {
 	RevokedAt *time.Time `json:"revoked_at"`
 	UserAgent string     `json:"user_agent"`
 	CreatedAt time.Time  `json:"created_at"`
+}
+
+type ScheduledJob struct {
+	Name               string     `json:"name"`
+	Enabled            bool       `json:"enabled"`
+	IntervalSeconds    int32      `json:"interval_seconds"`
+	LastRunAt          *time.Time `json:"last_run_at"`
+	RunRequestedAt     *time.Time `json:"run_requested_at"`
+	IntervalOverridden bool       `json:"interval_overridden"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
 type SearchTerm struct {

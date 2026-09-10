@@ -99,8 +99,16 @@ const (
 	codeCategoryInUse        = "category_in_use"
 	codeImageInvalid         = "image_invalid"
 	codeUserNotFound         = "user_not_found"
-	codeSuggestionNotFound   = "suggestion_not_found"
-	codeSuggestionReviewed   = "suggestion_already_reviewed"
+	// 帳號被停權。跟 session_expired 分開：app 收到後者會清 token 導回登入頁，
+	// 使用者會以為是登入逾期而反覆重試，看不到真正的原因。
+	codeAccountSuspended   = "account_suspended"
+	codeUserNotSuspendable = "user_not_suspendable"
+	codeSuggestionNotFound = "suggestion_not_found"
+	codeSuggestionReviewed = "suggestion_already_reviewed"
+	codeJobNotFound        = "job_not_found"
+	codeJobDisabled        = "job_disabled"
+	codeJobIntervalInvalid = "job_interval_invalid"
+	codeJobNothingToUpdate = "job_nothing_to_update"
 )
 
 // 基礎設施與 webhook。前兩個是機器對機器，不會顯示給使用者。

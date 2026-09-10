@@ -1,4 +1,4 @@
-package main
+package appimport
 
 import (
 	"context"
@@ -25,7 +25,7 @@ const (
 	lookupBatch = 100
 )
 
-type app struct {
+type App struct {
 	TrackID          int64    `json:"trackId"`
 	TrackName        string   `json:"trackName"`
 	SellerName       string   `json:"sellerName"`
@@ -39,7 +39,7 @@ type app struct {
 }
 
 // logoURL 優先用 512px：目錄的 logo 在 retina 上會放到 80px 以上，100px 那張會糊。
-func (a app) logoURL() string {
+func (a App) logoURL() string {
 	if a.ArtworkURL512 != "" {
 		return a.ArtworkURL512
 	}
@@ -48,7 +48,7 @@ func (a app) logoURL() string {
 
 // signupURL 用開發商自己的網站，沒有才退回 App Store 頁面 ——
 // 「前往註冊」要把人帶到能填推薦碼的地方，App Store 只能下載。
-func (a app) signupURL() string {
+func (a App) signupURL() string {
 	if strings.HasPrefix(a.SellerURL, "http") {
 		return a.SellerURL
 	}
@@ -107,8 +107,8 @@ func (c *client) chartIDs(ctx context.Context, chart string, limit int) ([]strin
 }
 
 // lookup 依 id 取完整資料。回傳的順序不保證跟輸入一致，呼叫端不要依賴它。
-func (c *client) lookup(ctx context.Context, ids []string) ([]app, error) {
-	var all []app
+func (c *client) lookup(ctx context.Context, ids []string) ([]App, error) {
+	var all []App
 
 	for start := 0; start < len(ids); start += lookupBatch {
 		end := min(start+lookupBatch, len(ids))
@@ -128,7 +128,7 @@ func (c *client) lookup(ctx context.Context, ids []string) ([]app, error) {
 		}
 
 		var out struct {
-			Results []app `json:"results"`
+			Results []App `json:"results"`
 		}
 		err = json.NewDecoder(resp.Body).Decode(&out)
 		resp.Body.Close()

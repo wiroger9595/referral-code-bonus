@@ -28,6 +28,10 @@ type revenueCatEvent struct {
 	ExpirationAtMs int64    `json:"expiration_at_ms"`
 }
 
+// RevenueCat 的 environment 只有這兩個值。sandbox（含 TestFlight 與 Play 的
+// 內部測試）打的是同一支 webhook、同一個專案，所以正式環境要自己把它擋掉。
+const envProduction = "PRODUCTION"
+
 // 只有這幾種事件會改動訂閱狀態，其餘一律只記錄。這裡一定要是白名單：
 // 用黑名單的話，認不得的事件會掉進下面「沒被撤銷就是有效」的預設分支，
 // 而 Paywall events（PAYWALL_IMPRESSION 等）不帶 entitlement_ids 也不帶
@@ -65,7 +69,15 @@ type subscriptionDecision struct {
 
 // decideSubscription 把「這個事件代表使用者現在有沒有 Pro」的判斷從 handler 抽出來。
 // 不碰 DB、不碰 request，now 由呼叫端傳進來，才測得到遲到事件那條路徑。
-func decideSubscription(ev revenueCatEvent, proEntitlement string, now time.Time) subscriptionDecision {
+func decideSubscription(ev revenueCatEvent, proEntitlement string, allowSandbox bool, now time.Time) subscriptionDecision {
+	// 測試購買不該在正式資料上發真的 Pro。sandbox 訂閱在商店端是免費的，
+	// 不擋的話任何拿得到 TestFlight 或內部測試軌的人都能自己開一個。
+	//
+	// 認不出環境的也一起擋：與其猜，不如讓它留在 subscription_events 裡等人看。
+	// 開發期間要用 sandbox 走完整流程時，才用 ALLOW_SANDBOX_SUBSCRIPTIONS 打開。
+	if !allowSandbox && ev.Environment != envProduction {
+		return subscriptionDecision{Skip: true}
+	}
 	if !slices.Contains(subscriptionEventTypes, ev.Type) {
 		return subscriptionDecision{Skip: true}
 	}
@@ -175,10 +187,11 @@ func (s *Server) handleRevenueCatWebhook(w http.ResponseWriter, r *http.Request)
 
 	// 只處理會影響授權的事件、而且是我們認得的 entitlement。RevenueCat 上之後
 	// 多開別的方案、或多送別種事件時，都不該把 pro 狀態蓋掉。
-	d := decideSubscription(ev, s.cfg.ProEntitlement, time.Now())
+	d := decideSubscription(ev, s.cfg.ProEntitlement, s.cfg.AllowSandboxSubscriptions, time.Now())
 	if d.Skip {
 		slog.Info("RevenueCat 事件不改動訂閱狀態，只記錄",
-			"event_id", ev.ID, "type", ev.Type, "entitlements", ev.EntitlementIDs)
+			"event_id", ev.ID, "type", ev.Type, "entitlements", ev.EntitlementIDs,
+			"env", ev.Environment)
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ignored"})
 		return
 	}

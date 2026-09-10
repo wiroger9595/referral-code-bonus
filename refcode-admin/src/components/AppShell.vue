@@ -40,6 +40,10 @@ const menuOptions = computed(() => {
         label: () => h(RouterLink, { to: { name: 'users' } }, () => '使用者'),
         key: 'users',
       },
+      {
+        label: () => h(RouterLink, { to: { name: 'jobs' } }, () => '排程'),
+        key: 'jobs',
+      },
     )
   }
 

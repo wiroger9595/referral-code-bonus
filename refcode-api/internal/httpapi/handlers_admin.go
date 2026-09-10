@@ -178,6 +178,34 @@ func (s *Server) handleReviewCode(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, updated)
 }
 
+// handleListMerchantsFlaggedByCodeAudit 是稽核連續兩次在頁面上找不到推薦碼字樣的
+// 服務商，等人工複檢。
+//
+// 上榜不等於這家真的把推薦計畫收掉了 —— 排程只回報不下架，因為公開頁面比對
+// 關鍵字的誤判率實測有 43%（見 merchantaudit 的 package 註解）。複檢的順序：
+// 先看 checked_urls 確認爬蟲抓的是不是對的頁面（抓到登入牆是最常見的誤判來源），
+// 再看 active_code_count —— 架上還有人在用的碼，就是它還在發碼的活證據。
+// 確定要下架的話走 PATCH /admin/merchants/{id} 把 is_active 關掉。
+func (s *Server) handleListMerchantsFlaggedByCodeAudit(w http.ResponseWriter, r *http.Request) {
+	limit, offset := paginate(r, 50, 200)
+
+	rows, err := s.store.ListMerchantsFlaggedByCodeAudit(r.Context(), dbgen.ListMerchantsFlaggedByCodeAuditParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+
+	// total_count 是 window function 的結果，每一列都一樣；沒有列就是 0 筆。
+	var total int64
+	if len(rows) > 0 {
+		total = rows[0].TotalCount
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"merchants": rows, "total": total})
+}
+
 // handleListMerchantSuggestions 是使用者提報的待審平台。
 // 審過的不再回來——建議單只會被審一次，通過的那些已經變成服務商了。
 func (s *Server) handleListMerchantSuggestions(w http.ResponseWriter, r *http.Request) {
@@ -761,4 +789,117 @@ func (s *Server) handleAdminRevokePro(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusNoContent, nil)
+}
+
+// handleAdminSuspendUser 停權一個使用者。
+//
+// 停權做三件事，少任何一件都會留下矛盾的狀態：
+//
+//  1. users.status → suspended。擋掉之後的請求（middleware.go 的 currentUser）
+//     與上架（把關寫在 CreateCode 的 SQL 裡，見 codes.sql）。
+//  2. 把他上架中的碼下架，每一個都在 code_reviews 留一列 suspend 的軌跡。
+//     人被停權而碼還留在目錄上的話，使用者複製到的是一個不會再有人維護的碼；
+//     而軌跡要獨立的 action 才分得出「因為停權被下架」與「這個碼自己有問題」，
+//     解除停權時只還前者（見 00020_suspend_action.sql）。
+//  3. 撤掉所有 refresh token，讓他換不到新的 access token。
+//
+// 三步刻意不包在同一個交易裡：每一步都是冪等的（狀態條件都帶在 WHERE 上），
+// 中途失敗重按一次就會補完剩下的，比為此把 store 的介面全部改成收 tx 划算。
+//
+// 誰在什麼時候停了誰，靠 code_reviews.admin_id 留存 —— 那比一行 log 耐久，
+// Northflank 的 log 有保留期限。
+func (s *Server) handleAdminSuspendUser(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		badRequest(w, codeInvalidID, "id 格式錯誤")
+		return
+	}
+
+	ctx := r.Context()
+	admin, _ := auth.Admin(ctx)
+
+	n, err := s.store.SuspendUser(ctx, userID)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if n == 0 {
+		// SuspendUser 帶了 status = 'active'，撈不到列的原因有三種：沒這個人、
+		// 已經被停權、已刪除。一律回同一個錯 —— 查得到人才會有人按下停權，
+		// 而重按一次不該看起來像系統壞了。
+		conflict(w, codeUserNotSuspendable, "這個使用者不在可停權的狀態（可能已被停權或已刪除）")
+		return
+	}
+
+	ids, err := s.store.DisableCodesForSuspendedUser(ctx, userID)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	for _, id := range ids {
+		if _, err := s.store.CreateCodeReview(ctx, dbgen.CreateCodeReviewParams{
+			CodeID:  id,
+			AdminID: &admin.ID,
+			Action:  "suspend",
+			Reason:  "上架者已被停權",
+		}); err != nil {
+			internalError(w, r, err)
+			return
+		}
+	}
+
+	if err := s.store.RevokeAllUserTokens(ctx, userID); err != nil {
+		internalError(w, r, err)
+		return
+	}
+
+	slog.Info("後台停權使用者", "user", userID, "admin", admin.ID, "disabled_codes", len(ids))
+	writeJSON(w, http.StatusOK, map[string]any{"disabled_codes": len(ids)})
+}
+
+// handleAdminReinstateUser 解除停權，並把「因為停權才被下架」的碼還給他。
+//
+// 只還最後一筆軌跡是 suspend 的那些（見 RestoreCodesSuspendedWithUser）：停權期間
+// admin 又個別處理過的碼，最新那筆才代表現在的決定，不該被解除停權一起復活。
+// 還原也留一列 restore 的軌跡，理由跟停權時一樣 —— 沒有軌跡的話，事後看到一個
+// active 的碼查不出它中間被下架過。
+func (s *Server) handleAdminReinstateUser(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		badRequest(w, codeInvalidID, "id 格式錯誤")
+		return
+	}
+
+	ctx := r.Context()
+	admin, _ := auth.Admin(ctx)
+
+	n, err := s.store.ReinstateUser(ctx, userID)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if n == 0 {
+		conflict(w, codeUserNotSuspendable, "這個使用者目前沒有被停權")
+		return
+	}
+
+	ids, err := s.store.RestoreCodesSuspendedWithUser(ctx, userID)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	for _, id := range ids {
+		if _, err := s.store.CreateCodeReview(ctx, dbgen.CreateCodeReviewParams{
+			CodeID:  id,
+			AdminID: &admin.ID,
+			Action:  "restore",
+			Reason:  "上架者已解除停權",
+		}); err != nil {
+			internalError(w, r, err)
+			return
+		}
+	}
+
+	slog.Info("後台解除停權", "user", userID, "admin", admin.ID, "restored_codes", len(ids))
+	writeJSON(w, http.StatusOK, map[string]any{"restored_codes": len(ids)})
 }

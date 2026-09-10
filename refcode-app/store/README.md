@@ -6,7 +6,8 @@ App Store 與 Google Play 送審要用的所有文件。
 |---|---|
 | `legal/privacy-policy.zh-TW.md` | 隱私權政策（中文，主要版本） |
 | `legal/privacy-policy.en.md` | 隱私權政策（英文，App Store 預設語系要用） |
-| `legal/terms-of-service.zh-TW.md` | 服務條款 / EULA，含 Apple 要求的 UGC 零容忍條款 |
+| `legal/terms-of-service.zh-TW.md` | 服務條款 / EULA（中文，主要版本），含 Apple 要求的 UGC 零容忍條款 |
+| `legal/terms-of-service.en.md` | 服務條款 / EULA（英文，App Store 預設語系要用） |
 | `app-store/listing.md` | App Store 商店文案、URL、分級 |
 | `app-store/app-privacy.md` | App Privacy（隱私標籤）逐題填答 |
 | `app-store/review-notes.md` | 審核備註欄要貼的內容、測試帳號 |
@@ -79,7 +80,7 @@ Google 那半已經做完（三組 client id 都填在 `refcode-app/.env`，後�
 填進 app 的 `VITE_APPLE_SERVICES_ID` / `VITE_APPLE_REDIRECT_URL`（**目前 `.env` 連這兩個
 變數都沒有**）與後端的 `APPLE_CLIENT_IDS`。
 
-⚠️ **後端的 `APPLE_CLIENT_IDS` 現在是 `tw.refcode.app`，但 app 的 bundle id 是
+⚠️ **後端的 `APPLE_CLIENT_IDS` 現在是 `com.refcode.app`，但 app 的 bundle id 是
 `com.referra.app`。** iOS 原生的 Apple 登入，ID token 的 `aud` 就是 bundle id ——
 兩邊對不上的話驗證會直接失敗。填 client id 之前先確認哪一個才是對的。
 

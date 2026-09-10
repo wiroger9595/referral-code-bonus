@@ -33,6 +33,14 @@ func (s *Server) currentUser(w http.ResponseWriter, r *http.Request) (dbgen.User
 		internalError(w, r, err)
 		return dbgen.User{}, false
 	}
+
+	// 停權的人手上那張 access token 沒過期之前仍然通得過 requireUser（那層只驗
+	// 簽章），所以要在這裡再擋一次。GetUserByID 已經排除 deleted，走到這裡的
+	// 非 active 就是 suspended。
+	if user.Status != "active" {
+		forbidden(w, codeAccountSuspended, "帳號已被停權，請聯絡客服")
+		return dbgen.User{}, false
+	}
 	return user, true
 }
 

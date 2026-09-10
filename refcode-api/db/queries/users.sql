@@ -142,3 +142,19 @@ FROM referral_code_bonus.user_blocks b
 JOIN referral_code_bonus.users u ON u.id = b.blocked_id
 WHERE b.blocker_id = $1
 ORDER BY b.created_at DESC;
+
+-- 後台停權。條件帶 status = 'active' 讓回傳列數有意義：兩個 admin 同時按下停權時
+-- 第二個會拿到 0，由 handler 轉成「這個人已經被停權了」，而不是重複寫一次。
+--
+-- 只動 users.status。他上架中的碼由 DisableCodesForSuspendedUser 另外處理 ——
+-- 分兩步是因為每個被下架的碼都要留一列 code_reviews，那需要拿得到 id。
+-- name: SuspendUser :execrows
+UPDATE referral_code_bonus.users
+SET status = 'suspended', updated_at = now()
+WHERE id = @id AND status = 'active';
+
+-- 解除停權。同樣帶 status = 'suspended'，回傳 0 代表這個人本來就沒被停權。
+-- name: ReinstateUser :execrows
+UPDATE referral_code_bonus.users
+SET status = 'active', updated_at = now()
+WHERE id = @id AND status = 'suspended';

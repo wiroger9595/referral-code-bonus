@@ -10,5 +10,9 @@
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">localhost</domain>
         <domain includeSubdomains="false">127.0.0.1</domain>
+        <!-- 模擬器的 localhost 是模擬器自己，10.0.2.2 才是這台電腦（Android
+             模擬器固定的 host loopback 別名）。adb reverse 在實機上可行，
+             但這台模擬器上 socket 接受連線卻不回傳資料，所以模擬器一律走這個。 -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
     </domain-config>
 </network-security-config>

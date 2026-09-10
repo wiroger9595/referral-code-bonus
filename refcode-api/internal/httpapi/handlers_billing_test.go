@@ -108,8 +108,9 @@ func TestDecideSubscription(t *testing.T) {
 				Type:           tt.eventType,
 				EntitlementIDs: tt.entitlements,
 				ExpirationAtMs: tt.expirationMs,
+				Environment:    envProduction,
 			}
-			got := decideSubscription(ev, "pro", now)
+			got := decideSubscription(ev, "pro", false, now)
 
 			if got.Skip != tt.wantSkip {
 				t.Fatalf("Skip = %v, 想要 %v", got.Skip, tt.wantSkip)
@@ -136,7 +137,8 @@ func TestDecideSubscriptionExpiresAt(t *testing.T) {
 	got := decideSubscription(revenueCatEvent{
 		Type:           "INITIAL_PURCHASE",
 		ExpirationAtMs: want.UnixMilli(),
-	}, "pro", now)
+		Environment:    envProduction,
+	}, "pro", false, now)
 
 	if got.ExpiresAt == nil {
 		t.Fatal("ExpiresAt 不該是 nil")
@@ -145,8 +147,47 @@ func TestDecideSubscriptionExpiresAt(t *testing.T) {
 		t.Errorf("ExpiresAt = %v, 想要 %v", got.ExpiresAt, want)
 	}
 
-	noExpiry := decideSubscription(revenueCatEvent{Type: "NON_RENEWING_PURCHASE"}, "pro", now)
+	noExpiry := decideSubscription(revenueCatEvent{
+		Type:        "NON_RENEWING_PURCHASE",
+		Environment: envProduction,
+	}, "pro", false, now)
 	if noExpiry.ExpiresAt != nil {
 		t.Errorf("沒有到期日時 ExpiresAt 應為 nil，得到 %v", noExpiry.ExpiresAt)
+	}
+}
+
+// sandbox 的購買在商店端是免費的，卻跟正式購買走同一支 webhook。
+// 這道沒擋住的話，拿得到 TestFlight 或內部測試軌的人都能自己開一個 Pro。
+func TestDecideSubscriptionEnvironment(t *testing.T) {
+	now := time.Date(2026, 8, 16, 12, 0, 0, 0, time.UTC)
+	ev := func(env string) revenueCatEvent {
+		return revenueCatEvent{
+			Type:           "INITIAL_PURCHASE",
+			ExpirationAtMs: now.Add(30 * 24 * time.Hour).UnixMilli(),
+			Environment:    env,
+		}
+	}
+
+	tests := []struct {
+		name         string
+		env          string
+		allowSandbox bool
+		wantSkip     bool
+	}{
+		{name: "正式環境照常套用", env: envProduction, wantSkip: false},
+		{name: "sandbox 預設不套用", env: "SANDBOX", wantSkip: true},
+		{name: "開了設定才吃 sandbox", env: "SANDBOX", allowSandbox: true, wantSkip: false},
+		// 認不出環境時當成不是正式的：猜錯的代價是白送 Pro。
+		{name: "沒帶環境不套用", env: "", wantSkip: true},
+		{name: "開了設定連沒帶環境的也吃", env: "", allowSandbox: true, wantSkip: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := decideSubscription(ev(tt.env), "pro", tt.allowSandbox, now)
+			if got.Skip != tt.wantSkip {
+				t.Errorf("Skip = %v, 想要 %v", got.Skip, tt.wantSkip)
+			}
+		})
 	}
 }

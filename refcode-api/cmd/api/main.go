@@ -94,11 +94,21 @@ func run() error {
 		slog.Warn("CLOUDINARY_* 未設定，後台圖片上傳暫時停用")
 	}
 
-	go worker.New(st, cfg.FreeActiveCodeLimit).Run(ctx)
+	workerDeps := worker.Deps{
+		FreeActiveCodeLimit: cfg.FreeActiveCodeLimit,
+		ImportCountries:     cfg.AppImportCountries,
+	}
+	// 沒設定 Cloudinary 就不要把 logo-backfill 掛上去。介面的 nil 判斷要看實際值，
+	// 直接塞 *cloudinary.Client 進去的話，即使是 nil pointer 也會是 non-nil interface。
+	if images.Enabled() {
+		workerDeps.Images = images
+	}
+	sched := worker.New(st, workerDeps)
+	go sched.Run(ctx)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           httpapi.NewServer(cfg, st, tokens, oidcVerifier, reset, mail, images).Routes(),
+		Handler:           httpapi.NewServer(cfg, st, tokens, oidcVerifier, reset, mail, images, sched.Jobs()).Routes(),
 		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,

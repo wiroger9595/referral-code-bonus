@@ -195,3 +195,34 @@ export interface MerchantInput {
   is_active?: boolean
   countries: string[]
 }
+
+// 排程。開關與間隔存在後端資料庫（scheduled_jobs），description 由 Go 那邊的
+// 註冊清單提供 —— 後端只回「程式裡還註冊著」的那些，所以這裡不必處理孤兒。
+export interface ScheduledJob {
+  name: string
+  description: string
+  enabled: boolean
+  interval_seconds: number
+  last_run_at: string | null
+  // 有值代表已經按過「立即執行」，還在等 worker 下一次輪詢（最多 30 秒）。
+  run_requested_at: string | null
+  // 間隔被人工調整過。調過之後就不會再跟著程式的預設值走。
+  interval_overridden: boolean
+  updated_at: string
+  // 最近一次執行的結果。從沒跑過時 last_status 是空字串。
+  last_status: '' | 'running' | 'ok' | 'failed'
+  last_summary: string
+  last_error: string
+  last_finished_at: string | null
+}
+
+export interface JobRun {
+  id: string
+  job_name: string
+  started_at: string
+  finished_at: string | null
+  status: 'running' | 'ok' | 'failed'
+  summary: string
+  error: string
+  trigger: 'schedule' | 'manual'
+}

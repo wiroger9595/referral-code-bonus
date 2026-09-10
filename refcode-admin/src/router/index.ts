@@ -49,6 +49,12 @@ const router = createRouter({
       component: () => import('../views/UsersView.vue'),
       meta: { ownerOnly: true },
     },
+    {
+      path: '/jobs',
+      name: 'jobs',
+      component: () => import('../views/JobsView.vue'),
+      meta: { ownerOnly: true },
+    },
   ],
 })
 

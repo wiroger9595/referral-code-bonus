@@ -464,6 +464,21 @@ func (q *Queries) MarkRefreshTokenRotated(ctx context.Context, id uuid.UUID) err
 	return err
 }
 
+const reinstateUser = `-- name: ReinstateUser :execrows
+UPDATE referral_code_bonus.users
+SET status = 'active', updated_at = now()
+WHERE id = $1 AND status = 'suspended'
+`
+
+// 解除停權。同樣帶 status = 'suspended'，回傳 0 代表這個人本來就沒被停權。
+func (q *Queries) ReinstateUser(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, reinstateUser, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const revokeAllUserTokens = `-- name: RevokeAllUserTokens :exec
 UPDATE referral_code_bonus.refresh_tokens
 SET revoked_at = now()
@@ -503,6 +518,25 @@ WHERE family_id = $1 AND revoked_at IS NULL
 func (q *Queries) RevokeTokenFamily(ctx context.Context, familyID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, revokeTokenFamily, familyID)
 	return err
+}
+
+const suspendUser = `-- name: SuspendUser :execrows
+UPDATE referral_code_bonus.users
+SET status = 'suspended', updated_at = now()
+WHERE id = $1 AND status = 'active'
+`
+
+// 後台停權。條件帶 status = 'active' 讓回傳列數有意義：兩個 admin 同時按下停權時
+// 第二個會拿到 0，由 handler 轉成「這個人已經被停權了」，而不是重複寫一次。
+//
+// 只動 users.status。他上架中的碼由 DisableCodesForSuspendedUser 另外處理 ——
+// 分兩步是因為每個被下架的碼都要留一列 code_reviews，那需要拿得到 id。
+func (q *Queries) SuspendUser(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, suspendUser, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const unblockUser = `-- name: UnblockUser :exec

@@ -70,6 +70,13 @@ type Config struct {
 	ProEntitlement        string
 	FreeActiveCodeLimit   int
 
+	// app-import 排程要爬哪幾個 App Store 國別的排行榜。留空就不註冊那支排程
+	// —— 匯進來的是停用草稿，還是得有人到後台補完，開之前先想清楚有沒有人顧。
+	AppImportCountries []string
+	// sandbox 的購買事件走的是同一支 webhook。預設只認正式環境的事件，
+	// 要拿 sandbox 或 Test Store 驗完整流程時才打開。
+	AllowSandboxSubscriptions bool
+
 	// 後台上傳圖片（服務商 logo、分類圖）存去 Cloudinary。留空就是沒設定，
 	// 上傳端點會直接回錯誤，不影響其他功能。
 	CloudinaryCloudName string
@@ -107,6 +114,8 @@ func Load() (*Config, error) {
 		GoogleClientIDs: envList("GOOGLE_CLIENT_IDS", ""),
 		AppleClientIDs:  envList("APPLE_CLIENT_IDS", ""),
 
+		AppImportCountries: envList("APP_IMPORT_COUNTRIES", ""),
+
 		PasswordResetTTL:         envDuration("PASSWORD_RESET_TTL", 10*time.Minute),
 		PasswordResetMaxAttempts: envInt("PASSWORD_RESET_MAX_ATTEMPTS", 5),
 		PasswordResetMaxSends:    envInt("PASSWORD_RESET_MAX_SENDS", 5),
@@ -116,9 +125,10 @@ func Load() (*Config, error) {
 
 		Ranking: loadRanking(),
 
-		RevenueCatWebhookAuth: env("REVENUECAT_WEBHOOK_AUTH", ""),
-		ProEntitlement:        env("PRO_ENTITLEMENT", "refcode_pro"),
-		FreeActiveCodeLimit:   envInt("FREE_ACTIVE_CODE_LIMIT", 3),
+		RevenueCatWebhookAuth:     env("REVENUECAT_WEBHOOK_AUTH", ""),
+		ProEntitlement:            env("PRO_ENTITLEMENT", "refcode_pro"),
+		FreeActiveCodeLimit:       envInt("FREE_ACTIVE_CODE_LIMIT", 3),
+		AllowSandboxSubscriptions: envBool("ALLOW_SANDBOX_SUBSCRIPTIONS", false),
 
 		CloudinaryCloudName: env("CLOUDINARY_CLOUD_NAME", ""),
 		CloudinaryAPIKey:    env("CLOUDINARY_API_KEY", ""),
