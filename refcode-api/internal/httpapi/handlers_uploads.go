@@ -116,5 +116,5 @@ func (s *Server) handleUploadAvatar(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, http.StatusOK, toUserResponse(user))
+	writeJSON(w, http.StatusOK, toUserResponse(user, s.cfg.FreeActiveCodeLimit))
 }

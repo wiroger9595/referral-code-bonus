@@ -10,6 +10,7 @@ import {
   identify,
   isIdentifiedAs,
   isProActive,
+  manageURL,
   onCustomerInfoChange,
   proExpiresAt,
   proPackages,
@@ -33,6 +34,10 @@ export const useSubscriptionStore = defineStore('subscription', () => {
   const isPro = computed(() => (purchasesAvailable ? isProActive(info.value) : serverIsPro.value))
   const expiresAt = computed(() => proExpiresAt(info.value))
   const available = computed(() => purchasesAvailable)
+
+  // 管理／取消訂閱的連結，沒有生效中的訂閱時是 null。瀏覽器上沒有 SDK，
+  // info 一直是 null，那邊本來也買不了，所以不用另外判斷。
+  const manageUrl = computed(() => manageURL(info.value))
 
   function setServerState(pro: boolean) {
     serverIsPro.value = pro
@@ -127,6 +132,7 @@ export const useSubscriptionStore = defineStore('subscription', () => {
     isPro,
     expiresAt,
     available,
+    manageUrl,
     setServerState,
     linkUser,
     unlinkUser,

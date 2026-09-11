@@ -19,6 +19,7 @@ import {
 import {
   addCircleOutline,
   cameraOutline,
+  cardOutline,
   chevronForward,
   earthOutline,
   documentTextOutline,
@@ -203,6 +204,22 @@ function initial() {
                 </p>
                 <p v-else-if="!subs.isPro">{{ $t('pro.heroDesc') }}</p>
               </IonLabel>
+              <IonIcon slot="end" :icon="chevronForward" class="chev" />
+            </IonItem>
+            <!-- 管理／取消訂閱。兩家商店都要求訂閱者在 app 內找得到這個入口。
+                 網址由 RevenueCat 依他實際在哪家商店買的來給（見 purchases.ts
+                 的 manageURL），沒有生效中的訂閱時是 null，整列就不出現 ——
+                 對還沒訂閱的人顯示「管理訂閱」只會讓人以為自己被扣款了。
+                 走 https 所以跟條款那兩列一樣用 target="_blank"。 -->
+            <IonItem
+              v-if="subs.manageUrl"
+              button
+              :href="subs.manageUrl"
+              target="_blank"
+              :detail="false"
+            >
+              <IonIcon slot="start" :icon="cardOutline" color="primary" />
+              <IonLabel>{{ $t('pro.manage') }}</IonLabel>
               <IonIcon slot="end" :icon="chevronForward" class="chev" />
             </IonItem>
             <IonItem button router-link="/add-code" :detail="false">

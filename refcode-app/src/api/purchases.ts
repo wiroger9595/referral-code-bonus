@@ -73,6 +73,17 @@ export function proExpiresAt(info: CustomerInfo | null): string | null {
   return info?.entitlements.active[PRO_ENTITLEMENT]?.expirationDate ?? null
 }
 
+// 管理／取消訂閱的入口。兩家商店都要求訂閱者在 app 裡找得到這個連結。
+//
+// 用 RevenueCat 給的 URL，不要自己組 Play 的 deep link：那要寫死訂閱 ID
+// （商店那邊改名就失效，而這個專案的識別碼已經換過一輪），而且同一份程式碼
+// 在 iOS 上會指到錯的地方。RevenueCat 是照這筆訂閱實際在哪家商店買的來給。
+//
+// 沒有生效中的訂閱時是 null —— 呼叫端據此決定要不要顯示那一列。
+export function manageURL(info: CustomerInfo | null): string | null {
+  return info?.managementURL ?? null
+}
+
 export async function currentCustomerInfo(): Promise<CustomerInfo | null> {
   if (!purchasesAvailable) return null
   await ensureConfigured()

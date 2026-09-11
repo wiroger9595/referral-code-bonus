@@ -27,7 +27,7 @@ func (s *Server) handleGetMe(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := user.ID
 
-	resp := toUserResponse(user)
+	resp := toUserResponse(user, s.cfg.FreeActiveCodeLimit)
 	resp.IsPro, resp.ProExpiresAt = s.isPro(r, userID)
 	writeJSON(w, http.StatusOK, resp)
 }
@@ -66,7 +66,7 @@ func (s *Server) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, toUserResponse(user))
+	writeJSON(w, http.StatusOK, toUserResponse(user, s.cfg.FreeActiveCodeLimit))
 }
 
 // handleDeleteMe 刪除帳號。Apple 5.1.1(v) 與 Play 的使用者資料政策都要求

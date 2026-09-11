@@ -42,11 +42,13 @@ const selected = ref<string | null>(null)
 const buying = ref(false)
 const errorMessage = ref('')
 
-// 免費方案的同時上架上限。真正在擋的是後端（見 refcode-api 的
-// FREE_ACTIVE_CODE_LIMIT，預設 3），這裡純粹是把數字填進賣點文案 ——
-// API 沒有把這個值吐給前端，所以改後端那個環境變數時要記得跟著改這裡，
-// 否則付費頁會說一個跟實際不符的數字。
-const FREE_ACTIVE_CODE_LIMIT = 3
+// 免費方案的同時上架上限，純粹是把數字填進賣點文案，真正在擋的是後端。
+// 數字現在也跟著後端走（userResponse.free_active_code_limit）—— 以前這裡寫死
+// 一份，改了後端的 FREE_ACTIVE_CODE_LIMIT 就會讓付費頁說一個跟實際不符的數字。
+//
+// 這頁的路由帶 requiresAuth，理論上 user 一定在；?? 3 只是給型別收尾，
+// 值與後端的預設一致，萬一真的走到也不會講錯。
+const freeLimit = computed(() => auth.user?.free_active_code_limit ?? 3)
 
 const perks = [
   { icon: infiniteOutline, key: 'unlimited' },
@@ -176,7 +178,7 @@ async function restore() {
             <div>
               <h3>{{ $t(`pro.perks.${p.key}.title`) }}</h3>
               <p class="tiny muted">
-                {{ $t(`pro.perks.${p.key}.desc`, { limit: FREE_ACTIVE_CODE_LIMIT }) }}
+                {{ $t(`pro.perks.${p.key}.desc`, { limit: freeLimit }) }}
               </p>
             </div>
           </div>

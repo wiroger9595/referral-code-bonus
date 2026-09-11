@@ -41,6 +41,9 @@ export interface User {
   // （剛買完的那幾秒 webhook 還沒到），瀏覽器沒有 SDK 才看這個。
   is_pro: boolean
   pro_expires_at: string | null
+  // 免費方案的同時上架上限，由後端的 FREE_ACTIVE_CODE_LIMIT 決定。
+  // paywall 的賣點文案要填這個數字，app 自己寫死一份會跟後端分岔。
+  free_active_code_limit: number
 }
 
 export interface AuthResponse {

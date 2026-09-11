@@ -13,7 +13,10 @@
       「我的推薦碼」每張卡上有入口。是 status → `disabled` 不是真刪，回報與統計保留）
 - [ ] Apple／Play 的資料申報已對齊大頭照 —— `app-privacy.md`（照片或影片）、
       `data-safety.md`（相片）、隱私權政策三份都已改好，填表時照著填
-- [ ] 隱私權政策與服務條款掛上正式網域，免登入可直接開
+- [x] 隱私權政策與服務條款掛上正式網域，免登入可直接開
+      —— `/terms`、`/privacy`、`/delete-account` 三頁都回 200。目前在
+      `referral-code-bonus-vrcm.vercel.app`；之後換自訂網域的話，
+      `VITE_SITE_URL` 與兩家商店的 listing 都要一起改
 - [x] `.env` 的 `VITE_SUPPORT_EMAIL` 與 `VITE_SITE_URL` 已填
       —— 帳號頁的「聯絡我們 / 檢舉」與條款連結沒填就不會顯示，那三列是 UGC 的送審要件
 - [x] 有封鎖 / 檢舉上架者的機制
@@ -23,26 +26,43 @@
 
 ## A2. 訂閱（RevenueCat）
 
-- [ ] RevenueCat 專案已建立，entitlement `refcode_pro` 已建好
+- [x] RevenueCat 專案已建立，entitlement `refcode_pro` 已建好
 - [ ] App Store Connect 的訂閱群組 `refcode_pro` 與兩個 product 已建立並掛進 RevenueCat
-- [ ] Play Console 的訂閱 `pro` 與兩個基本方案已建立並掛進 RevenueCat
-- [ ] offering 已設為 current，`getOfferings()` 拿得到方案
+- [x] Play Console 的訂閱 `refcode_pro_subscription` 與兩個基本方案（`rps30` 月繳、
+      `rps365` 年繳）已建立、Store Status 都是 Published 並掛進 RevenueCat
+      —— 舊的 `refcode_monthly_subscribe` 還在，但沒有放進 offering
+- [x] offering `default` 已設為 current，`$rc_monthly` / `$rc_annual` 兩個 package 都在
 - [ ] 兩家商店的 introductory offer（7 天免費試用）已設好 ——
       paywall 顯示的是商店回傳的 `introPrice`，天數沒有寫死，
       沒設的話畫面上完全不會出現試用字樣，很容易被誤判成程式沒做
+      ⚠️ Play 這邊 `promo7trail`（月繳）與 `promo60trail`（年繳）都已啟用，
+      但**實際天數還沒開編輯頁確認過**。同專案的 `annual-free-14-trail` 實際是
+      30 天不是 14 天，所以名字裡的數字一律不能當真
 - [ ] `refcode-app/.env` 的 `VITE_REVENUECAT_IOS_KEY` / `VITE_REVENUECAT_ANDROID_KEY` 已填
+      —— Android（`goog_…`）已填；iOS 還是空的，iOS 版要出之前得補
 - [x] `refcode-app/.env` 的 `VITE_REVENUECAT_TEST_KEY` **已清空** ——
       Test Store 的 key 會蓋掉平台 key，帶著它送審等於真實購買全部收不到
 - [ ] RevenueCat 的 Play service account credentials 已上傳且驗證通過
       （做法見 `refcode-app/README.md`，權限傳播最久 36 小時）
-- [ ] `refcode-api/.env` 的 `REVENUECAT_WEBHOOK_AUTH` 已填，且與 RevenueCat 後台的
-      Authorization 標頭值一致
-- [ ] RevenueCat 後台的 webhook URL 指向正式環境的 `https://.../v1/webhooks/revenuecat`
+- [x] `refcode-api/.env` 的 `REVENUECAT_WEBHOOK_AUTH` 已填，且與 RevenueCat 後台的
+      Authorization 標頭值一致 —— 正式環境對無認證的請求回 401（沒設會回 404），
+      而且 `subscription_events` 真的收得到事件，代表兩邊的值對得上
+- [x] RevenueCat 後台的 webhook URL 指向正式環境的 `https://.../v1/webhooks/revenuecat`
 - [x] 兩邊的 entitlement 名稱一致（app 的 `VITE_REVENUECAT_ENTITLEMENT` 與後端的 `PRO_ENTITLEMENT`）
-- [ ] sandbox 買過一次，`subscriptions` 表真的有 upsert 進去
-- [ ] paywall 上有自動續訂揭露（期間、價格、扣款時間、怎麼取消）與服務條款連結
-- [ ] app 內找得到「恢復購買」
-- [ ] 已經是 Pro 的人不會再被推銷同一個方案
+      ⚠️ 本機兩份都是 `refcode_pro`，但 **Northflank 上的 `PRO_ENTITLEMENT` 要自己去看**：
+      這個名稱在 RevenueCat 上前後改過 `pro` → `refcode Pro` → `vip` → `refcode_pro`，
+      正式環境若還留著舊值，真實購買會被 `decideSubscription` 直接略過 ——
+      錢扣了、app 顯示 Pro（讀 SDK）、後端永遠不給
+- [x] sandbox 買過一次，`subscriptions` 表真的有 upsert 進去
+      —— 2026-08-11 有一筆 `refcode_pro_monthly` / `APP_STORE` 進去過。
+      之後 `ALLOW_SANDBOX_SUBSCRIPTIONS` 關掉了，現在 sandbox 事件只記錄不寫訂閱，
+      所以要再驗一次得先把那個開關打開
+- [x] paywall 上有自動續訂揭露（期間、價格、扣款時間、怎麼取消）與服務條款連結
+      —— 有試用的方案會再多一句 `pro.trialDisclosure`，而且只對選中的方案顯示
+- [x] app 內找得到「恢復購買」
+- [x] app 內找得到「管理訂閱」（帳號頁，只對有生效訂閱的人顯示）——
+      網址用 RevenueCat 的 `managementURL`，會指向他實際購買的那家商店
+- [x] 已經是 Pro 的人不會再被推銷同一個方案
 
 ## B. 帳號與設定
 
@@ -60,7 +80,8 @@
       —— 兩個平台都加好了，Android 已經能出 debug APK
 - [ ] `npm run build && npx cap sync`（**每次改前端都要 sync**，忘記就是送出舊版）
 - [ ] icon 與啟動畫面已產生（`assets.md`）
-- [ ] 版本號策略定好：`version` 對使用者、`build` / `versionCode` 每次上傳都要遞增
+- [x] 版本號策略定好：`version` 對使用者、`build` / `versionCode` 每次上傳都要遞增
+      —— `./release.sh` 自己加，兩個平台共用同一個建置編號，不靠人記
 - [x] iOS：`ITSAppUsesNonExemptEncryption` = `false`（已寫進 Info.plist，驗過會進 bundle）
 - [x] iOS：`NSCameraUsageDescription` 已加進 Info.plist ——
       大頭照的 `<input type="file">` 選單有「拍照」，少了它使用者一點就閃退
@@ -75,9 +96,13 @@
 - [ ] Android：keystore 與密碼已備份到密碼管理器 / 另一台裝置
       （弄丟就永遠無法更新這個 package name，除非改用 Play App Signing 且已註冊）
 - [x] Android：`targetSdkVersion` 符合 Play Console 當下公告的最低要求（目前 36）
-- [ ] Android：合併後的 manifest 沒有多餘權限（尤其 `AD_ID`）——
-      `./gradlew :app:processDebugMainManifest --rerun-tasks` 之後 grep 一次，
-      這件事會被 social-login plugin 的 provider 設定影響，升級 plugin 後要重驗
+- [x] Android：合併後的 manifest 沒有多餘權限（尤其 `AD_ID`）——
+      `./gradlew :app:processReleaseMainManifest --rerun-tasks` 之後 grep 一次，
+      這件事會被 social-login plugin 的 provider 設定影響，升級 plugin 後要重驗。
+      2026-09-10 驗過 release 版合併結果，七個權限：`INTERNET`、
+      `ACCESS_NETWORK_STATE`、`USE_BIOMETRIC`、`USE_CREDENTIALS`、`USE_FINGERPRINT`
+      （後三個來自 social-login 的 Credential Manager）、`com.android.vending.BILLING`、
+      `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`。**沒有 `AD_ID`**
 - [ ] 實機測過冷啟動、登入、複製、回報、上架的完整流程
 
 ## D. App Store Connect

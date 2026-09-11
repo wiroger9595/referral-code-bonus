@@ -30,19 +30,28 @@ type userResponse struct {
 	// 只有 /v1/me 會填，登入當下 webhook 可能還沒到。
 	IsPro        bool       `json:"is_pro"`
 	ProExpiresAt *time.Time `json:"pro_expires_at"`
+
+	// 免費方案能同時上架幾個碼。不是使用者資料而是伺服器設定，掛在這裡是因為
+	// paywall 要把數字填進賣點文案，而 app 本來只能自己寫死一份 —— 改了
+	// FREE_ACTIVE_CODE_LIMIT 之後付費頁就會說一個跟實際不符的數字。
+	//
+	// 每個回傳使用者的地方都填，所以放在 toUserResponse 裡而不是各 handler：
+	// 註冊完直接開 paywall 是常見路徑，那時 app 手上只有註冊回應。
+	FreeActiveCodeLimit int `json:"free_active_code_limit"`
 }
 
 // dbgen.User 帶著 password_hash，而且 sqlc 產的 struct 有 json tag，
 // 直接回給前端就會外洩。所有回傳使用者資料的地方都要經過這裡。
-func toUserResponse(u dbgen.User) userResponse {
+func toUserResponse(u dbgen.User, freeActiveCodeLimit int) userResponse {
 	return userResponse{
-		ID:          u.ID,
-		Email:       u.Email,
-		DisplayName: u.DisplayName,
-		AvatarURL:   u.AvatarUrl,
-		Verified:    u.EmailVerifiedAt != nil,
-		Country:     u.Country,
-		CreatedAt:   u.CreatedAt,
+		ID:                  u.ID,
+		Email:               u.Email,
+		DisplayName:         u.DisplayName,
+		AvatarURL:           u.AvatarUrl,
+		Verified:            u.EmailVerifiedAt != nil,
+		Country:             u.Country,
+		CreatedAt:           u.CreatedAt,
+		FreeActiveCodeLimit: freeActiveCodeLimit,
 	}
 }
 
@@ -489,7 +498,7 @@ func (s *Server) respondWithTokens(w http.ResponseWriter, r *http.Request, user 
 		return
 	}
 	// 登入當下就把 Pro 狀態帶回去，app 才不用為了知道方案再打一次 /v1/me。
-	resp := toUserResponse(user)
+	resp := toUserResponse(user, s.cfg.FreeActiveCodeLimit)
 	resp.IsPro, resp.ProExpiresAt = s.isPro(r, user.ID)
 
 	writeJSON(w, http.StatusOK, authResponse{User: resp, Tokens: pair})
