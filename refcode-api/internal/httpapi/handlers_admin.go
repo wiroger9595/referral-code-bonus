@@ -829,6 +829,15 @@ func (s *Server) handleAdminSuspendUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// nil 是無限期，那是正常用法。但填一個已經過去的時間就是打錯字 ——
+	// 停權會成立、碼會被下架，然後一小時內 reinstate-suspensions 就把人放掉、
+	// 碼放回去，最後只留下一對互相抵銷的 code_reviews。與其讓它安靜空轉一輪，
+	// 不如當場擋下來。
+	if req.ExpiresAt != nil && !req.ExpiresAt.After(time.Now()) {
+		badRequest(w, codeSuspendUntilInvalid, "停權期限必須是未來的時間")
+		return
+	}
+
 	ctx := r.Context()
 	admin, _ := auth.Admin(ctx)
 

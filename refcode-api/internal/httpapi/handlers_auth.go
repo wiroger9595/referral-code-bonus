@@ -492,6 +492,21 @@ func (s *Server) handleAdminLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) respondWithTokens(w http.ResponseWriter, r *http.Request, user dbgen.User) {
+	// 停權的人不發 token。擋在這裡而不是各自的 handler：註冊、密碼登入、社群登入、
+	// 重設密碼四條路徑都收斂到這支，分開擋遲早會漏一條。
+	//
+	// 沒有這道的話，停權者登入會拿到 200 加一組有效 token，接著每一支 API 被
+	// middleware 的 currentUser 擋成 403。app 的 login() 用的是回應裡的 user，
+	// 不會再打一次 /v1/me，所以他會進到主畫面然後每個動作都失敗 —— 對當事人
+	// 看起來是「app 壞了」而不是「我被停權了」，客服收到的會是錯的問題描述。
+	//
+	// GetUserByEmail / GetUserByID 已經排除 deleted，走到這裡的非 active 就是
+	// suspended。註冊剛建好的帳號一定是 active，這道對它是空轉。
+	if user.Status != "active" {
+		forbidden(w, codeAccountSuspended, "帳號已被停權，請聯絡客服")
+		return
+	}
+
 	pair, err := s.tokens.IssuePair(r.Context(), user.ID, r.UserAgent())
 	if err != nil {
 		internalError(w, r, err)

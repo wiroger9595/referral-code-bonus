@@ -49,15 +49,18 @@ vet:
 sqlc:
 	sqlc generate
 
+# 這三行前面的 @ 不能拿掉：指令展開後含 GOOSE_DBSTRING，也就是完整連線字串與
+# 密碼。沒有 @ 的話 make 會先把整行印出來再執行，密碼就跟著進了終端機捲軸、
+# CI log 與貼給別人的錯誤訊息。goose 自己的輸出不受影響。
 migrate-up:
-	$(GOOSE) up
+	@$(GOOSE) up
 
 # 套用前先自己看過產生的 SQL，這個指令會真的改資料庫。
 migrate-down:
-	$(GOOSE) down
+	@$(GOOSE) down
 
 migrate-status:
-	$(GOOSE) status
+	@$(GOOSE) status
 
 # 只給本機：建第一個 admin 並塞 demo 服務商。
 seed:

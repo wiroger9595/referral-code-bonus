@@ -290,7 +290,7 @@
     "oauth_no_email": "That social account didn't provide an email address, so we can't create an account",
     "email_needs_password_login": "An account with that email already exists. Sign in with your password first, then link the social account.",
     "session_expired": "Your session expired. Please sign in again.",
-    "account_suspended": "Your account is suspended, so you can't share codes right now. Contact support if you think this is a mistake.",
+    "account_suspended": "Your account is suspended. Contact support if you think this is a mistake.",
     "login_required": "Please sign in",
     "invalid_id": "That id isn't valid",
     "display_name_required": "Display name can't be empty",

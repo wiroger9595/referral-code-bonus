@@ -103,6 +103,10 @@ const (
 	// 使用者會以為是登入逾期而反覆重試，看不到真正的原因。
 	codeAccountSuspended   = "account_suspended"
 	codeUserNotSuspendable = "user_not_suspendable"
+	// 停權期限填了過去的時間。不擋的話停權會成立、碼被下架，然後一小時內
+	// reinstate-suspensions 就把人放掉、碼放回去，只在 code_reviews 留下
+	// 一對互相抵銷的軌跡 —— 按下去的人會以為停權根本沒生效。
+	codeSuspendUntilInvalid = "suspend_until_invalid"
 	codeSuggestionNotFound = "suggestion_not_found"
 	codeSuggestionReviewed = "suggestion_already_reviewed"
 	codeJobNotFound        = "job_not_found"
