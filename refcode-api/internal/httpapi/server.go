@@ -15,6 +15,7 @@ import (
 	"refcode-api/internal/mailer"
 	"refcode-api/internal/ranking"
 	"refcode-api/internal/store"
+	"refcode-api/internal/suspension"
 	"refcode-api/internal/worker"
 )
 
@@ -30,6 +31,9 @@ type Server struct {
 	// 訂閱狀態變動後把架上的碼收斂回該有的張數。跟 worker 用的是同一份邏輯，
 	// 只是各自持有一個 —— Syncer 沒有狀態，不值得為它多拉一條建構參數。
 	ent *entitlement.Syncer
+	// 停權與解除要連帶處理架上的碼與 refresh token。跟 ent 同理，worker 也持有
+	// 一個各自的 —— Manager 沒有狀態。
+	susp *suspension.Manager
 	// 後台的排程頁要顯示每支 job 的說明，那只有程式碼這邊有（資料庫那張表
 	// 只存開關與間隔）。存的是註冊清單本身，不是 *worker.Worker —— API 不該
 	// 有辦法直接叫排程跑起來，那是 worker 自己輪詢認領的事。
@@ -56,6 +60,7 @@ func NewServer(
 		images:   images,
 		rankOpts: cfg.Ranking,
 		ent:      entitlement.New(st, cfg.FreeActiveCodeLimit),
+		susp:     suspension.New(st),
 		jobs:     jobs,
 	}
 }

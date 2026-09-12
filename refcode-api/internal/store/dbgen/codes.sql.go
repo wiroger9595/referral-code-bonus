@@ -388,6 +388,9 @@ SELECT
     m.name AS merchant_name,
     u.email AS owner_email,
     u.display_name AS owner_name,
+    -- 複核這個碼時要順手停權上架者的話，得先知道他是不是已經被停權了 ——
+    -- 沒有這一欄，後台只能先按下去才從錯誤訊息得知「他已經停權了」。
+    u.status AS owner_status,
     coalesce(rs.total, 0) AS report_total,
     coalesce(rs.worked, 0) AS report_worked,
     coalesce(rs.failed, 0) AS report_failed,
@@ -448,6 +451,7 @@ type ListAutoDisabledCodesRow struct {
 	MerchantName         string      `json:"merchant_name"`
 	OwnerEmail           string      `json:"owner_email"`
 	OwnerName            string      `json:"owner_name"`
+	OwnerStatus          string      `json:"owner_status"`
 	ReportTotal          int64       `json:"report_total"`
 	ReportWorked         int64       `json:"report_worked"`
 	ReportFailed         int64       `json:"report_failed"`
@@ -493,6 +497,7 @@ func (q *Queries) ListAutoDisabledCodes(ctx context.Context, arg ListAutoDisable
 			&i.MerchantName,
 			&i.OwnerEmail,
 			&i.OwnerName,
+			&i.OwnerStatus,
 			&i.ReportTotal,
 			&i.ReportWorked,
 			&i.ReportFailed,
@@ -551,6 +556,9 @@ SELECT
     m.name AS merchant_name,
     u.email AS owner_email,
     u.display_name AS owner_name,
+    -- 複核這個碼時要順手停權上架者的話，得先知道他是不是已經被停權了 ——
+    -- 沒有這一欄，後台只能先按下去才從錯誤訊息得知「他已經停權了」。
+    u.status AS owner_status,
     coalesce(rs.total, 0) AS report_total,
     coalesce(rs.worked, 0) AS report_worked,
     coalesce(rs.failed, 0) AS report_failed,
@@ -614,6 +622,7 @@ type ListCodesForAdminRow struct {
 	MerchantName         string      `json:"merchant_name"`
 	OwnerEmail           string      `json:"owner_email"`
 	OwnerName            string      `json:"owner_name"`
+	OwnerStatus          string      `json:"owner_status"`
 	ReportTotal          int64       `json:"report_total"`
 	ReportWorked         int64       `json:"report_worked"`
 	ReportFailed         int64       `json:"report_failed"`
@@ -672,6 +681,7 @@ func (q *Queries) ListCodesForAdmin(ctx context.Context, arg ListCodesForAdminPa
 			&i.MerchantName,
 			&i.OwnerEmail,
 			&i.OwnerName,
+			&i.OwnerStatus,
 			&i.ReportTotal,
 			&i.ReportWorked,
 			&i.ReportFailed,

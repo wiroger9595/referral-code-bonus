@@ -125,7 +125,7 @@ func TestSuspendUserFullFlow(t *testing.T) {
 	}
 
 	// ── 停權 ─────────────────────────────────────────────────────────
-	n, err := f.st.SuspendUser(f.ctx, uploader)
+	n, err := f.st.SuspendUser(f.ctx, dbgen.SuspendUserParams{ID: uploader})
 	if err != nil {
 		t.Fatalf("停權失敗: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestSuspendLeavesPendingCodesAlone(t *testing.T) {
 	        VALUES ($1, $2, $3, $4, 'pending', 'discount')`,
 		pending, uploader, m, "PENDING-1")
 
-	if _, err := f.st.SuspendUser(f.ctx, uploader); err != nil {
+	if _, err := f.st.SuspendUser(f.ctx, dbgen.SuspendUserParams{ID: uploader}); err != nil {
 		t.Fatalf("停權失敗: %v", err)
 	}
 	ids, err := f.st.DisableCodesForSuspendedUser(f.ctx, uploader)
@@ -264,7 +264,7 @@ func TestReinstateOnlyRestoresSuspendedCodes(t *testing.T) {
 	// 這個是停權時才被下架的，軌跡是 suspend。
 	bySuspension := f.code(uploader, mB, "referral")
 
-	if _, err := f.st.SuspendUser(f.ctx, uploader); err != nil {
+	if _, err := f.st.SuspendUser(f.ctx, dbgen.SuspendUserParams{ID: uploader}); err != nil {
 		t.Fatalf("停權失敗: %v", err)
 	}
 	ids, err := f.st.DisableCodesForSuspendedUser(f.ctx, uploader)
@@ -305,10 +305,10 @@ func TestSuspendReinstateIdempotent(t *testing.T) {
 
 	u := f.user("u@example.com")
 
-	if n, err := f.st.SuspendUser(f.ctx, u); err != nil || n != 1 {
+	if n, err := f.st.SuspendUser(f.ctx, dbgen.SuspendUserParams{ID: u}); err != nil || n != 1 {
 		t.Fatalf("第一次停權應該動到 1 列，實際 n=%d err=%v", n, err)
 	}
-	if n, err := f.st.SuspendUser(f.ctx, u); err != nil || n != 0 {
+	if n, err := f.st.SuspendUser(f.ctx, dbgen.SuspendUserParams{ID: u}); err != nil || n != 0 {
 		t.Errorf("重複停權應該 0 列，實際 n=%d err=%v", n, err)
 	}
 
@@ -320,7 +320,7 @@ func TestSuspendReinstateIdempotent(t *testing.T) {
 	}
 
 	// 不存在的人也是 0 列，不是錯誤。
-	if n, err := f.st.SuspendUser(f.ctx, uuid.New()); err != nil || n != 0 {
+	if n, err := f.st.SuspendUser(f.ctx, dbgen.SuspendUserParams{ID: uuid.New()}); err != nil || n != 0 {
 		t.Errorf("停權不存在的人應該 0 列，實際 n=%d err=%v", n, err)
 	}
 }
@@ -337,7 +337,7 @@ func TestSuspendedUserCannotCreateCode(t *testing.T) {
 		t.Fatalf("正常使用者上架應該成功，實際 %v", err)
 	}
 
-	if _, err := f.st.SuspendUser(f.ctx, u); err != nil {
+	if _, err := f.st.SuspendUser(f.ctx, dbgen.SuspendUserParams{ID: u}); err != nil {
 		t.Fatalf("停權失敗: %v", err)
 	}
 

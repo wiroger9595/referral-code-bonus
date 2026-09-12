@@ -3,9 +3,11 @@ import {
   NAlert,
   NButton,
   NDataTable,
+  NDatePicker,
   NInput,
   NModal,
   NPagination,
+  NPopconfirm,
   NSelect,
   NSpace,
   NTabPane,
@@ -141,6 +143,62 @@ async function confirmReview() {
   }
 }
 
+// 停權上架者。入口放在這一頁而不是只有使用者列表：看到有問題的碼的當下就是要
+// 處分的當下，為了停一個人再去別頁搜 email，中間那一步常常就不做了。
+const suspending = ref<AdminCodeItem | null>(null)
+const suspendUntil = ref<number | null>(null)
+
+function openSuspend(code: AdminCodeItem) {
+  suspending.value = code
+  suspendUntil.value = null
+}
+
+async function confirmSuspend() {
+  const target = suspending.value
+  if (!target) return false
+
+  submitting.value.add(target.id)
+  try {
+    // NDatePicker 給的是當天 00:00，「停權到 9/18」的語意是那天結束為止，
+    // 所以補到隔天零點 —— 不補的話選今天等於立刻期滿。
+    const until = suspendUntil.value
+      ? new Date(suspendUntil.value + 24 * 60 * 60 * 1000).toISOString()
+      : null
+    const res = await api.suspendUser(target.user_id, until)
+    message.success(
+      res.disabled_codes > 0
+        ? `已停權 ${target.owner_email}，連帶下架 ${res.disabled_codes} 個碼`
+        : `已停權 ${target.owner_email}`,
+    )
+    suspending.value = null
+    // 他名下的碼狀態全變了，而且這一頁上可能不只一個 —— 重抓而不是改本地那一列。
+    await load()
+    return true
+  } catch (e) {
+    message.error(e instanceof ApiError ? e.message : '操作失敗')
+    return false
+  } finally {
+    submitting.value.delete(target.id)
+  }
+}
+
+async function reinstateOwner(code: AdminCodeItem) {
+  submitting.value.add(code.id)
+  try {
+    const res = await api.reinstateUser(code.user_id)
+    message.success(
+      res.restored_codes > 0
+        ? `已解除 ${code.owner_email} 的停權，放回 ${res.restored_codes} 個碼`
+        : `已解除 ${code.owner_email} 的停權`,
+    )
+    await load()
+  } catch (e) {
+    message.error(e instanceof ApiError ? e.message : '操作失敗')
+  } finally {
+    submitting.value.delete(code.id)
+  }
+}
+
 const STATUS_META: Record<string, { label: string; type: 'success' | 'error' | 'warning' | 'default' }> = {
   active: { label: '上架中', type: 'success' },
   disabled: { label: '已下架', type: 'error' },
@@ -191,12 +249,37 @@ function baseColumns(): DataTableColumns<AdminCodeItem> {
     {
       title: '上架者',
       key: 'owner_email',
-      width: 200,
-      render: (row) =>
-        h('div', [
+      width: 230,
+      render: (row) => {
+        const loading = submitting.value.has(row.id)
+        // 已經停權的人只給解除；沒有這個判斷的話按下去只會拿到 409。
+        const action =
+          row.owner_status === 'suspended'
+            ? h(NSpace, { size: 6, align: 'center' }, () => [
+                h(NTag, { type: 'error', size: 'tiny', bordered: false }, () => '已停權'),
+                h(
+                  NPopconfirm,
+                  { onPositiveClick: () => reinstateOwner(row) },
+                  {
+                    trigger: () =>
+                      h(NButton, { size: 'tiny', quaternary: true, loading }, () => '解除'),
+                    default: () =>
+                      `解除 ${row.owner_email} 的停權？當初因停權被下架的碼會放回架上。`,
+                  },
+                ),
+              ])
+            : h(
+                NButton,
+                { size: 'tiny', type: 'error', quaternary: true, onClick: () => openSuspend(row) },
+                () => '停權上架者',
+              )
+
+        return h('div', [
           h('div', { style: 'font-size: 13px' }, row.owner_email),
           h('div', { style: 'font-size: 12px; opacity: 0.6' }, row.owner_name || '（未設暱稱）'),
-        ]),
+          h('div', { style: 'margin-top: 2px' }, [action]),
+        ])
+      },
     },
     {
       title: '內容檢舉',
@@ -413,6 +496,28 @@ const allColumns: DataTableColumns<AdminCodeItem> = [
         placeholder="原因（會留下紀錄）"
         :rows="3"
       />
+    </NModal>
+
+    <NModal
+      :show="suspending !== null"
+      preset="dialog"
+      title="停權上架者"
+      positive-text="確認停權"
+      negative-text="取消"
+      @update:show="(show: boolean) => { if (!show) suspending = null }"
+      @positive-click="confirmSuspend"
+    >
+      <p>
+        <strong>{{ suspending?.owner_email }}</strong>
+      </p>
+      <NSpace vertical>
+        <NText depth="3" style="font-size: 13px">
+          停權會把他架上的碼<strong>全部</strong>下架（不只這一個）、並讓他無法登入與上架。
+          解除時只會還回「因為這次停權才被下架」的那些。
+        </NText>
+        <NText depth="3" style="font-size: 13px">停權到哪一天（含當天），留空代表無限期</NText>
+        <NDatePicker v-model:value="suspendUntil" type="date" clearable style="width: 100%" />
+      </NSpace>
     </NModal>
   </div>
 </template>

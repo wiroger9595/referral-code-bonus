@@ -20,6 +20,7 @@ import (
 	"refcode-api/internal/merchantaudit"
 	"refcode-api/internal/store"
 	"refcode-api/internal/store/dbgen"
+	"refcode-api/internal/suspension"
 )
 
 // tickInterval 是排程器自己醒來的頻率，不是任何一支 job 的間隔 ——
@@ -62,6 +63,7 @@ type Worker struct {
 func New(st *store.Store, deps Deps) *Worker {
 	ent := entitlement.New(st, deps.FreeActiveCodeLimit)
 	audit := merchantaudit.New(st)
+	susp := suspension.New(st)
 
 	w := &Worker{store: st}
 	w.jobs = []Job{
@@ -92,6 +94,15 @@ func New(st *store.Store, deps Deps) *Worker {
 			DefaultInterval: 24 * time.Hour,
 			Description:     "爬各平台頁面確認服務商還有沒有在發推薦碼（只回報不下架）",
 			Fn:              func(ctx context.Context) (string, error) { return auditMerchantCodes(ctx, audit) },
+		},
+		{
+			// 期滿放人是以「天」為單位的處分，一小時一輪的誤差對當事人沒有差別，
+			// 但比一天一次少讓人多關大半天。停權期間的碼要一起還回去，所以不能
+			// 只靠查詢時比對時間 —— 那樣 users.status 會跟架上的碼說法不一致。
+			Name:            "reinstate-suspensions",
+			DefaultInterval: time.Hour,
+			Description:     "把期滿的停權解除，並把當初因停權下架的碼放回架上",
+			Fn:              func(ctx context.Context) (string, error) { return reinstateSuspensions(ctx, susp) },
 		},
 		{
 			Name:            "prune-job-runs",
@@ -298,6 +309,18 @@ func ensurePartitions(ctx context.Context, st *store.Store) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+// reinstateSuspensions 放掉期滿的停權。一個人失敗不中斷其他人，細節見 suspension.Sweep。
+func reinstateSuspensions(ctx context.Context, susp *suspension.Manager) (string, error) {
+	released, err := susp.Sweep(ctx)
+	if err != nil {
+		return "", err
+	}
+	if released == 0 {
+		return "", nil
+	}
+	return fmt.Sprintf("解除 %d 人的停權", released), nil
 }
 
 func pruneJobRuns(ctx context.Context, st *store.Store) (string, error) {

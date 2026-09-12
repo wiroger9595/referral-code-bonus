@@ -120,6 +120,9 @@ SELECT
     m.name AS merchant_name,
     u.email AS owner_email,
     u.display_name AS owner_name,
+    -- 複核這個碼時要順手停權上架者的話，得先知道他是不是已經被停權了 ——
+    -- 沒有這一欄，後台只能先按下去才從錯誤訊息得知「他已經停權了」。
+    u.status AS owner_status,
     coalesce(rs.total, 0) AS report_total,
     coalesce(rs.worked, 0) AS report_worked,
     coalesce(rs.failed, 0) AS report_failed,
@@ -176,6 +179,9 @@ SELECT
     m.name AS merchant_name,
     u.email AS owner_email,
     u.display_name AS owner_name,
+    -- 複核這個碼時要順手停權上架者的話，得先知道他是不是已經被停權了 ——
+    -- 沒有這一欄，後台只能先按下去才從錯誤訊息得知「他已經停權了」。
+    u.status AS owner_status,
     coalesce(rs.total, 0) AS report_total,
     coalesce(rs.worked, 0) AS report_worked,
     coalesce(rs.failed, 0) AS report_failed,

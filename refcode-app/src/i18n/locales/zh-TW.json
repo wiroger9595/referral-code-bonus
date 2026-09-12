@@ -290,6 +290,7 @@
     "oauth_no_email": "這個社群帳號沒有提供 email，無法建立帳號",
     "email_needs_password_login": "這個 email 已經有帳號了，請先用密碼登入後再綁定社群帳號",
     "session_expired": "登入已失效，請重新登入",
+    "account_suspended": "帳號已被停權，目前無法上架推薦碼。有疑問請聯絡客服。",
     "login_required": "請先登入",
     "invalid_id": "id 格式錯誤",
     "display_name_required": "顯示名稱不能空白",

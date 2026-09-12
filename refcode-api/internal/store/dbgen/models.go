@@ -208,4 +208,5 @@ type User struct {
 	UpdatedAt       time.Time  `json:"updated_at"`
 	Country         *string    `json:"country"`
 	AvatarPublicID  *string    `json:"avatar_public_id"`
+	SuspendedUntil  *time.Time `json:"suspended_until"`
 }

@@ -126,6 +126,9 @@ export interface AdminCodeItem extends ReferralCode {
   merchant_name: string
   owner_email: string
   owner_name: string
+  // 上架者現在的狀態。決定複核這個碼時要顯示「停權上架者」還是「已停權」——
+  // 沒有這一欄只能先按下去才從錯誤訊息得知他已經被停權了。
+  owner_status: 'active' | 'suspended' | 'deleted'
   // 使用者回報。四種分開數，因為處理方式不同：invalid_code 要找上架者，
   // merchant_closed 代表整家服務商的活動可能都結束了。
   report_total: number
@@ -174,6 +177,9 @@ export interface AdminUserItem {
   display_name: string
   status: 'active' | 'suspended' | 'deleted'
   created_at: string
+  // 停權到什麼時候。null 要看 status 才知道意思：active 是「沒被停權」，
+  // suspended 是「無限期，停到有人手動解除為止」。
+  suspended_until: string | null
   is_pro: boolean
   pro_expires_at: string | null
   pro_store: string | null

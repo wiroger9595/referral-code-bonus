@@ -99,7 +99,7 @@ DELETE FROM referral_code_bonus.users WHERE id = $1;
 -- 是因為要一次列一頁，不能逐筆呼叫 Go 那個函式。
 -- name: ListUsersAdmin :many
 SELECT
-    u.id, u.email, u.display_name, u.status, u.created_at,
+    u.id, u.email, u.display_name, u.status, u.created_at, u.suspended_until,
     COALESCE(s.is_active, false) AND (s.expires_at IS NULL OR s.expires_at > now()) AS is_pro,
     s.expires_at  AS pro_expires_at,
     s.store       AS pro_store,
@@ -146,15 +146,28 @@ ORDER BY b.created_at DESC;
 -- 後台停權。條件帶 status = 'active' 讓回傳列數有意義：兩個 admin 同時按下停權時
 -- 第二個會拿到 0，由 handler 轉成「這個人已經被停權了」，而不是重複寫一次。
 --
--- 只動 users.status。他上架中的碼由 DisableCodesForSuspendedUser 另外處理 ——
+-- suspended_until 是 NULL 代表停到有人手動解除為止；有值的話由
+-- reinstate-suspensions 排程期滿自動放人（見 internal/suspension）。
+--
+-- 只動 users 這一列。他上架中的碼由 DisableCodesForSuspendedUser 另外處理 ——
 -- 分兩步是因為每個被下架的碼都要留一列 code_reviews，那需要拿得到 id。
 -- name: SuspendUser :execrows
 UPDATE referral_code_bonus.users
-SET status = 'suspended', updated_at = now()
+SET status = 'suspended', suspended_until = sqlc.narg(suspended_until)::timestamptz, updated_at = now()
 WHERE id = @id AND status = 'active';
 
 -- 解除停權。同樣帶 status = 'suspended'，回傳 0 代表這個人本來就沒被停權。
+-- suspended_until 要一起清掉：留著的話，下次這個人被無限期停權時，
+-- 後台會讀到上一次那個早就過去的日期。
 -- name: ReinstateUser :execrows
 UPDATE referral_code_bonus.users
-SET status = 'active', updated_at = now()
+SET status = 'active', suspended_until = NULL, updated_at = now()
 WHERE id = @id AND status = 'suspended';
+
+-- 期滿待放人的停權。排程每輪問一次，交給 suspension.Sweep 逐一解除。
+-- 只收 suspended_until 有值的 —— NULL 是無限期，永遠不該被排程放掉。
+-- name: ListDueSuspensions :many
+SELECT id FROM referral_code_bonus.users
+WHERE status = 'suspended'
+  AND suspended_until IS NOT NULL
+  AND suspended_until <= now();

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -14,6 +15,7 @@ import (
 	"refcode-api/internal/geo"
 	"refcode-api/internal/store"
 	"refcode-api/internal/store/dbgen"
+	"refcode-api/internal/suspension"
 )
 
 // slug 會直接出現在網址上（/factories/ooo-bank），限制字元避免產生怪 URL。
@@ -656,15 +658,18 @@ func (s *Server) handleUpdateMerchant(w http.ResponseWriter, r *http.Request) {
 }
 
 type adminUserItem struct {
-	ID           uuid.UUID  `json:"id"`
-	Email        string     `json:"email"`
-	DisplayName  string     `json:"display_name"`
-	Status       string     `json:"status"`
-	CreatedAt    time.Time  `json:"created_at"`
-	IsPro        bool       `json:"is_pro"`
-	ProExpiresAt *time.Time `json:"pro_expires_at"`
-	ProStore     *string    `json:"pro_store"`
-	ProProductID *string    `json:"pro_product_id"`
+	ID          uuid.UUID `json:"id"`
+	Email       string    `json:"email"`
+	DisplayName string    `json:"display_name"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+	// null 有兩種意思，要看 Status：active 的人是「沒被停權」，
+	// suspended 的人是「無限期，停到有人手動解除為止」。
+	SuspendedUntil *time.Time `json:"suspended_until"`
+	IsPro          bool       `json:"is_pro"`
+	ProExpiresAt   *time.Time `json:"pro_expires_at"`
+	ProStore       *string    `json:"pro_store"`
+	ProProductID   *string    `json:"pro_product_id"`
 }
 
 // handleAdminListUsers 是客服查帳號、查訂閱狀態的入口——退款爭議或要手動
@@ -693,8 +698,9 @@ func (s *Server) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
 		items[i] = adminUserItem{
 			ID: row.ID, Email: row.Email, DisplayName: row.DisplayName,
 			Status: row.Status, CreatedAt: row.CreatedAt,
-			IsPro:        row.IsPro != nil && *row.IsPro,
-			ProExpiresAt: row.ProExpiresAt, ProStore: row.ProStore, ProProductID: row.ProProductID,
+			SuspendedUntil: row.SuspendedUntil,
+			IsPro:          row.IsPro != nil && *row.IsPro,
+			ProExpiresAt:   row.ProExpiresAt, ProStore: row.ProStore, ProProductID: row.ProProductID,
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"users": items, "total": total})
@@ -798,13 +804,13 @@ func (s *Server) handleAdminRevokePro(w http.ResponseWriter, r *http.Request) {
 //  1. users.status → suspended。擋掉之後的請求（middleware.go 的 currentUser）
 //     與上架（把關寫在 CreateCode 的 SQL 裡，見 codes.sql）。
 //  2. 把他上架中的碼下架，每一個都在 code_reviews 留一列 suspend 的軌跡。
-//     人被停權而碼還留在目錄上的話，使用者複製到的是一個不會再有人維護的碼；
-//     而軌跡要獨立的 action 才分得出「因為停權被下架」與「這個碼自己有問題」，
-//     解除停權時只還前者（見 00020_suspend_action.sql）。
 //  3. 撤掉所有 refresh token，讓他換不到新的 access token。
 //
-// 三步刻意不包在同一個交易裡：每一步都是冪等的（狀態條件都帶在 WHERE 上），
-// 中途失敗重按一次就會補完剩下的，比為此把 store 的介面全部改成收 tx 划算。
+// 這三件事在 suspension.Suspend 裡 —— 期滿自動解除的排程走的是同一份邏輯，
+// 兩邊各寫一份會分岔成「後台解除有還碼、排程解除沒還」這種只有當事人會發現的差別。
+//
+// expires_at 留空代表停到有人手動解除為止。填在過去的時間不特別擋：那等於
+// 「停一下下就放」，由排程的下一輪收掉，比回一個錯讓 admin 猜哪裡填錯單純。
 //
 // 誰在什麼時候停了誰，靠 code_reviews.admin_id 留存 —— 那比一行 log 耐久，
 // Northflank 的 log 有保留期限。
@@ -815,54 +821,36 @@ func (s *Server) handleAdminSuspendUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	var req struct {
+		ExpiresAt *time.Time `json:"expires_at"`
+	}
+	if err := decodeJSON(w, r, &req); err != nil {
+		badRequest(w, codeInvalidRequest, "請求格式錯誤")
+		return
+	}
+
 	ctx := r.Context()
 	admin, _ := auth.Admin(ctx)
 
-	n, err := s.store.SuspendUser(ctx, userID)
+	disabled, err := s.susp.Suspend(ctx, userID, &admin.ID, req.ExpiresAt)
 	if err != nil {
-		internalError(w, r, err)
-		return
-	}
-	if n == 0 {
-		// SuspendUser 帶了 status = 'active'，撈不到列的原因有三種：沒這個人、
-		// 已經被停權、已刪除。一律回同一個錯 —— 查得到人才會有人按下停權，
-		// 而重按一次不該看起來像系統壞了。
-		conflict(w, codeUserNotSuspendable, "這個使用者不在可停權的狀態（可能已被停權或已刪除）")
-		return
-	}
-
-	ids, err := s.store.DisableCodesForSuspendedUser(ctx, userID)
-	if err != nil {
-		internalError(w, r, err)
-		return
-	}
-	for _, id := range ids {
-		if _, err := s.store.CreateCodeReview(ctx, dbgen.CreateCodeReviewParams{
-			CodeID:  id,
-			AdminID: &admin.ID,
-			Action:  "suspend",
-			Reason:  "上架者已被停權",
-		}); err != nil {
-			internalError(w, r, err)
+		if errors.Is(err, suspension.ErrNotSuspendable) {
+			// 撈不到列的原因有三種：沒這個人、已經被停權、已刪除。一律回同一個錯
+			// —— 查得到人才會有人按下停權，而重按一次不該看起來像系統壞了。
+			conflict(w, codeUserNotSuspendable, "這個使用者不在可停權的狀態（可能已被停權或已刪除）")
 			return
 		}
-	}
-
-	if err := s.store.RevokeAllUserTokens(ctx, userID); err != nil {
 		internalError(w, r, err)
 		return
 	}
 
-	slog.Info("後台停權使用者", "user", userID, "admin", admin.ID, "disabled_codes", len(ids))
-	writeJSON(w, http.StatusOK, map[string]any{"disabled_codes": len(ids)})
+	slog.Info("後台停權使用者", "user", userID, "admin", admin.ID,
+		"until", req.ExpiresAt, "disabled_codes", disabled)
+	writeJSON(w, http.StatusOK, map[string]any{"disabled_codes": disabled})
 }
 
 // handleAdminReinstateUser 解除停權，並把「因為停權才被下架」的碼還給他。
-//
-// 只還最後一筆軌跡是 suspend 的那些（見 RestoreCodesSuspendedWithUser）：停權期間
-// admin 又個別處理過的碼，最新那筆才代表現在的決定，不該被解除停權一起復活。
-// 還原也留一列 restore 的軌跡，理由跟停權時一樣 —— 沒有軌跡的話，事後看到一個
-// active 的碼查不出它中間被下架過。
+// 細節見 suspension.Reinstate —— 排程期滿放人走的是同一支。
 func (s *Server) handleAdminReinstateUser(w http.ResponseWriter, r *http.Request) {
 	userID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
@@ -873,33 +861,16 @@ func (s *Server) handleAdminReinstateUser(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	admin, _ := auth.Admin(ctx)
 
-	n, err := s.store.ReinstateUser(ctx, userID)
+	restored, err := s.susp.Reinstate(ctx, userID, &admin.ID)
 	if err != nil {
-		internalError(w, r, err)
-		return
-	}
-	if n == 0 {
-		conflict(w, codeUserNotSuspendable, "這個使用者目前沒有被停權")
-		return
-	}
-
-	ids, err := s.store.RestoreCodesSuspendedWithUser(ctx, userID)
-	if err != nil {
-		internalError(w, r, err)
-		return
-	}
-	for _, id := range ids {
-		if _, err := s.store.CreateCodeReview(ctx, dbgen.CreateCodeReviewParams{
-			CodeID:  id,
-			AdminID: &admin.ID,
-			Action:  "restore",
-			Reason:  "上架者已解除停權",
-		}); err != nil {
-			internalError(w, r, err)
+		if errors.Is(err, suspension.ErrNotSuspendable) {
+			conflict(w, codeUserNotSuspendable, "這個使用者目前沒有被停權")
 			return
 		}
+		internalError(w, r, err)
+		return
 	}
 
-	slog.Info("後台解除停權", "user", userID, "admin", admin.ID, "restored_codes", len(ids))
-	writeJSON(w, http.StatusOK, map[string]any{"restored_codes": len(ids)})
+	slog.Info("後台解除停權", "user", userID, "admin", admin.ID, "restored_codes", restored)
+	writeJSON(w, http.StatusOK, map[string]any{"restored_codes": restored})
 }

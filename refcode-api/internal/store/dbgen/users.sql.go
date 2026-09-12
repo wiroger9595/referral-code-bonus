@@ -155,7 +155,7 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 const createUser = `-- name: CreateUser :one
 INSERT INTO referral_code_bonus.users (email, display_name, avatar_url, password_hash, email_verified_at, country)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id
+RETURNING id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id, suspended_until
 `
 
 type CreateUserParams struct {
@@ -189,6 +189,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.Country,
 		&i.AvatarPublicID,
+		&i.SuspendedUntil,
 	)
 	return i, err
 }
@@ -289,7 +290,7 @@ func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id FROM referral_code_bonus.users
+SELECT id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id, suspended_until FROM referral_code_bonus.users
 WHERE lower(email) = lower($1::text) AND status <> 'deleted'
 `
 
@@ -308,12 +309,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.UpdatedAt,
 		&i.Country,
 		&i.AvatarPublicID,
+		&i.SuspendedUntil,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id FROM referral_code_bonus.users
+SELECT id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id, suspended_until FROM referral_code_bonus.users
 WHERE id = $1 AND status <> 'deleted'
 `
 
@@ -332,8 +334,38 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.UpdatedAt,
 		&i.Country,
 		&i.AvatarPublicID,
+		&i.SuspendedUntil,
 	)
 	return i, err
+}
+
+const listDueSuspensions = `-- name: ListDueSuspensions :many
+SELECT id FROM referral_code_bonus.users
+WHERE status = 'suspended'
+  AND suspended_until IS NOT NULL
+  AND suspended_until <= now()
+`
+
+// 期滿待放人的停權。排程每輪問一次，交給 suspension.Sweep 逐一解除。
+// 只收 suspended_until 有值的 —— NULL 是無限期，永遠不該被排程放掉。
+func (q *Queries) ListDueSuspensions(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listDueSuspensions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listMyBlocks = `-- name: ListMyBlocks :many
@@ -380,7 +412,7 @@ func (q *Queries) ListMyBlocks(ctx context.Context, blockerID uuid.UUID) ([]List
 
 const listUsersAdmin = `-- name: ListUsersAdmin :many
 SELECT
-    u.id, u.email, u.display_name, u.status, u.created_at,
+    u.id, u.email, u.display_name, u.status, u.created_at, u.suspended_until,
     COALESCE(s.is_active, false) AND (s.expires_at IS NULL OR s.expires_at > now()) AS is_pro,
     s.expires_at  AS pro_expires_at,
     s.store       AS pro_store,
@@ -400,15 +432,16 @@ type ListUsersAdminParams struct {
 }
 
 type ListUsersAdminRow struct {
-	ID           uuid.UUID  `json:"id"`
-	Email        string     `json:"email"`
-	DisplayName  string     `json:"display_name"`
-	Status       string     `json:"status"`
-	CreatedAt    time.Time  `json:"created_at"`
-	IsPro        *bool      `json:"is_pro"`
-	ProExpiresAt *time.Time `json:"pro_expires_at"`
-	ProStore     *string    `json:"pro_store"`
-	ProProductID *string    `json:"pro_product_id"`
+	ID             uuid.UUID  `json:"id"`
+	Email          string     `json:"email"`
+	DisplayName    string     `json:"display_name"`
+	Status         string     `json:"status"`
+	CreatedAt      time.Time  `json:"created_at"`
+	SuspendedUntil *time.Time `json:"suspended_until"`
+	IsPro          *bool      `json:"is_pro"`
+	ProExpiresAt   *time.Time `json:"pro_expires_at"`
+	ProStore       *string    `json:"pro_store"`
+	ProProductID   *string    `json:"pro_product_id"`
 }
 
 // 後台的使用者查詢，客服/退款爭議時用來看誰是 Pro、手動補發或撤銷。
@@ -429,6 +462,7 @@ func (q *Queries) ListUsersAdmin(ctx context.Context, arg ListUsersAdminParams) 
 			&i.DisplayName,
 			&i.Status,
 			&i.CreatedAt,
+			&i.SuspendedUntil,
 			&i.IsPro,
 			&i.ProExpiresAt,
 			&i.ProStore,
@@ -466,11 +500,13 @@ func (q *Queries) MarkRefreshTokenRotated(ctx context.Context, id uuid.UUID) err
 
 const reinstateUser = `-- name: ReinstateUser :execrows
 UPDATE referral_code_bonus.users
-SET status = 'active', updated_at = now()
+SET status = 'active', suspended_until = NULL, updated_at = now()
 WHERE id = $1 AND status = 'suspended'
 `
 
 // 解除停權。同樣帶 status = 'suspended'，回傳 0 代表這個人本來就沒被停權。
+// suspended_until 要一起清掉：留著的話，下次這個人被無限期停權時，
+// 後台會讀到上一次那個早就過去的日期。
 func (q *Queries) ReinstateUser(ctx context.Context, id uuid.UUID) (int64, error) {
 	result, err := q.db.Exec(ctx, reinstateUser, id)
 	if err != nil {
@@ -522,17 +558,25 @@ func (q *Queries) RevokeTokenFamily(ctx context.Context, familyID uuid.UUID) err
 
 const suspendUser = `-- name: SuspendUser :execrows
 UPDATE referral_code_bonus.users
-SET status = 'suspended', updated_at = now()
-WHERE id = $1 AND status = 'active'
+SET status = 'suspended', suspended_until = $1::timestamptz, updated_at = now()
+WHERE id = $2 AND status = 'active'
 `
+
+type SuspendUserParams struct {
+	SuspendedUntil *time.Time `json:"suspended_until"`
+	ID             uuid.UUID  `json:"id"`
+}
 
 // 後台停權。條件帶 status = 'active' 讓回傳列數有意義：兩個 admin 同時按下停權時
 // 第二個會拿到 0，由 handler 轉成「這個人已經被停權了」，而不是重複寫一次。
 //
-// 只動 users.status。他上架中的碼由 DisableCodesForSuspendedUser 另外處理 ——
+// suspended_until 是 NULL 代表停到有人手動解除為止；有值的話由
+// reinstate-suspensions 排程期滿自動放人（見 internal/suspension）。
+//
+// 只動 users 這一列。他上架中的碼由 DisableCodesForSuspendedUser 另外處理 ——
 // 分兩步是因為每個被下架的碼都要留一列 code_reviews，那需要拿得到 id。
-func (q *Queries) SuspendUser(ctx context.Context, id uuid.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, suspendUser, id)
+func (q *Queries) SuspendUser(ctx context.Context, arg SuspendUserParams) (int64, error) {
+	result, err := q.db.Exec(ctx, suspendUser, arg.SuspendedUntil, arg.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -558,7 +602,7 @@ const updateUserAvatar = `-- name: UpdateUserAvatar :one
 UPDATE referral_code_bonus.users
 SET avatar_url = $2, avatar_public_id = $3, updated_at = now()
 WHERE id = $1
-RETURNING id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id
+RETURNING id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id, suspended_until
 `
 
 type UpdateUserAvatarParams struct {
@@ -584,6 +628,7 @@ func (q *Queries) UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarPara
 		&i.UpdatedAt,
 		&i.Country,
 		&i.AvatarPublicID,
+		&i.SuspendedUntil,
 	)
 	return i, err
 }
@@ -608,7 +653,7 @@ const updateUserProfile = `-- name: UpdateUserProfile :one
 UPDATE referral_code_bonus.users
 SET display_name = $2, avatar_url = $3, country = $4, updated_at = now()
 WHERE id = $1
-RETURNING id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id
+RETURNING id, email, email_verified_at, display_name, avatar_url, password_hash, status, created_at, updated_at, country, avatar_public_id, suspended_until
 `
 
 type UpdateUserProfileParams struct {
@@ -638,6 +683,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.UpdatedAt,
 		&i.Country,
 		&i.AvatarPublicID,
+		&i.SuspendedUntil,
 	)
 	return i, err
 }

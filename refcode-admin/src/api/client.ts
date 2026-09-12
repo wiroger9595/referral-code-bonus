@@ -260,4 +260,22 @@ export const api = {
   revokePro(id: string) {
     return request<void>(`/v1/admin/users/${id}/pro`, { method: 'DELETE' })
   },
+
+  // 停權。expiresAt 是 null 代表停到有人手動解除為止；有值的話後端的
+  // reinstate-suspensions 排程會在期滿那一輪自動放人。
+  // 回傳連帶被下架的碼數，用來告訴 admin 這一按影響了多少東西。
+  suspendUser(id: string, expiresAt: string | null) {
+    return request<{ disabled_codes: number }>(`/v1/admin/users/${id}/suspend`, {
+      method: 'POST',
+      body: JSON.stringify({ expires_at: expiresAt }),
+    })
+  },
+
+  // 解除停權。回傳放回架上的碼數 —— 只有「當初因為停權才下架」的那些，
+  // 停權期間被個別處理過的不會一起復活。
+  reinstateUser(id: string) {
+    return request<{ restored_codes: number }>(`/v1/admin/users/${id}/suspend`, {
+      method: 'DELETE',
+    })
+  },
 }
